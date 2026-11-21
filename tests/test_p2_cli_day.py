@@ -63,6 +63,16 @@ class TestDaysFlag(unittest.TestCase):
             "bad_plan": {"day": {"day_plan": [{"day": 1, "dishes": {"mon_la": 1}}]}},
             "plan_ingredients_mismatch": {"day": {"day_plan": [{"day": 1, "dishes": {"lau_mam": 1},
                                                                 "ingredients": {"ca_loc": 1}}]}},
+            "plan_ingredients_string": {"day": {"day_plan": [{"day": 1, "dishes": {"ca_loc_nuong_trui": 1},
+                                                              "ingredients": {"ca_loc": "1"}}]}},
+            "plan_ingredients_none": {"day": {"day_plan": [{"day": 1, "dishes": {"ca_loc_nuong_trui": 1},
+                                                            "ingredients": {"ca_loc": None}}]}},
+            "plan_ingredients_bool": {"day": {"day_plan": [{"day": 1, "dishes": {"ca_loc_nuong_trui": 1},
+                                                            "ingredients": {"ca_loc": True}}]}},
+            "plan_ingredients_float": {"day": {"day_plan": [{"day": 1, "dishes": {"ca_loc_nuong_trui": 1},
+                                                             "ingredients": {"ca_loc": 1.0}}]}},
+            "plan_ingredients_negative": {"day": {"day_plan": [{"day": 1, "dishes": {"ca_loc_nuong_trui": 1},
+                                                                "ingredients": {"ca_loc": 1, "bong_sung": -1}}]}},
         }
         for name, doc in cases.items():
             with self.subTest(case=name), Workdir() as w:
@@ -70,7 +80,19 @@ class TestDaysFlag(unittest.TestCase):
                 sc = write_json(w.path("sc.json"), doc)
                 code, err = run_headless(*day("--scenario", sc), "--out", out)
                 self.assertEqual(code, 2, err)
+                self.assertNotIn("Traceback", err)
                 self.assertFalse(os.path.exists(out))
+
+    def test_day_plan_ingredients_zero_count_accepted_cli(self):
+        with Workdir() as w:
+            out = w.path("o.jsonl")
+            sc = write_json(w.path("sc.json"), {
+                "day": {"day_plan": [{"day": 1, "dishes": {"ca_loc_nuong_trui": 1},
+                                      "ingredients": {"ca_loc": 1, "bong_sung": 0}}]},
+            })
+            code, err = run_headless(*day("--scenario", sc), "--out", out)
+            self.assertEqual(code, 0, err)
+            self.assertTrue(os.path.exists(out))
 
     def test_ticket_example_scenario_passes_validation(self):
         with Workdir() as w:

@@ -2,7 +2,7 @@
 
 ## Phase 4 · v1.0.0 · contract 1.3
 
-Bổ sung lệnh đo cảnh lặn có render và soak nhiều Ngày. Bản đồ ở màn hình đầu, bản đồ nhỏ trong lúc chơi và Sổ tay hỗ trợ bàn phím lẫn cảm ứng. Ba cảnh báo có chữ, chế độ tương phản cao lưu theo trình duyệt. Gói ZIP chứa mã chạy, Three.js và giấy phép đi kèm.
+Test Contract v1.3 khai `bench_cmd` để đo cảnh lặn có render và `soak_cmd` để chạy nhiều Ngày. Scenario trả mã 2 khi số lượng nguyên liệu khai trong kế hoạch Ngày sai kiểu hoặc âm. Bản đồ ở màn hình đầu, bản đồ nhỏ trong lúc chơi và Sổ tay hỗ trợ bàn phím lẫn cảm ứng. Ba cảnh báo có chữ, chế độ tương phản cao lưu theo trình duyệt. Gói ZIP chứa mã chạy, Three.js và giấy phép đi kèm.
 
 ## Phase 3 · Mùa Nước Nổi · contract 1.2
 

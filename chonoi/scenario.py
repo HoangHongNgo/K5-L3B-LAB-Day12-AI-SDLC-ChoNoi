@@ -50,7 +50,11 @@ def _validate_day_plan_entry(plan, tuning, label="day_plan"):
         declared = plan["ingredients"]
         if not isinstance(declared, dict):
             raise BadInput(f"{label}.ingredients phải là object")
-        cleaned_declared = {k: v for k, v in declared.items() if v > 0}
+        cleaned_declared = {}
+        for k, v in declared.items():
+            _nonneg_int(f"{label}.ingredients.{k}", v)
+            if v > 0:
+                cleaned_declared[k] = v
         if cleaned_declared != expected_ingredients:
             raise BadInput(f"{label}.ingredients không khớp công thức ({cleaned_declared} != {expected_ingredients})")
 

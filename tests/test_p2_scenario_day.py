@@ -88,8 +88,34 @@ class TestDayPlanOverride(unittest.TestCase):
     def test_declared_ingredients_must_match(self):
         ok = {"day": 1, "dishes": {"ca_loc_nuong_trui": 1}, "ingredients": {"ca_loc": 1}}
         load({"day": {"day_plan": [ok]}})
+        load({"day": {"day_plan": [dict(ok, ingredients={"ca_loc": 1, "bong_sung": 0})]}})
+        load({"day": {"day_plan": {"1": {"dishes": {"ca_loc_nuong_trui": 1},
+                                         "ingredients": {"ca_loc": 1, "bong_sung": 0}}}}})
         with self.assertRaises(BadInput):
             load({"day": {"day_plan": [dict(ok, ingredients={"ca_loc": 2})]}})
+
+    def test_declared_ingredients_reject_malformed_quantities(self):
+        bad_ingredients = [
+            {"ca_loc": True},
+            {"ca_loc": False},
+            {"ca_loc": 1, "bong_sung": False},
+            {"ca_loc": 1.0},
+            {"ca_loc": 1.5},
+            {"ca_loc": 1, "bong_sung": 0.0},
+            {"ca_loc": "1"},
+            {"ca_loc": None},
+            {"ca_loc": [1]},
+            {"ca_loc": {"n": 1}},
+            {"ca_loc": -1},
+            {"ca_loc": 1, "bong_sung": -1},
+        ]
+        for ingredients in bad_ingredients:
+            entry = {"day": 1, "dishes": {"ca_loc_nuong_trui": 1}, "ingredients": ingredients}
+            with self.subTest(form="list", ingredients=ingredients), self.assertRaises(BadInput):
+                load({"day": {"day_plan": [entry]}})
+            map_entry = {"dishes": {"ca_loc_nuong_trui": 1}, "ingredients": ingredients}
+            with self.subTest(form="map", ingredients=ingredients), self.assertRaises(BadInput):
+                load({"day": {"day_plan": {"1": map_entry}}})
 
     def test_invalid_plans(self):
         cases = [

@@ -1,4 +1,4 @@
-"""Đọc game.contract.json và kiểm dải hợp lệ của tuning (Test Contract v1.1)."""
+"""Đọc game.contract.json và kiểm dải hợp lệ của tuning (Test Contract v1.3)."""
 
 import json
 import os
@@ -8,7 +8,8 @@ from .errors import BadInput
 DEFAULT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "game.contract.json")
 
 
-CONTRACT_VERSION = "1.2"
+CONTRACT_VERSION = "1.3"
+REQUIRED_COMMANDS = ("bench_cmd", "soak_cmd")
 NODE_KINDS = ("bong_dien_dien", "bong_sung", "keo_neo")
 FISH_KINDS = ("ca_linh", "ca_loc", "ca_keo")
 INGREDIENTS = tuple(sorted(NODE_KINDS + FISH_KINDS))
@@ -30,8 +31,14 @@ def load_contract(path=DEFAULT_PATH) -> dict:
             c = json.load(f)
     except (OSError, ValueError) as e:
         raise BadInput(f"không đọc được {path}: {e}")
+    if not isinstance(c, dict):
+        raise BadInput("manifest phải là object")
     if c.get("contract_version") != CONTRACT_VERSION:
         raise BadInput(f"contract_version phải là {CONTRACT_VERSION!r}, đang là {c.get('contract_version')!r}")
+    for field in REQUIRED_COMMANDS:
+        cmd = c.get(field)
+        if not isinstance(cmd, str) or not cmd.strip():
+            raise BadInput(f"{field} phải là chuỗi lệnh khác rỗng")
     validate_tuning(c.get("tuning"))
     t = c["tuning"]
     fresh = t.get("freshness")

@@ -30,3 +30,4 @@
 ## Skills / hooks của nhóm
 - Sau đổi schema kho hoặc JSONL, chạy `python3 docs/proof/phase-3/smoke.py` để đối chiếu hai tiến trình và day.
 - Sau đổi vòng ngày, chạy `python3 -m tools.soak --seed 7 --days 10 --out /tmp/cho-noi-soak.json`.
+- Trước bàn giao Phase 4, chạy `bench_cmd` và `soak_cmd` theo manifest v1.3. Đóng gói bằng `python3 tools/package_release.py HEAD --out /tmp/ChoNoi-v1.0.0.zip` và chơi thử cả từ clone sạch lẫn từ ZIP giải nén.

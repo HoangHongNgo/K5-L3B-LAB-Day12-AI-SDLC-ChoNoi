@@ -44,7 +44,7 @@ node tools/bench.mjs --seed 42 --duration 30 --out bench.json
 python3 -m tools.soak --seed 7 --days 10 --out soak.json
 ```
 
-Benchmark mở cảnh lặn có render ở 1280×720. Cần Node.js 22+ và Chrome/Chromium trên máy; có thể đặt `CHROME_BIN` để chọn trình duyệt. Soak dùng Python, chạy liên tục qua Shop mỗi Ngày. [Kết quả đo](docs/proof/phase-4/bench.json) · [Kết quả 10 Ngày](docs/proof/phase-4/soak.json) · [Ghi chú bản v1.0.0](docs/release-v1.0.0.md).
+Benchmark mở cảnh lặn có render ở 1280×720. Cần Node.js 22+ và Chrome/Chromium trên máy; có thể đặt `CHROME_BIN` để chọn trình duyệt. Soak dùng Python, chạy liên tục qua Shop mỗi Ngày. Test Contract v1.3 khai hai lệnh trên tại `bench_cmd` và `soak_cmd` trong `game.contract.json`. [Kết quả đo](docs/proof/phase-4/bench.json) · [Kết quả 10 Ngày](docs/proof/phase-4/soak.json) · [Ghi chú bản v1.0.0](docs/release-v1.0.0.md).
 
 ## Bản đồ, Sổ tay và Mùa Nước Nổi
 
