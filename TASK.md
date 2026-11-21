@@ -33,9 +33,9 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Commit: `contracts: chốt schema kho, event và giao diện sim-UI`.
 
 ### ChuTungDuongg — Lát 1
-- [ ] Đọc PRD-0 mục F "Gather" (đoạn 2) và `chonoi/sim/gather.py`.
-- [ ] Thống nhất với haiquanng một hàm chung `_add_to_hold(kinds) -> bool` (kiểm trần `hold_capacity`, thêm theo thứ tự nhặt) để hai lát không đụng nhau.
-- [ ] Tạo nhánh `p1/lat1-ChuTungDuongg`, dựng hàm trống `_update_oxygen(events, was_surface)`.
+- [x] Đọc PRD-0 mục F "Gather" (đoạn 2) và `chonoi/sim/gather.py`.
+- [x] Thống nhất với haiquanng một hàm chung `_add_to_hold(kinds) -> bool` (kiểm trần `hold_capacity`, thêm theo thứ tự nhặt) để hai lát không đụng nhau.
+- [x] Tạo nhánh `p1/lat1-ChuTungDuongg`, dựng hàm trống `_update_oxygen(events, was_surface)`.
 
 ### haiquanng — Lát 2
 - [x] Đọc PRD-0 mục F "Gather" (đoạn 3–5) và mục G.
@@ -63,10 +63,10 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 ## 1.2 Lõi lát (phút 15–25)
 
 ### ChuTungDuongg — Lát 1
-- [ ] Oxy theo `d` cuối bước: mặt nước (`d ≤ surface_depth`) +`oxygen_refill_per_tick`, kẹp max, reset `zero_oxy_ticks`; dưới nước −1, kẹp 0.
-- [ ] `dive` / `surface` khi đổi phía mặt nước (so đầu/cuối bước, `data.pos`).
-- [ ] `oxygen_empty` khi từ dương xuống 0.
-- [ ] Commit: `gather: oxy, dive/surface, oxygen_empty`.
+- [x] Oxy theo `d` cuối bước: mặt nước (`d ≤ surface_depth`) +`oxygen_refill_per_tick`, kẹp max, reset `zero_oxy_ticks`; dưới nước −1, kẹp 0.
+- [x] `dive` / `surface` khi đổi phía mặt nước (so đầu/cuối bước, `data.pos`).
+- [x] `oxygen_empty` khi từ dương xuống 0.
+- [x] Commit: `gather: oxy, dive/surface, oxygen_empty`.
 
 ### haiquanng — Lát 2
 - [x] Hái: chỉ ở mặt nước, ngoài bến; nút `ready` gần nhất trong `interact_radius` (tính cả đúng mép, hòa theo id); đủ chỗ → `gather` + `regrow_ticks = regrow_s × 60`; thiếu chỗ → `hold_full` (`action`, `node_id`, `required`, `free`).
@@ -98,10 +98,10 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 ## 1.3 Hoàn thiện lát (phút 25–45)
 
 ### ChuTungDuongg — Lát 1
-- [ ] Đếm ngạt: mỗi bước dưới nước kết thúc với oxy 0 tăng `zero_oxy_ticks`; đủ `choke_interval_ticks` → về 0, −1 Máu, `choke` (`hp`). Nổi lên đúng bước đáng lẽ ngạt thì không ngạt.
-- [ ] Máu 0 → bỏ giỏ LIFO, `faint` (`cause:"choke"`, `lost`, `hp:0`) → `gather_end` `fainted`, kho rỗng, dừng bước.
-- [ ] Test `tests/test_p1_lat1.py`: choke ở t+59 (AC-P1-02), faint ghi kho `{"items":{}}` (AC-P1-03).
-- [ ] Mở PR, nhờ haiquanng review.
+- [x] Đếm ngạt: mỗi bước dưới nước kết thúc với oxy 0 tăng `zero_oxy_ticks`; đủ `choke_interval_ticks` → về 0, −1 Máu, `choke` (`hp`). Nổi lên đúng bước đáng lẽ ngạt thì không ngạt.
+- [x] Máu 0 → bỏ giỏ LIFO, `faint` (`cause:"choke"`, `lost`, `hp:0`) → `gather_end` `fainted`, kho rỗng, dừng bước.
+- [x] Test `tests/test_p1_lat1.py`: choke ở t+59 (AC-P1-02), faint ghi kho `{"items":{}}` (AC-P1-03).
+- [x] Mở PR, nhờ haiquanng review.
 
 ### haiquanng — Lát 2
 - [x] Bắt cá: cạnh `catch`, `catch_cd_ticks == 0`, dưới nước; đàn gần nhất trong `catch_radius` (hòa theo id); đủ chỗ → thêm đủ `fish_yield`, xóa đàn, `fish_caught`, cooldown `catch_cooldown_s × 60`; thiếu chỗ → `hold_full`, giữ đàn, không đặt cooldown.
