@@ -41,9 +41,9 @@ PLAY_BUTTONS = ("interact", "catch", "pause")
 WEB_ASSETS = {
     "/": ("index.html", "text/html"),
     "/index.html": ("index.html", "text/html"),
-    **{"/assets/" + name: (name, "text/css") for name in ("game.css", "forage.css", "flow.css")},
+    **{"/assets/" + name: (name, "text/css") for name in ("game.css", "forage.css", "flow.css", "navigation.css")},
     **{"/assets/" + name: (name, "text/javascript") for name in (
-        "scene.js", "river.js", "cafe.js", "forage.js", "service.js", "flow.js",
+        "scene.js", "river.js", "cafe.js", "forage.js", "service.js", "flow.js", "map.js", "field.js",
         "vendor/three.module.min.js", "vendor/three.core.min.js",
     )},
 }
@@ -215,6 +215,8 @@ class LiveGame:
             snap["menu_pending"] = self.menu_pending
             snap["meta"] = self.tuning[snap["phase"]]
             snap["menu"] = self.tuning["menu"]
+            if "freshness" in self.tuning:
+                snap["freshness"] = self.tuning["freshness"]
             if snap["phase"] == "gather" and snap.get("active_upgrades", {}).get("net"):
                 active_net = self.session.sim.cur.net
                 if active_net is not None:
@@ -422,11 +424,9 @@ def main(argv=None) -> int:
         if a.inventory_out and a.mode != "gather":
             raise BadInput("--inventory-out chỉ dùng với gather")
         contract = load_contract()
-        if a.mode == "day" and contract["contract_version"] != "1.1":
-            raise BadInput("--mode day cần Test Contract v1.1")
         tuning = contract["tuning"]
         scenario = load_scenario(a.scenario, a.mode, tuning)
-        inventory = read_inventory(a.inventory) if a.inventory else None
+        inventory = read_inventory(a.inventory, contract_version=contract["contract_version"]) if a.inventory else None
         if inventory is not None and "stock" in scenario:
             raise BadInput("vừa có quan.stock vừa có --inventory")
         game = LiveGame(a.mode, tuning, scenario, a.seed, inventory, a.inventory_out, start_in_menu=True)

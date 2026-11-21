@@ -498,10 +498,10 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Mở PR sau lát Q (đặt trước chạm `quan.py` → phối hợp với minhphuong150505). Commit: `day: bàn giao kho cá thể`, `quan: đặt trước R1/R2`.
 
 ### RachalHys — Lát U (HUD) + QA
-- [ ] HUD sáng/tối hiện độ tươi hoặc hàng ươn bằng số, thanh, nhãn hoặc biểu tượng, cho giỏ, kho quán và phần giữ; thanh/nhãn không phụ thuộc màu (đọc được ở 320 px và 1280×720).
-- [ ] HUD sáng hiện hai đơn đặt trước R1/R2; HUD quán hiện bàn giữ, trạng thái và đồng hồ đến; cảnh báo dòng lũ bằng chữ, biểu tượng, âm thanh.
-- [ ] Rà test P1–P2 sẽ vỡ vì kho cá thể, gửi danh sách cho các lát ngay phút 7 (cần cho haiquanng, minhphuong150505).
-- [ ] Commit: `ui: HUD độ tươi, đặt trước, cảnh báo lũ`.
+- [x] HUD sáng/tối hiện số lượng còn tươi và ươn trong giỏ, kho quán và phần giữ theo từng bàn. Kiểm bằng Chromium ở 320 px và 1280×720.
+- [x] HUD sáng hiện R1/R2. HUD quán hiện bàn giữ, trạng thái đơn và thời gian đến. Kiểm cảnh báo lũ có chữ, biểu tượng và phát âm một lần trên fixture.
+- [x] Rà test P1–P2 bị ảnh hưởng và đính kèm [danh sách theo lát](docs/proof/phase-3/ui/regression.md) để các thành viên cập nhật fixture khi tích hợp.
+- [x] Commit: `ui: HUD độ tươi, đặt trước, cảnh báo lũ`.
 
 ### Phút 20 — Smoke tích hợp + standup (haiquanng dẫn, HoangHongNgo hỗ trợ)
 - [ ] Chạy smoke bàn giao kho trên bản tích hợp, lưu `docs/proof/phase-3/integration.*`.
@@ -529,7 +529,8 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Chơi thử `day` trọn 1 Ngày: hàng ươn trong kho quán, giữ lại một lần, món giá theo tươi, một khách đặt trước thành công và một fail.
 
 ### RachalHys
-- [ ] Chạy lại regression P1–P2 và kiểm HUD trên `main`; ảnh HUD bàn giao cho haiquanng.
+- [x] Chạy toàn suite với manifest v1.1 trên nhánh U, 377 test đạt và 1 skip. Kiểm HUD v1.2 qua fixture. [Ảnh và kết quả của lát U](docs/proof/phase-3/ui/README.md) để haiquanng nối vào proof chung.
+- [ ] Chạy lại regression và chụp HUD trên `main` sau khi Contract v1.2, Gather/current và Day/reservations được tích hợp.
 
 ---
 

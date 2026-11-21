@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="/assets/game.css">
 <link rel="stylesheet" href="/assets/flow.css">
 <link rel="stylesheet" href="/assets/forage.css">
+<link rel="stylesheet" href="/assets/navigation.css">
 </head>
 <body>
 <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -31,13 +32,14 @@
 <section id="play-hud" aria-label="Thông tin ca chơi" hidden>
   <div class="hud-top"><div class="phase-block"><svg class="icon"><use id="hud-phase-icon" href="#i-sun"/></svg><span id="hud-phase"></span></div>
     <div class="clock-block"><svg class="icon"><use href="#i-clock"/></svg><b id="hud-time"></b></div>
-    <button id="hud-menu" class="icon-button" aria-label="Tạm dừng" title="Tạm dừng"><svg class="icon"><use href="#i-pause"/></svg></button>
+    <button id="hud-menu" class="icon-button" aria-label="Mở Sổ tay" title="Sổ tay (Esc)"><svg class="icon"><use href="#i-book"/></svg><span>Sổ tay</span></button>
   </div>
   <div id="hud-stats" class="hud-stats"></div>
   <section class="ledger"><div id="forage-guide" hidden></div><div id="service-guide" hidden></div>
     <button id="wait-turn" class="secondary" type="button" hidden>Chờ lượt khách kế tiếp</button>
     <h2><svg class="icon"><use href="#i-basket"/></svg><span id="ledger-title"></span></h2><div id="ledger-rows"></div></section>
-  <div class="hud-bottom"><output id="event-feedback" aria-live="polite" hidden></output><p id="hud-prompt"></p><div id="key-hints"></div></div>
+  <button id="mini-map" type="button" aria-label="Mở bản đồ"><span class="map-head">Bản đồ <span>⤢</span></span><canvas id="mini-chart"></canvas><span class="map-foot">Út Sen · Mục tiêu <kbd>M</kbd></span></button>
+  <div class="hud-bottom"><output id="field-warning" role="status" hidden></output><output id="event-feedback" aria-live="polite" hidden></output><p id="hud-prompt"></p><div id="key-hints"></div></div>
   <div class="touch-controls" aria-label="Điều khiển cảm ứng">
     <div class="dpad"><button data-move="u" aria-label="Lên">↑</button><button data-move="l" aria-label="Trái">←</button><button data-move="d" aria-label="Xuống">↓</button><button data-move="r" aria-label="Phải">→</button></div>
     <div class="touch-actions"><button data-action="interact">Tương tác</button><button data-action="catch">Bắt cá</button></div>
@@ -61,12 +63,15 @@
     <h1 id="screen-title" tabindex="-1"></h1>
     <div id="screen-content"></div><div id="screen-actions" class="actions"></div><p id="screen-message" role="alert" hidden></p>
   </div>
+  <button class="lobby-atlas" type="button" aria-label="Mở bản đồ phiên chợ"><span class="map-head"><span id="chart-title">Bản đồ phiên chợ</span><span>↗</span></span><canvas id="lobby-chart"></canvas><span class="map-foot">Mở bản đồ <span>→</span></span></button>
   <footer class="lobby-footer"><div class="journey-label"><span class="line"></span>Một ngày<br><em>trên sông</em></div><div id="journey"></div></footer>
 </section>
 <script type="module" src="/assets/scene.js"></script>
 <script src="/assets/flow.js"></script>
 <script src="/assets/forage.js"></script>
 <script src="/assets/service.js"></script>
+<script src="/assets/map.js"></script>
+<script src="/assets/field.js" defer></script>
 <script>
 "use strict";
 /*
@@ -139,6 +144,8 @@ addEventListener("keydown", (e) => {
         (e.shiftKey ? buttons.at(-1) : buttons[0]).focus();
       }
     }
+    if (screenName === "atlas-lobby" && ["m","escape"].includes(k)) { e.preventDefault(); showMenu(); return; }
+    if (screenName === "menu" && k === "m") { e.preventDefault(); openAtlas("map"); return; }
     if ((screenName === "help" || screenName === "exit") && k === "escape") {
       e.preventDefault(); showMenu(); return;
     }
@@ -152,15 +159,15 @@ addEventListener("keydown", (e) => {
       e.preventDefault();
       continueDay();
     }
-    if (screenName === "pause" && (k === "escape" || k === "p")) {
+    if (screenName === "pause" && ["escape","p","m"].includes(k)) {
       e.preventDefault();
       press("pause");
     }
     return;
   }
-  if (snap && (k === "escape" || k === "p")) {
+  if (snap && ["escape","p","m"].includes(k)) {
     e.preventDefault();
-    press("pause");
+    openAtlas(k === "m" ? "map" : "mission");
     return;
   }
   if (e.target.closest("select") && k.startsWith("arrow")) return;
@@ -198,7 +205,7 @@ document.querySelectorAll("[data-move],[data-action]").forEach(button => {
     button.classList.remove("held"); pushInput();
   });
 });
-document.getElementById("hud-menu").onclick = () => press("pause");
+
 
 function element(tag, value) {
   const node = document.createElement(tag);
@@ -423,7 +430,7 @@ function updateDayScreen(previous) {
   if (snap.mode !== "day") {
     if (snap.menu_pending) {
       const starting = dayStarted && previous?.menu_pending && !screenName;
-      if (!starting && !["menu","help","exit","evening-intro"].includes(screenName) && !introBusy) showMenu();
+      if (!starting && !["menu","help","exit","evening-intro","atlas-lobby"].includes(screenName) && !introBusy) showMenu();
       return;
     }
     if (snap.error || snap.finished) {
@@ -464,7 +471,7 @@ function updateDayScreen(previous) {
 }
 
 function showPause() {
-  showScreen("pause", "Tạm dừng", [], [action("Tiếp tục",() => press("pause")), action("Về màn hình chính",returnToMenu,true)]);
+  renderAtlas(false);
 }
 
 // ---------- ra: poll snapshot ----------
@@ -483,6 +490,7 @@ async function poll() {
     if (!offline) {
       updateDayScreen(previous);
       renderHud();
+      window.paintCharts?.();
     }
   } finally {
     setTimeout(poll, document.hidden ? 250 : 45);
@@ -698,7 +706,7 @@ function renderHud() {
     hintMode = phase;
     const actions = [["WASD","Di chuyển"],["E",morning?"Hái / cập bến":"Bếp / bàn"]];
     if (morning) actions.push(["Space","Bắt cá"]);
-    actions.push(["Esc","Tạm dừng"]);
+    actions.push(["M","Bản đồ"],["Esc","Sổ tay"]);
     document.getElementById("key-hints").replaceChildren(...actions.map(([key,label]) => {
       const hint=element("span",label); hint.prepend(element("kbd",key)); return hint;
     }));
@@ -756,12 +764,13 @@ function renderHud() {
   const nearbyAction = prompt.match(/E · (.+)$/)?.[1];
   setText(touchAction, nearbyAction || (morning ? "Hái bông" : "Tương tác"));
   setText(hudPrompt, matchMedia("(pointer:coarse)").matches ? prompt.replace("E · ", "") : prompt);
+  renderFieldStatus(snap, warning);
   hud.classList.toggle("danger", warning);
 }
 function frame() {
   requestAnimationFrame(frame);  // đặt trước để lỗi vẽ không làm dừng vòng lặp
   const guide = document.getElementById(snap?.phase === "quan" ? "service-guide" : "forage-guide");
-  window.gameView = { state:snap, screen:["help","exit"].includes(screenName) ? "menu" : screenName,
+  window.gameView = { state:snap, screen:["help","exit","atlas-lobby"].includes(screenName) ? "menu" : screenName,
     targetId: screen.hidden && shop.hidden && !guide.hidden ? guide.dataset.targetId : null };
   if (document.body.classList.contains("has-3d")) return;
   const [w, h] = fit();

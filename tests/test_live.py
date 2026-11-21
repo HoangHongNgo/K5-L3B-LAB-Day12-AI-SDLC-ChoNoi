@@ -30,6 +30,18 @@ def _post(url, obj):
 
 
 class LiveServerTest(unittest.TestCase):
+    def test_item_stock_includes_freshness_tuning_for_hud(self):
+        tuning = load_contract()["tuning"]
+        freshness = {"initial": 100, "gather_decay_per_s": 0.5, "quan_decay_per_s": 0.25, "spoiled_below": 30}
+        tuning["freshness"] = freshness
+        stock = [{"id": "I1", "kind": "ca_loc", "fresh": 29.99}]
+        game = LiveGame("quan", tuning, {}, 42, inventory=stock)
+
+        snapshot = json.loads(game.state_json())
+        self.assertEqual(snapshot["freshness"], freshness)
+        self.assertEqual(snapshot["stock"], stock)
+
+
     def test_standalone_menu_pause_and_restart_keep_game_time(self):
         game = LiveGame("gather", load_contract()["tuning"], {}, 1, start_in_menu=True)
         def read():
