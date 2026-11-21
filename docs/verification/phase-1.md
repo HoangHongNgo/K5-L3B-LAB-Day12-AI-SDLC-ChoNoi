@@ -1,6 +1,6 @@
 # Ma trận truy vết Phase 1
 
-Đối chiếu PRD-0 và Test Contract v1.0 trên `main` + nhánh `p1/close-haiquanng` tại `aa18d1b` (sau khi gộp lát 4, sửa payload `amount`/`yield` và fixture quán theo mục D). Mọi kết quả tái lập bằng `PYTHONPATH=tests:. python3 docs/proof/phase-1/check_ac.py`. Chạy lại script trên commit gắn tag. [Bằng chứng Phase 1](../proof/phase-1/README.md)
+Đối chiếu PRD-0 và Test Contract v1.0 trên `main` + nhánh `p1/close-haiquanng` tại `aa18d1b` (sau khi gộp lát 4, sửa payload `amount`/`yield` và fixture quán theo mục D). Mọi kết quả tái lập bằng `PYTHONPATH=tests:. python3 docs/proof/phase-1/check_ac.py`. Kết quả kiểm lại trên `516e868` được ghi ở cuối bảng. [Bằng chứng Phase 1](../proof/phase-1/README.md)
 
 | AC | Cách kiểm chứng | Bằng chứng (`docs/proof/phase-1/`) | Kết quả |
 |---|---|---|---|
@@ -21,4 +21,4 @@
 
 - Lần kiểm trên `aa18d1b` đạt 11/12 AC và 153/153 test. Trên `516e868` (main, v1.0), chạy lại script và chơi thử AC-P1-11 trên Chromium. 12/12 AC đạt, 173/173 test đạt. [Log kiểm lại](../proof/phase-1/qa-recheck/contract.log)
 - Lần kiểm trước ở `a1c94cb` đạt 5/12: thiếu lát 4, payload `gather`/`fish_caught` dùng `count`, fixture quán theo mục D bị mã 2/mã 1. Đã sửa ở nhánh `p1/close-haiquanng`.
-- GitHub chưa có tag `phase-1`. `516e868` là commit dùng để kiểm lại trong lịch sử main.
+- Tag `phase-1` trỏ tới `9ad3a3e`. Kết quả 12/12 AC ở trên thuộc lần kiểm sau trên `516e868`.

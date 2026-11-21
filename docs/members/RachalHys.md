@@ -1,8 +1,6 @@
-# RachalHys — phản tư cá nhân
+# Nguyễn Đức Khương Lam — RachalHys
 
-- **Phase 1** — HUD hai buổi, README và test ca biên khi cập bến hoặc chạm giới hạn tick. [HUD sáng](https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi/commit/0d2a033) · [HUD tối](https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi/commit/7f887c9) · [Test](https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi/commit/513b7f6) · [Ma trận 12 AC](../verification/phase-1.md). Kiểm lại HUD từ nấu đến trả tiền.
-- **Phase 2** — Menu, màn giới thiệu, HUD v1.1, pause, Shop, DayResult, Summary. [Menu](https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi/commit/3b7b625) · [HUD](https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi/commit/fdb79ba) · [Bằng chứng](../proof/phase-2/ui/README.md). Kiểm vòng năm ngày, pause và hồi quy v1.1.
-- **Phase 3** — HUD độ tươi, đơn đặt trước, cảnh báo lũ. [Kiểm chứng](../proof/phase-3/ui/README.md) · [Kiểm lại trên v1.2](../proof/phase-3/qa-recheck/README.md)
-- **Giúp đồng đội** — Rà test của bốn lát và chạy lại regression Phase 1 sau mỗi lần gộp.
-- **AI sai ở đâu** — HUD sáng đầu tiên để log che ô giỏ; ca hái qua test nhưng JSONL dùng `count` thay vì `amount`. Tôi phát hiện qua ảnh Chromium 320 px và đối chiếu Test Contract.
-- **Bài học** — Đối chiếu schema và chạy qua đổi pha trên đúng revision bàn giao.
+- **Đóng góp.** Phase 1, tôi làm HUD hai ca, lập ma trận 12 AC và chơi thử quán từ lúc nấu đến khi nhận tiền. Phase 2, tôi làm menu, pause, Shop và HUD vòng ngày. Phase 3, tôi thêm hiển thị độ tươi, đơn đặt trước và kiểm khi chuyển từ Lặn sang Quán. [Phase 1](../verification/phase-1.md) · [Phase 2](../verification/phase-2.md) · [Phase 3](../proof/phase-3/qa-recheck/README.md)
+- **Hỗ trợ.** Tôi tổng hợp ảnh HUD, smoke bàn giao kho và log hồi quy để HoangHongNgo đối chiếu bản tích hợp. [Kết quả v1.1](../proof/phase-2/qa-recheck.md)
+- **Lỗi AI.** Bản HUD đầu để log sự kiện che giỏ. Tôi thấy lỗi khi chụp Chromium ở chiều rộng 320 px, dời log rồi thử lại ở cả hai kích thước màn hình.
+- **Bài học.** Tôi kiểm cùng dữ liệu trên headless và trong trình duyệt để đối chiếu từ snapshot đến HUD, nhất là khi chuyển pha.
