@@ -9,6 +9,8 @@
 import math
 from fractions import Fraction
 
+from ..errors import BadInput
+from ..inventory import decay_items, public_items, validate_items
 from ..ids import id_key, sort_by_id
 from . import reservations as res_mod
 from .ramp import ramp_velocity
@@ -25,9 +27,9 @@ def _order_ref(obj):
         return None
     if isinstance(obj, str):
         return {"order_id": None, "dish_id": obj, "base_price": None}
+    if isinstance(obj.get("dish"), dict):
+        return _order_ref(obj["dish"])
     dish = obj.get("dish_id") or obj.get("dish")
-    if isinstance(dish, dict):
-        return _order_ref(dish)
     if dish is None:
         return None
     return {"order_id": obj.get("order_id") or obj.get("customer_id"), "dish_id": dish,
@@ -36,15 +38,6 @@ def _order_ref(obj):
 
 # Trạng thái đơn theo PRD-0 mục D; tên cũ của nhóm (cooking/ready/carried) quy về assigned.
 LEGACY_ASSIGNED = {"cooking", "ready", "carried"}
-
-
-def _format_fresh(val):
-    if isinstance(val, (int, float, str, Fraction)):
-        f = float(val)
-        if f.is_integer():
-            return int(f)
-        return round(f, 4)
-    return val
 
 
 class QuanSim:
@@ -70,43 +63,29 @@ class QuanSim:
         self._tgt = None
         self._ramp_left = 0
         # kho: --inventory HOẶC scenario.stock (cả hai -> cli đã báo mã 2)
-        raw_inv = inventory if inventory is not None else scenario.get("stock", {})
-        if isinstance(raw_inv, list):
-            self.is_item_inventory = True
-            raw_items = raw_inv
-        elif isinstance(raw_inv, dict) and "items" in raw_inv and isinstance(raw_inv["items"], list):
-            self.is_item_inventory = True
-            raw_items = raw_inv["items"]
-        else:
-            custs = scenario.get("customers", [])
-            contract_ver = str(tuning.get("contract_version", ""))
-            if (contract_ver in ("1.2", "1.3")
-                or contract_ver >= "1.2"
-                or "freshness" in tuning
-                or any(isinstance(c.get("reserved"), list) for c in custs)):
-                self.is_item_inventory = True
-                raw_items = []
-                if isinstance(raw_inv, dict):
-                    for k, count in raw_inv.items():
-                        for idx in range(count):
-                            raw_items.append({"id": f"I_{k}_{idx+1}", "kind": k, "fresh": 100})
-            else:
-                self.is_item_inventory = False
-                raw_items = None
-
+        freshness = tuning.get("freshness")
+        raw_inv = inventory if inventory is not None else scenario.get("stock", [] if freshness else {})
+        if isinstance(raw_inv, dict) and set(raw_inv) == {"items"}:
+            raw_inv = raw_inv["items"]
+        self.is_item_inventory = freshness is not None or tuning.get("contract_version") in ("1.2", "1.3") or isinstance(raw_inv, list)
         if self.is_item_inventory:
-            self.items = []
-            for it in (raw_items or []):
-                self.items.append({
-                    "id": str(it["id"]),
-                    "kind": it["kind"],
-                    "fresh": Fraction(str(it["fresh"])),
-                })
-            self.stock = {k: sum(1 for it in self.items if it["kind"] == k and it["fresh"] >= Fraction(30))
-                          for k in sorted(set(it["kind"] for it in self.items))}
+            # Older in-process callers supplied individual items before the v1.2 manifest landed.
+            cfg = freshness or {"quan_decay_per_s": .25, "spoiled_below": 30}
+            self.decay = Fraction(str(cfg["quan_decay_per_s"])) / self.tick_hz
+            self.spoiled_below = Fraction(str(cfg["spoiled_below"]))
+            if isinstance(raw_inv, dict):
+                # Compatibility for Python callers. File/scenario validation enforces the declared schema.
+                counts = validate_items(raw_inv, contract_version="1.1")
+                initial = cfg.get("initial", 100)
+                raw_inv = [{"id": self.ids.new("I"), "kind": kind, "fresh": initial}
+                           for kind, count in sorted(counts.items()) for _ in range(count)]
+            raw_items = validate_items(raw_inv, contract_version="1.2")
+            self.items = [dict(it, fresh=Fraction(str(it["fresh"]))) for it in raw_items]
+            for it in self.items:
+                self.ids.reserve(it["id"])
         else:
             self.items = None
-            self.stock = dict(raw_inv if isinstance(raw_inv, dict) else {})
+            self._count_stock = dict(raw_inv)
 
         self.hand = _order_ref(scenario.get("hand"))
         self.time_left_ticks = scenario.get("time_left_ticks", int(round(t["duration_s"] * 60)))
@@ -146,6 +125,17 @@ class QuanSim:
         self.result = None
         self._init_reservations(tuning, scenario, streams, menu_ids, reservations)
 
+    @property
+    def stock(self):
+        """Legacy count view. The item inventory is the single source of truth in v1.2+."""
+        if not self.is_item_inventory:
+            return self._count_stock
+        totals = {}
+        for item in self.items:
+            kind = item["kind"]
+            totals[kind] = totals.get(kind, 0) + int(item["fresh"] >= self.spoiled_below)
+        return totals
+
     def _init_reservations(self, tuning, scenario, streams, menu_ids, entries):
         """Mở rộng `reservations` (lát D): `day` truyền đơn đã công bố; quán độc lập tự công bố lúc dựng pha."""
         self.book = None
@@ -174,7 +164,7 @@ class QuanSim:
                  and isinstance(c.get("reserved"), list) for iid in c["reserved"]}
         chosen = []
         for k, n in recipe.items():
-            cands = sorted((it for it in self.items if it["kind"] == k and it["fresh"] >= Fraction(30)
+            cands = sorted((it for it in self.items if it["kind"] == k and it["fresh"] >= self.spoiled_below
                             and it["id"] not in taken), key=lambda it: (-it["fresh"], id_key(it["id"])))
             if len(cands) < n:
                 return None
@@ -187,7 +177,6 @@ class QuanSim:
         by_id = {d["id"]: dict(d) for d in defaults}
         for u in updates:
             if u["id"] not in by_id:
-                from ..errors import BadInput
                 raise BadInput(f"id bếp/bàn không tồn tại: {u['id']}")
             by_id[u["id"]].update(u)
         return sort_by_id(list(by_id.values()))
@@ -195,8 +184,7 @@ class QuanSim:
     def snapshot(self) -> dict:
         occupied = {c["table_id"]: c["id"] for c in self.customers}
         if self.is_item_inventory:
-            stock_data = [{"id": it["id"], "kind": it["kind"], "fresh": _format_fresh(it["fresh"])}
-                          for it in sorted(self.items, key=lambda x: id_key(x["id"]))]
+            stock_data = public_items(sort_by_id(self.items), self.spoiled_below)
         else:
             stock_data = {k: self.stock[k] for k in sorted(self.stock) if self.stock[k] > 0}
         snap = {
@@ -261,8 +249,7 @@ class QuanSim:
             events.append(("quan_end", {"reason": "time", "money": self.money, "earned": self.earned,
                                         "shift_earned": self.shift_earned, "reputation": self.reputation}))
             if self.is_item_inventory:
-                stock_result = [{"id": it["id"], "kind": it["kind"], "fresh": _format_fresh(it["fresh"])}
-                                for it in sorted(self.items, key=lambda x: id_key(x["id"]))]
+                stock_result = public_items(sort_by_id(self.items), self.spoiled_below)
             else:
                 stock_result = {k: v for k, v in sorted(self.stock.items()) if v > 0}
             self.result = {
@@ -330,59 +317,17 @@ class QuanSim:
     def _decay_freshness_and_handle_spoiled(self) -> list:
         if not self.is_item_inventory:
             return []
-        decay = Fraction(1, 240)
-        spoiled_items = []
-        for it in self.items:
-            old_fresh = it["fresh"]
-            new_fresh = max(Fraction(0), old_fresh - decay)
-            it["fresh"] = new_fresh
-            if old_fresh >= Fraction(30) and new_fresh < Fraction(30):
-                spoiled_items.append(it)
-
-        events = []
-        if spoiled_items:
-            spoiled_items.sort(key=lambda x: id_key(x["id"]))
-            for it in spoiled_items:
-                events.append(("spoiled", {
-                    "item_id": it["id"],
-                    "kind": it["kind"],
-                    "location": "stock",
-                }))
-
-            spoiled_ids = {it["id"] for it in spoiled_items}
-            # Xử lý các đơn có reserved bị ươn
-            aff_custs = [c for c in self.customers if c.get("order_status") == "reserved"
-                         and isinstance(c.get("reserved"), list)
-                         and any(iid in spoiled_ids for iid in c["reserved"])]
-            aff_custs.sort(key=lambda c: (c.get("order_tick", 0), id_key(c["table_id"])))
-
-            for c in aff_custs:
-                c["reserved"] = []  # Nhả toàn bộ giữ chỗ của đơn
-                recipe = self.menu[c["dish_id"]]["recipe"]
-                other_reserved = {iid for oc in self.customers if oc is not c
-                                  and oc.get("order_status") == "reserved"
-                                  and isinstance(oc.get("reserved"), list)
-                                  for iid in oc["reserved"]}
-                can_re_reserve = True
-                chosen_items = []
-                for k, req in recipe.items():
-                    cands = [it for it in self.items if it["kind"] == k and it["fresh"] >= Fraction(30) and it["id"] not in other_reserved]
-                    cands.sort(key=lambda it: (-it["fresh"], id_key(it["id"])))
-                    if len(cands) < req:
-                        can_re_reserve = False
-                        break
-                    chosen = cands[:req]
-                    chosen_items.extend(chosen)
-                    for it in chosen:
-                        other_reserved.add(it["id"])
-                if can_re_reserve:
-                    c["reserved"] = sorted([it["id"] for it in chosen_items], key=id_key)
+        events = decay_items(self.items, self.decay, self.spoiled_below, "stock")
+        if events:
+            spoiled = {data["item_id"] for _, data in events}
+            affected = [c for c in self.customers if c["order_status"] == "reserved" and spoiled.intersection(c["reserved"])]
+            for customer in sorted(affected, key=lambda c: (c["order_tick"], id_key(c["table_id"]))):
+                customer["reserved"] = []
+                reserved = self._reserve_recipe(self.menu[customer["dish_id"]]["recipe"])
+                if reserved is None:
+                    customer["order_status"] = "unfulfillable"
                 else:
-                    c["order_status"] = "unfulfillable"
-                    c["reserved"] = []
-        if self.is_item_inventory:
-            self.stock = {k: sum(1 for it in self.items if it["kind"] == k and it["fresh"] >= Fraction(30))
-                          for k in sorted(set(it["kind"] for it in self.items))}
+                    customer["reserved"] = reserved
         return events
 
     def _start_cooking(self, stove) -> list:
@@ -402,8 +347,6 @@ class QuanSim:
                 avg_fresh = Fraction(100)
             base_price = math.floor(int(dish["price"]) * avg_fresh / 100)
             self.items = [it for it in self.items if it["id"] not in used_ids]
-            self.stock = {k: sum(1 for it in self.items if it["kind"] == k and it["fresh"] >= Fraction(30))
-                          for k in sorted(set(it["kind"] for it in self.items))}
             c["reserved"] = []
             c["order_status"] = "assigned"
             c["base_price"] = base_price
@@ -411,8 +354,7 @@ class QuanSim:
             stove["dish"] = {"order_id": c["id"], "dish_id": c["dish_id"], "base_price": c["base_price"]}
             stove["cook_ticks_left"] = int(round(dish["cook_s"] * self.tick_hz))
             stove["ready_ticks"] = 0
-            items = [{"id": it["id"], "kind": it["kind"], "fresh": _format_fresh(it["fresh"])}
-                     for it in sorted(used_items, key=lambda x: (x["kind"], id_key(x["id"])))]
+            items = public_items(sorted(used_items, key=lambda x: (x["kind"], id_key(x["id"]))), self.spoiled_below)
             return [("cook_started", dict(self._stove_data(stove), items=items, base_price=c["base_price"]))]
 
         used = dict(c["reserved"] or dish["recipe"])
@@ -586,21 +528,7 @@ class QuanSim:
         customer_id = self.ids.new("C")
         pat_ticks = int(round(self.t["patience_s"] * self.tick_hz))
 
-        if self.is_item_inventory:
-            reserved_ids = {iid for c in self.customers if c.get("order_status") == "reserved"
-                            and isinstance(c.get("reserved"), list) for iid in c["reserved"]}
-            chosen_items = []
-            for k, req in recipe.items():
-                cands = [it for it in self.items if it["kind"] == k and it["fresh"] >= Fraction(30) and it["id"] not in reserved_ids]
-                cands.sort(key=lambda it: (-it["fresh"], id_key(it["id"])))
-                chosen = cands[:req]
-                chosen_items.extend(chosen)
-                for it in chosen:
-                    reserved_ids.add(it["id"])
-            chosen_ids = sorted([it["id"] for it in chosen_items], key=id_key)
-            reserved_val = chosen_ids
-        else:
-            reserved_val = recipe
+        reserved_val = self._reserve_recipe(recipe)
 
         new_customer = {
             "id": customer_id,
@@ -694,7 +622,7 @@ class QuanSim:
                             and isinstance(c.get("reserved"), list) for iid in c["reserved"]}
             avail = {}
             for it in self.items:
-                if it["fresh"] >= Fraction(30) and it["id"] not in reserved_ids:
+                if it["fresh"] >= self.spoiled_below and it["id"] not in reserved_ids:
                     avail[it["kind"]] = avail.get(it["kind"], 0) + 1
             return avail
         reserved_totals = {}
@@ -713,23 +641,10 @@ class QuanSim:
 
         if self.is_item_inventory:
             for c in unreserved:
-                recipe = self.menu[c["dish_id"]]["recipe"]
-                other_reserved = {iid for oc in self.customers if oc is not c
-                                  and oc.get("order_status") == "reserved"
-                                  and isinstance(oc.get("reserved"), list)
-                                  for iid in oc["reserved"]}
-                chosen_items = []
-                for k, req in recipe.items():
-                    cands = [it for it in self.items if it["kind"] == k and it["fresh"] >= Fraction(30) and it["id"] not in other_reserved]
-                    cands.sort(key=lambda it: (-it["fresh"], id_key(it["id"])))
-                    if len(cands) < req:
-                        from ..errors import BadInput
-                        raise BadInput(f"không đủ kho để giữ nguyên liệu cho khách {c['id']} (món {c['dish_id']})")
-                    chosen = cands[:req]
-                    chosen_items.extend(chosen)
-                    for it in chosen:
-                        other_reserved.add(it["id"])
-                c["reserved"] = sorted([it["id"] for it in chosen_items], key=id_key)
+                reserved = self._reserve_recipe(self.menu[c["dish_id"]]["recipe"])
+                if reserved is None:
+                    raise BadInput(f"không đủ kho để giữ nguyên liệu cho khách {c['id']} (món {c['dish_id']})")
+                c["reserved"] = reserved
 
             for c in self.customers:
                 if c.get("reserved") is None:
@@ -742,7 +657,6 @@ class QuanSim:
             avail = self._available_stock()
             for k, req in recipe.items():
                 if avail.get(k, 0) < req:
-                    from ..errors import BadInput
                     raise BadInput(f"không đủ kho để giữ nguyên liệu cho khách {c['id']} (món {c['dish_id']})")
             c["reserved"] = dict(recipe)
 
@@ -759,16 +673,26 @@ class QuanSim:
                 if c.get("order_status") == "reserved" and isinstance(c.get("reserved"), list):
                     reserved_ids.extend(c["reserved"])
             if len(reserved_ids) != len(set(reserved_ids)):
-                from ..errors import BadInput
                 raise BadInput("trùng lặp nguyên liệu giữ chỗ giữa các khách")
             item_map = {it["id"]: it for it in self.items}
-            for iid in reserved_ids:
-                if iid not in item_map:
-                    from ..errors import BadInput
-                    raise BadInput(f"nguyên liệu giữ chỗ {iid} không tồn tại trong kho")
-                if item_map[iid]["fresh"] < Fraction(30):
-                    from ..errors import BadInput
-                    raise BadInput(f"nguyên liệu giữ chỗ {iid} bị ươn (fresh < 30)")
+            for customer in self.customers:
+                reserved = customer["reserved"]
+                if not isinstance(reserved, list):
+                    raise BadInput("reserved trong kho cá thể phải là mảng id")
+                if customer["order_status"] != "reserved":
+                    if reserved:
+                        raise BadInput("đơn chưa giữ hàng phải có reserved rỗng")
+                    continue
+                counts = {}
+                for iid in reserved:
+                    if iid not in item_map:
+                        raise BadInput(f"nguyên liệu giữ chỗ {iid} không tồn tại trong kho")
+                    if item_map[iid]["fresh"] < self.spoiled_below:
+                        raise BadInput(f"nguyên liệu giữ chỗ {iid} bị ươn")
+                    kind = item_map[iid]["kind"]
+                    counts[kind] = counts.get(kind, 0) + 1
+                if counts != self.menu[customer["dish_id"]]["recipe"]:
+                    raise BadInput(f"phần giữ sai công thức cho {customer['id']}")
             return
 
         reserved_totals = {}
@@ -780,5 +704,4 @@ class QuanSim:
                         reserved_totals[k] = reserved_totals.get(k, 0) + v
         for k, v in reserved_totals.items():
             if v > self.stock.get(k, 0):
-                from ..errors import BadInput
                 raise BadInput(f"tổng nguyên liệu giữ vượt quá kho thực tế cho {k}: giữ {v}, kho có {self.stock.get(k, 0)}")

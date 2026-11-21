@@ -7,6 +7,12 @@ Số liệu (bán kính, thời gian, giá…) **không** chép vào đây: luô
 
 ---
 
+## Kho hiện hành từ v1.2
+
+File có đúng một khóa `items` chứa mảng cá thể. Mỗi cá thể là `{"id":"I1","kind":"ca_linh","fresh":100}`. Id không rỗng và duy nhất; fresh hữu hạn trong [0,100]. Kho đếm trả mã 2. File [mẫu hiện hành](inventory.sample.json) dùng được với ca quán. [Smoke hai tiến trình](../proof/phase-3/handoff.json) ghi cả snapshot nhận kho và thời điểm chuyển pha trong day.
+
+Các phần dưới lưu giao thức của Phase 1–2 để đọc bằng chứng tại các commit cũ.
+
 ## 1. Schema file kho (PRD-0 mục G)
 
 ```json
@@ -23,8 +29,8 @@ Số liệu (bán kính, thời gian, giá…) **không** chép vào đây: luô
 | Nội dung | `items` = đếm từ giỏ `hold` lúc kết thúc. `fainted` → `{"items":{}}`. |
 | Đọc (quan) | `--inventory kho.json` nạp vào `stock`. Không được vừa có `--inventory` vừa có `quan.stock` trong scenario (mã 2). |
 
-Ví dụ hợp lệ: [`inventory.sample.json`](inventory.sample.json) → `{"items":{"bong_sung":2,"ca_loc":1}}`.
-Đã kiểm: `python3 -m chonoi.headless --mode quan --seed 1 --ticks 0 --inventory docs/contracts/inventory.sample.json --out q.jsonl` → mã 0, snapshot tick 0 có `"stock":{"bong_sung":2,"ca_loc":1}`.
+Ví dụ lịch sử ở v1.1 → `{"items":{"bong_sung":2,"ca_loc":1}}`.
+Đã kiểm tại phase trước: `python3 -m chonoi.headless --mode quan --seed 1 --ticks 0 --inventory docs/contracts/inventory.sample.json --out q.jsonl` → mã 0, snapshot tick 0 có `"stock":{"bong_sung":2,"ca_loc":1}`.
 
 ---
 

@@ -11,6 +11,7 @@ import math
 import os
 import unittest
 
+from fixtures.fresh import fresh_items, kinds
 from helpers import ROOT
 
 from chonoi.contract import load_contract
@@ -243,7 +244,7 @@ class Scenario(unittest.TestCase):
     def test_age_ticks_and_new_kinds_validate(self):
         _validate_gather({"fish": [school(kind="ca_keo", pos=(50, 24), age=5)],
                           "nodes": [{"id": "N9", "kind": "keo_neo", "pos": [70, 0]}],
-                          "hold": ["ca_keo", "keo_neo"]}, T)
+                          "hold": fresh_items(["ca_keo", "keo_neo"])}, T)
 
     def test_bad_age_ticks(self):
         for bad in (-1, 1.5, "3", True):

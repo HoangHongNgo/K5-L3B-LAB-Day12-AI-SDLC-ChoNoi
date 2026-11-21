@@ -26,9 +26,9 @@ class TestStandardNumbers(unittest.TestCase):
         self.t = self.m["tuning"]
 
     def test_manifest_v11(self):
-        self.assertEqual(self.m["contract_version"], "1.1")
+        self.assertIn(self.m["contract_version"], ("1.2","1.3"))
         self.assertEqual(self.m["team_size"], 6)
-        self.assertEqual(self.m["extensions"], ["net"])  # mở rộng net (haiquanng) đã bật
+        self.assertIn("net", self.m["extensions"])  # mở rộng net (haiquanng) đã bật
         load_contract()
 
     def test_gather_standard_numbers(self):

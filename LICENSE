@@ -1,0 +1,9 @@
+Chợ Nổi — notices for the release archive
+
+The original lab starter and teaching materials are attributed to VinUni-AI20k.
+The repository contains contributions by the ChoNoi team. No additional public
+license for those materials was supplied with the lab starter.
+
+The bundled Three.js JavaScript files in chonoi/web/vendor are distributed under
+the MIT License. The complete upstream copyright notice and permission terms are
+included in chonoi/web/vendor/LICENSE. See CREDITS.md for asset provenance.

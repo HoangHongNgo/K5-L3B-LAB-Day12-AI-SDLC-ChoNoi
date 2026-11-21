@@ -1,0 +1,39 @@
+.forage-guide {
+  display: grid;
+  gap: .38em;
+  margin-bottom: .55em;
+  padding-bottom: .55em;
+  border-bottom: 1px solid #efd5a447;
+  font-size: .93em;
+}
+.forage-guide[hidden], .forage-guide [hidden] { display: none; }
+.forage-choose { display: grid; gap: .2em; }
+.forage-caption { font-size: .88em; color: #e7d6b3; }
+.forage-select {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  padding: .27em .3em;
+  font: inherit;
+  color: #fff3d8;
+  border: 1px solid #bca77c;
+  border-radius: 5px;
+  background: #1b4241;
+  text-overflow: ellipsis;
+}
+.forage-route { display: flex; align-items: baseline; gap: .45em; line-height: 1.35; }
+.forage-arrow { min-width: 1.1em; font-weight: 750; color: #ffda93; }
+.forage-advisory { color: #edd8ab; }
+.forage-action {
+  justify-self: start;
+  padding: .25em .7em;
+  color: #163632;
+  background: #efc477;
+  border: 1px solid #efc477;
+  border-radius: 5px;
+  font: 650 1em/1.4 var(--sans);
+  cursor: pointer;
+}
+@media (pointer:coarse), (max-width:680px) {
+  .forage-action {display:none}
+}

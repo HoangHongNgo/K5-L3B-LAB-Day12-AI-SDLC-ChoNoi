@@ -11,6 +11,7 @@ import json
 import math
 import unittest
 
+from fixtures.fresh import opening_price, stocked
 from helpers import Workdir, events, frames, read_jsonl, run_headless, snapshots, write_json
 
 with open("game.contract.json", encoding="utf-8") as _f:
@@ -43,7 +44,7 @@ def near(pos):
 def run(block, frame_list=(), ticks=3):
     """Trả (mã thoát, stderr, rows hoặc None)."""
     with Workdir() as w:
-        sc = write_json(w.path("sc.json"), {"quan": dict({"random_customers": False}, **block)})
+        sc = write_json(w.path("sc.json"), {"quan": dict({"random_customers": False, "random_reservations": False}, **block)})
         inp = write_json(w.path("in.json"), frames(*frame_list))
         out = w.path("o.jsonl")
         code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", str(ticks), "--snapshot-every", "1",
@@ -62,8 +63,8 @@ class AcceptPrdFixtures(unittest.TestCase):
     def test_hand_payload_serve_with_tip_at_threshold(self):
         """Tay cầm payload có base_price, đơn assigned; phục vụ ở đúng ngưỡng 50% kiên nhẫn thì có boa."""
         threshold = int(math.ceil(PATIENCE * Q["tip_min_patience_ratio"]))
-        code, err, rows = run({"player": {"pos": near(TABLE["pos"])}, "stock": {}, "hand": payload(),
-                               "customers": [customer(order_status="assigned", reserved={},
+        code, err, rows = run({"player": {"pos": near(TABLE["pos"])}, "stock": [], "hand": payload(),
+                               "customers": [customer(order_status="assigned", reserved=[],
                                                       patience_ticks_left=threshold + 1)]},
                               PRESS, ticks=2)
         self.assertEqual(code, 0, err)
@@ -79,13 +80,13 @@ class AcceptPrdFixtures(unittest.TestCase):
     def test_hand_base_price_is_the_settled_price(self):
         """Giá đã chốt nằm trong payload món; served dùng base_price của payload."""
         p = dict(payload(), base_price=PRICE + 5)
-        code, err, rows = run({"player": {"pos": near(TABLE["pos"])}, "stock": {}, "hand": p,
-                               "customers": [customer(order_status="assigned", reserved={})]}, PRESS, ticks=2)
+        code, err, rows = run({"player": {"pos": near(TABLE["pos"])}, "stock": [], "hand": p,
+                               "customers": [customer(order_status="assigned", reserved=[])]}, PRESS, ticks=2)
         self.assertEqual(code, 0, err)
         self.assertEqual(events(rows, "served")[0]["data"]["base_price"], PRICE + 5)
 
     def test_cooking_stove_payload_becomes_ready(self):
-        code, err, rows = run({"stock": {},
+        code, err, rows = run({"stock": [],
                                "stoves": [{"id": STOVE["id"], "state": "cooking", "dish": payload(),
                                            "cook_ticks_left": 3}],
                                "customers": [customer(order_status="assigned")]}, ticks=4)
@@ -98,7 +99,7 @@ class AcceptPrdFixtures(unittest.TestCase):
         self.assertEqual(s["customers"][0]["order_status"], "assigned")
 
     def test_ready_stove_payload_pick_to_hand(self):
-        code, err, rows = run({"player": {"pos": near(STOVE["pos"])}, "stock": {},
+        code, err, rows = run({"player": {"pos": near(STOVE["pos"])}, "stock": [],
                                "stoves": [{"id": STOVE["id"], "state": "ready", "dish": payload(),
                                            "ready_ticks": 4}],
                                "customers": [customer(order_status="assigned")]}, PRESS, ticks=2)
@@ -110,14 +111,14 @@ class AcceptPrdFixtures(unittest.TestCase):
         self.assertEqual(s["customers"][0]["order_status"], "assigned")
 
     def test_unfulfillable_waits_and_is_not_cooked(self):
-        code, err, rows = run({"player": {"pos": near(STOVE["pos"])}, "stock": {"bong_sung": 2},
-                               "customers": [customer(order_status="unfulfillable", reserved={})]}, PRESS, ticks=2)
+        code, err, rows = run({"player": {"pos": near(STOVE["pos"])}, "stock": stocked(bong_sung=2),
+                               "customers": [customer(order_status="unfulfillable", reserved=[])]}, PRESS, ticks=2)
         self.assertEqual(code, 0, err)
         self.assertEqual(events(rows, "cook_started"), [])
         self.assertEqual(snap(rows, 1)["customers"][0]["order_status"], "unfulfillable")
 
     def test_eating_customer_from_prd_fixture(self):
-        code, err, rows = run({"stock": {}, "customers": [customer(state="eating", order_status="served",
+        code, err, rows = run({"stock": [], "customers": [customer(state="eating", order_status="served",
                                                                    eat_ticks_left=1, base_price=PRICE, tip=0)]},
                               ticks=2)
         self.assertEqual(code, 0, err)
@@ -128,15 +129,15 @@ class SnapshotUsesPrdStatuses(unittest.TestCase):
     def test_cook_pick_serve_statuses_and_payloads(self):
         cook = int(round(MENU[DISH]["cook_s"] * HZ))
         fr = PRESS + [{"tick": cook + 1, "interact": True}, {"tick": cook + 2, "interact": False}]
-        code, err, rows = run({"player": {"pos": near(STOVE["pos"])}, "stock": {"bong_sung": 2},
+        code, err, rows = run({"player": {"pos": near(STOVE["pos"])}, "stock": stocked(bong_sung=2),
                                "customers": [customer()]}, fr, ticks=cook + 3)
         self.assertEqual(code, 0, err)
         s1 = snap(rows, 1)
         self.assertEqual(s1["customers"][0]["order_status"], "assigned")
-        self.assertEqual(s1["customers"][0]["reserved"], {})
-        self.assertEqual(s1["stoves"][0]["dish"], payload())
+        self.assertEqual(s1["customers"][0]["reserved"], [])
+        self.assertEqual(s1["stoves"][0]["dish"], dict(payload(), base_price=opening_price(DISH, TUNING)))
         sp = snap(rows, cook + 2)
-        self.assertEqual(sp["hand"], payload())
+        self.assertEqual(sp["hand"], dict(payload(), base_price=opening_price(DISH, TUNING)))
         self.assertEqual(sp["customers"][0]["order_status"], "assigned")
 
 
@@ -146,48 +147,48 @@ class RejectContradictions(unittest.TestCase):
         self.assertEqual(code, 2, (block, err))
 
     def test_assigned_without_dish(self):
-        self.assertExit2({"stock": {}, "customers": [customer(order_status="assigned", reserved={})]})
+        self.assertExit2({"stock": [], "customers": [customer(order_status="assigned", reserved=[])]})
 
     def test_assigned_with_reserved(self):
-        self.assertExit2({"stock": {"bong_sung": 2}, "hand": payload(),
+        self.assertExit2({"stock": stocked(bong_sung=2), "hand": payload(),
                           "customers": [customer(order_status="assigned", reserved={"bong_sung": 2})]})
 
     def test_cooking_stove_needs_positive_timer(self):
-        self.assertExit2({"stock": {}, "stoves": [{"id": STOVE["id"], "state": "cooking", "dish": payload(),
+        self.assertExit2({"stock": [], "stoves": [{"id": STOVE["id"], "state": "cooking", "dish": payload(),
                                                     "cook_ticks_left": 0}],
                           "customers": [customer(order_status="assigned")]})
 
     def test_stove_dish_not_matching_order(self):
-        self.assertExit2({"stock": {}, "stoves": [{"id": STOVE["id"], "state": "cooking",
+        self.assertExit2({"stock": [], "stoves": [{"id": STOVE["id"], "state": "cooking",
                                                     "dish": payload(dish="ca_loc_nuong_trui"),
                                                     "cook_ticks_left": 5}],
                           "customers": [customer(order_status="assigned")]})
 
     def test_hand_dish_not_matching_order(self):
-        self.assertExit2({"stock": {}, "hand": payload(dish="ca_loc_nuong_trui"),
+        self.assertExit2({"stock": [], "hand": payload(dish="ca_loc_nuong_trui"),
                           "customers": [customer(order_status="assigned")]})
 
     def test_payload_unknown_field(self):
-        self.assertExit2({"stock": {}, "hand": dict(payload(), x=1),
+        self.assertExit2({"stock": [], "hand": dict(payload(), x=1),
                           "customers": [customer(order_status="assigned")]})
 
     def test_unfulfillable_with_dish(self):
-        self.assertExit2({"stock": {}, "hand": payload(),
-                          "customers": [customer(order_status="unfulfillable", reserved={})]})
+        self.assertExit2({"stock": [], "hand": payload(),
+                          "customers": [customer(order_status="unfulfillable", reserved=[])]})
 
     def test_eating_timer_wrong_type_is_exit_2_not_crash(self):
         for bad in ("5", None):
-            self.assertExit2({"stock": {}, "customers": [customer(state="eating", order_status="served",
+            self.assertExit2({"stock": [], "customers": [customer(state="eating", order_status="served",
                                                                   eat_ticks_left=bad, base_price=PRICE, tip=0)]})
 
     def test_idle_stove_with_dish(self):
-        self.assertExit2({"stock": {}, "stoves": [{"id": STOVE["id"], "state": "idle", "dish": payload()}],
+        self.assertExit2({"stock": [], "stoves": [{"id": STOVE["id"], "state": "idle", "dish": payload()}],
                           "customers": [customer(order_status="assigned")]})
 
     def test_eating_without_timer_or_price(self):
-        self.assertExit2({"stock": {}, "customers": [customer(state="eating", order_status="served",
+        self.assertExit2({"stock": [], "customers": [customer(state="eating", order_status="served",
                                                               eat_ticks_left=0, base_price=PRICE, tip=0)]})
-        self.assertExit2({"stock": {}, "customers": [customer(state="eating", order_status="served",
+        self.assertExit2({"stock": [], "customers": [customer(state="eating", order_status="served",
                                                               eat_ticks_left=5, tip=0)]})
 
 

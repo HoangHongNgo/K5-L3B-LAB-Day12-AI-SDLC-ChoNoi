@@ -1,0 +1,1 @@
+{"quan":{"random_customers":false,"random_reservations":false,"customers":[{"id":"C1","table_id":"T1","dish_id":"ca_loc_nuong_trui","order_status":"reserved","reserved":["I1"]}],"stock":[{"id":"I1","kind":"ca_loc","fresh":97.5},{"id":"I2","kind":"bong_sung","fresh":29.5}]}}

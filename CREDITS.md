@@ -1,2 +1,4 @@
 # Credits
-Liệt kê asset ngoài (nguồn, giấy phép CC0/CC-BY/MIT) và công cụ AI đã dùng.
+- Three.js r180 do Three.js Authors phát triển. Bản phân phối JavaScript và giấy phép MIT đặt trong `chonoi/web/vendor/`. [Three.js r180](https://github.com/mrdoob/three.js/releases/tag/r180) · [Giấy phép](chonoi/web/vendor/LICENSE)
+- Cảnh sông, quán nổi và mô hình low-poly được dựng bằng mã trong repo với sự hỗ trợ của Codex. Bố cục điều khiển và ánh sáng lấy cảm hứng từ [Săn Cá Khủng](https://kenhgt247.github.io/cauca/) và [Vỉa Hè Tochi](https://tochicafe247.netlify.app/).
+- Luồng tìm nguyên liệu và chọn món trước giờ mở quán được phát triển sau khi tham khảo cách Nhóm001 xử lý hai bước này. [Chỉ hướng trong ca lặn](https://github.com/workcaominh-gif/K5-L3B-LAB-Day12-AI-SDLC-Nhom001/blob/1a9bf8d/client/src/scene_gather.js) · [Luồng mở quán và nhận đơn](https://github.com/workcaominh-gif/K5-L3B-LAB-Day12-AI-SDLC-Nhom001/blob/1a9bf8d/client/src/scene_quan.js)

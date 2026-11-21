@@ -8,6 +8,7 @@ import json
 import os
 import unittest
 
+from fixtures.fresh import fresh_items, kinds, counts
 from helpers import Workdir, events, frames, read_jsonl, run_headless, snapshots, write_json
 
 
@@ -62,7 +63,7 @@ class Gather(unittest.TestCase):
             self.assertEqual(ev[0]["tick"], 1)
             self.assertEqual(ev[0]["data"], {"node_id": "N1", "kind": "bong_sung", "amount": G["node_yield"]})
             snap = [s for s in snapshots(rows) if s["tick"] == 1][0]
-            self.assertEqual(snap["hold"], ["bong_sung"] * G["node_yield"])
+            self.assertEqual(kinds(snap["hold"]), ["bong_sung"] * G["node_yield"])
             self.assertEqual(snap["nodes"][0]["ready"], False)
             self.assertEqual(snap["nodes"][0]["regrow_ticks"], REGROW)
 
@@ -71,7 +72,7 @@ class Gather(unittest.TestCase):
             rows = run_gather(w, {"player": {"pos": [50, 1.5]}, "nodes": [node("N1", "bong_sung", [50, 0])],
                                   "fish": []}, press(0), 2)
             self.assertEqual(events(rows, "gather"), [])
-            self.assertEqual(snapshots(rows)[-1]["hold"], [])
+            self.assertEqual(kinds(snapshots(rows)[-1]["hold"]), [])
 
     def test_out_of_radius_nothing(self):
         with Workdir() as w:
@@ -100,7 +101,7 @@ class Gather(unittest.TestCase):
     def test_hold_full_keeps_node(self):
         with Workdir() as w:
             full = ["ca_loc"] * G["hold_capacity"]
-            rows = run_gather(w, {"player": {"pos": FAR}, "hold": full,
+            rows = run_gather(w, {"player": {"pos": FAR}, "hold": fresh_items(full),
                                   "nodes": [node("N1", "bong_sung", FAR)], "fish": []}, press(0), 2)
             self.assertEqual(events(rows, "gather"), [])
             hf = events(rows, "hold_full")
@@ -108,7 +109,7 @@ class Gather(unittest.TestCase):
             self.assertEqual(hf[0]["data"], {"action": "gather", "node_id": "N1",
                                              "required": G["node_yield"], "free": 0})
             last = snapshots(rows)[-1]
-            self.assertEqual(last["hold"], full)
+            self.assertEqual(kinds(last["hold"]), full)
             self.assertEqual(last["nodes"][0]["ready"], True)
             self.assertEqual(last["nodes"][0]["regrow_ticks"], 0)
 
@@ -127,7 +128,7 @@ class Gather(unittest.TestCase):
             rows = run_gather(w, {"player": {"pos": FAR}, "nodes": [node("N1", "bong_sung", FAR)], "fish": []},
                               press(0) + press(5), 8)
             self.assertEqual(len(events(rows, "gather")), 1)
-            self.assertEqual(snapshots(rows)[-1]["hold"], ["bong_sung"])
+            self.assertEqual(kinds(snapshots(rows)[-1]["hold"]), ["bong_sung"])
 
 
 class Catch(unittest.TestCase):
@@ -142,7 +143,7 @@ class Catch(unittest.TestCase):
                 self.assertEqual(len(ev), 1, kind)
                 self.assertEqual(ev[0]["data"], {"fish_id": "F1", "kind": kind, "yield": G["fish_yield"][kind]})
                 snap = [s for s in snapshots(rows) if s["tick"] == 1][0]
-                self.assertEqual(snap["hold"], [kind] * G["fish_yield"][kind])
+                self.assertEqual(kinds(snap["hold"]), [kind] * G["fish_yield"][kind])
                 self.assertEqual(snap["fish"], [])
                 self.assertEqual(snap["player"]["catch_cd_ticks"], CATCH_CD)
 
@@ -169,14 +170,14 @@ class Catch(unittest.TestCase):
     def test_hold_full_keeps_fish_no_cooldown(self):
         with Workdir() as w:
             hold = ["bong_sung"] * (G["hold_capacity"] - 2)
-            rows = run_gather(w, {"player": {"pos": [50, 10]}, "hold": hold, "nodes": [],
+            rows = run_gather(w, {"player": {"pos": [50, 10]}, "hold": fresh_items(hold), "nodes": [],
                                   "fish": [fish("F1", "ca_linh", [50, 10])]}, press(0, "catch"), 2)
             self.assertEqual(events(rows, "fish_caught"), [])
             hf = events(rows, "hold_full")
             self.assertEqual(hf[0]["data"], {"action": "catch", "fish_id": "F1",
                                              "required": G["fish_yield"]["ca_linh"], "free": 2})
             last = snapshots(rows)[-1]
-            self.assertEqual(last["hold"], hold)
+            self.assertEqual(kinds(last["hold"]), hold)
             self.assertEqual([f["id"] for f in last["fish"]], ["F1"])
             self.assertEqual(last["player"]["catch_cd_ticks"], 0)
 
@@ -199,12 +200,12 @@ class DockAndInventory(unittest.TestCase):
         with Workdir() as w:
             inv = w.path("inv.json")
             pos = [G["dock_pos"][0] + G["dock_radius"], G["dock_pos"][1]]
-            rows = run_gather(w, {"player": {"pos": pos}, "hold": ["ca_loc", "bong_sung"],
+            rows = run_gather(w, {"player": {"pos": pos}, "hold": fresh_items(["ca_loc", "bong_sung"]),
                                   "nodes": [node("N1", "bong_sung", pos)], "fish": []}, press(0), 5, inv)
             self.assertEqual(events(rows, "gather"), [])  # bến xét trước hái
             self.assertEqual(events(rows, "gather_end")[0]["data"]["reason"], "docked")
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {"bong_sung": 1, "ca_loc": 1}})
+                self.assertEqual(counts(json.load(f)["items"]), {"bong_sung": 1, "ca_loc": 1})
 
     def test_gather_on_last_tick_counts(self):
         with Workdir() as w:
@@ -213,7 +214,7 @@ class DockAndInventory(unittest.TestCase):
                                   "nodes": [node("N1", "bong_sung", FAR)], "fish": []}, press(0), 5, inv)
             self.assertEqual(events(rows, "gather_end")[0]["data"]["reason"], "time")
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {"bong_sung": 1}})
+                self.assertEqual(counts(json.load(f)["items"]), {"bong_sung": 1})
 
     def test_catch_on_last_tick_counts(self):
         with Workdir() as w:
@@ -221,7 +222,7 @@ class DockAndInventory(unittest.TestCase):
             run_gather(w, {"player": {"pos": [50, 10]}, "time_left_ticks": 1, "nodes": [],
                            "fish": [fish("F1", "ca_linh", [50, 10])]}, press(0, "catch"), 5, inv)
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {"ca_linh": 3}})
+                self.assertEqual(counts(json.load(f)["items"]), {"ca_linh": 3})
 
     def test_tick_limit_after_gather_no_inventory(self):
         with Workdir() as w:
@@ -255,11 +256,13 @@ class DockAndInventory(unittest.TestCase):
             self.assertEqual(len(events(rows, "fish_caught")), 1)
             self.assertEqual(events(rows, "gather_end")[0]["data"]["reason"], "docked")
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {"bong_sung": 1, "ca_loc": 1}})
+                saved = json.load(f)["items"]
+            self.assertEqual(kinds(saved), ["bong_sung", "ca_loc"])
+            self.assertEqual(events(rows, "gather_end")[0]["data"]["inventory"]["items"], saved)
             code, err = run_headless("--mode", "quan", "--seed", "42", "--ticks", "0", "--inventory", inv,
                                      "--out", w.path("q.jsonl"))
             self.assertEqual(code, 0, err)
-            self.assertEqual(snapshots(read_jsonl(w.path("q.jsonl")))[0]["stock"], {"bong_sung": 1, "ca_loc": 1})
+            self.assertEqual(snapshots(read_jsonl(w.path("q.jsonl")))[0]["stock"], saved)
 
 
 if __name__ == "__main__":

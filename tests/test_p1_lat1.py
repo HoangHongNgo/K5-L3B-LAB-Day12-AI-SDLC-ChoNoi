@@ -5,6 +5,7 @@ import math
 import unittest
 from pathlib import Path
 
+from fixtures.fresh import after_tick, fresh_items, stocked, kinds
 from helpers import Workdir, events, frames, read_jsonl, run_headless, snapshots, write_json
 
 
@@ -127,22 +128,24 @@ class GatherCore(unittest.TestCase):
             with self.subTest(x=x), Workdir() as w:
                 scenario = {
                     "player": {"pos": [x, 1], "oxygen_ticks": 0, "zero_oxy_ticks": 59, "hp": 1},
-                    "hold": ["bong_sung", "ca_loc", "bong_sung", "ca_linh"],
+                    "hold": fresh_items(["bong_sung", "ca_loc", "bong_sung", "ca_linh"]),
                     "fish": [{"id": "F1", "kind": "ca_loc", "pos": [x, 1]}],
                     "time_left_ticks": 1,
                 }
                 inventory = Path(w.path("gather.inventory.json"))
-                write_json(inventory, {"items": {"ca_loc": 2}})
+                write_json(inventory, {"items": stocked(ca_loc=2)})
                 rows = self.run_gather(
                     w, scenario, 5, {"tick": 0, "interact": True, "catch": True},
                     snapshot_every=10,
                 )
-                self.assertEqual(json.loads(inventory.read_bytes()), {"items": {}})
+                manifest = Path(__file__).resolve().parents[1] / "game.contract.json"
+                tuning = json.loads(manifest.read_text(encoding="utf-8"))["tuning"]
+                self.assertEqual(json.loads(inventory.read_bytes()), {"items": []})
                 self.assertEqual([(e["tick"], e["name"], e["data"]) for e in events(rows)], [
                     (1, "choke", {"hp": 0}),
                     (1, "faint", {"cause": "choke",
-                                  "lost": ["ca_linh", "bong_sung", "ca_loc", "bong_sung"], "hp": 0}),
-                    (1, "gather_end", {"reason": "fainted", "inventory": {"items": {}}}),
+                                  "lost": after_tick(scenario["hold"], tuning)[::-1], "hp": 0}),
+                    (1, "gather_end", {"reason": "fainted", "inventory": {"items": []}}),
                 ])
                 self.assertEqual([r["type"] for r in rows],
                                  ["snapshot", "event", "event", "event", "snapshot", "end"])
@@ -157,7 +160,7 @@ class GatherCore(unittest.TestCase):
     def test_same_seed_and_inputs_produce_identical_jsonl_and_inventory(self):
         scenario = {
             "player": {"pos": [20, 5], "oxygen_ticks": 2, "hp": 1},
-            "hold": ["ca_loc", "bong_sung"],
+            "hold": fresh_items(["ca_loc", "bong_sung"]),
         }
         inputs = ({"tick": 0, "move": [1, 0]}, {"tick": 12, "move": [0, 0]})
         with Workdir() as w:
@@ -171,7 +174,7 @@ class GatherCore(unittest.TestCase):
     def test_movement_into_dock_on_final_tick_keeps_inventory(self):
         scenario = {
             "player": {"pos": [5.05, 0], "vel": [-4, 0]},
-            "hold": ["bong_sung"],
+            "hold": fresh_items(["bong_sung"]),
             "time_left_ticks": 1,
         }
         with Workdir() as w:
@@ -184,13 +187,13 @@ class GatherCore(unittest.TestCase):
         self.assertEqual(final["player"]["pos"], [4.983, 0])
         self.assertEqual((final["time_left_ticks"], rows[-1]["reason"]), (0, "docked"))
         self.assertEqual(events(rows, "gather_end")[0]["data"],
-                         {"reason": "docked", "inventory": {"items": {"bong_sung": 1}}})
-        self.assertEqual(inventory, {"items": {"bong_sung": 1}})
+                         {"reason": "docked", "inventory": {"items": final["hold"]}})
+        self.assertEqual(kinds(inventory["items"]), ["bong_sung"])
 
     def test_timeout_underwater_keeps_inventory(self):
         scenario = {
             "player": {"pos": [20, 5], "oxygen_ticks": 2},
-            "hold": ["ca_loc"],
+            "hold": fresh_items(["ca_loc"]),
             "time_left_ticks": 2,
         }
         with Workdir() as w:
@@ -199,7 +202,7 @@ class GatherCore(unittest.TestCase):
 
         self.assertEqual([(e["tick"], e["name"], e["data"]) for e in events(rows)], [
             (2, "oxygen_empty", {"oxygen_ticks": 0}),
-            (2, "gather_end", {"reason": "time", "inventory": {"items": {"ca_loc": 1}}}),
+            (2, "gather_end", {"reason": "time", "inventory": {"items": snapshots(rows)[-1]["hold"]}}),
         ])
         self.assertEqual((rows[-1]["reason"], rows[-1]["ticks"]), ("time", 2))
-        self.assertEqual(inventory, {"items": {"ca_loc": 1}})
+        self.assertEqual(kinds(inventory["items"]), ["ca_loc"])

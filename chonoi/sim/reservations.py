@@ -73,9 +73,9 @@ def validate(entries, tuning):
             raise BadInput("mỗi đơn đặt trước cần đúng {id, table_id, dish_id, arrival_tick}")
         if not isinstance(r["id"], str) or not r["id"] or r["id"] in seen_ids:
             raise BadInput(f"đơn đặt trước: id rỗng hoặc trùng: {r['id']!r}")
-        if r["table_id"] not in tables or r["table_id"] in seen_tables:
+        if not isinstance(r["table_id"], str) or r["table_id"] not in tables or r["table_id"] in seen_tables:
             raise BadInput(f"đơn {r['id']}: bàn không tồn tại hoặc trùng bàn: {r['table_id']!r}")
-        if r["dish_id"] not in tuning["menu"]:
+        if not isinstance(r["dish_id"], str) or r["dish_id"] not in tuning["menu"]:
             raise BadInput(f"đơn {r['id']}: món không có trong menu: {r['dish_id']!r}")
         t = r["arrival_tick"]
         if isinstance(t, bool) or not isinstance(t, int) or not (1 <= t < shift_ticks(tuning)):
