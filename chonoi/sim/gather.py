@@ -74,7 +74,9 @@ class GatherSim:
         if "fish" in scenario:
             src_fish = scenario["fish"]
         elif scenario.get("random_fish", True):
-            src_fish = t["fish_initial"]
+            # v1.1: `fish_initial` là SỐ đàn đầu ca (8). Đặt đàn ban đầu theo seed là việc của lát A
+            # (chonoi/sim/fish.py); đến lúc đó chưa có cá mặc định.
+            src_fish = t["fish_initial"] if isinstance(t["fish_initial"], list) else []  # TODO(lát A)
         else:
             src_fish = []
         # Đàn cá đứng yên ở phase này. Cá bơi / sinh thêm là việc của phase sau.
