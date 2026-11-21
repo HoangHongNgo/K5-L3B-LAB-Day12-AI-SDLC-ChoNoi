@@ -80,7 +80,6 @@ class TestHeadlessExit2(unittest.TestCase):
 
         from chonoi import headless
 
-        bad = {"tuning": base_tuning()}
         with open(DEFAULT_PATH, encoding="utf-8") as f:
             bad = json.load(f)
         bad["tuning"]["gather"]["hold_capacity"] = 99
