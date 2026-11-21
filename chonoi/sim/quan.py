@@ -21,8 +21,11 @@ class QuanSim:
         t = tuning["quan"]
         self.t = t
         self.menu = tuning["menu"]
+        self.tick_hz = tuning.get("tick_hz", 60)
+        self.phase_tick = 0
         self.rng = streams
         self.ids = ids
+        self.random_customers = scenario.get("random_customers", True)
         p = scenario.get("player", {})
         self.pos = list(p.get("pos", t["start_pos"]))
         self.vel = [float(c) for c in p.get("vel", [0.0, 0.0])]
@@ -70,16 +73,41 @@ class QuanSim:
     def step(self, inp):
         events = []
         self.time_left_ticks = max(0, self.time_left_ticks - 1)
+        self.phase_tick += 1
         # TODO(nhóm): giảm kiên nhẫn / nấu / ăn; bếp chín -> ready; xử lý khách theo thứ tự PRD-0 mục F.
         self._move(inp)
         # TODO(nhóm): tối đa MỘT interact, chọn đối tượng theo (khoảng cách, bếp trước bàn, id).
-        # TODO(nhóm): khách mới theo lịch (first_customer_tick, customer_interval_s), no_dish.
+        # Khách mới theo lịch (first_customer_tick, customer_interval_s)
+        if self._should_spawn_customer():
+            table = self._find_available_table()
+            if table is not None:
+                events.extend(self._spawn_customer(table))
         if self.time_left_ticks <= 0:
             self.done = True
             self.reason = "time"
             events.append(("quan_end", {"reason": "time", "money": self.money, "earned": self.earned,
                                         "shift_earned": self.shift_earned, "reputation": self.reputation}))
         return events
+
+    def _should_spawn_customer(self) -> bool:
+        if not self.random_customers:
+            return False
+        first_tick = self.t["first_customer_tick"]
+        interval_ticks = int(round(self.t["customer_interval_s"] * self.tick_hz))
+        if self.phase_tick < first_tick:
+            return False
+        return (self.phase_tick - first_tick) % interval_ticks == 0
+
+    def _find_available_table(self):
+        occupied = {c["table_id"] for c in self.customers}
+        free_tables = [tb for tb in self.tables if tb["id"] not in occupied]
+        if not free_tables:
+            return None
+        return sort_by_id(free_tables)[0]
+
+    def _spawn_customer(self, table):
+        # Sẽ triển khai chi tiết ở Commit 4
+        return []
 
     def _move(self, inp):
         speed = self.t["walk_speed"]

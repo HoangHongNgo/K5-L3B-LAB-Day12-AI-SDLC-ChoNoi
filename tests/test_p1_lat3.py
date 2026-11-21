@@ -346,5 +346,67 @@ class CustomerInitializationAndReservations(unittest.TestCase):
             self.assertFalse(os.path.exists(out))
 
 
+class CustomerArrivalSchedule(unittest.TestCase):
+    def setUp(self):
+        from chonoi.contract import load_contract
+        from chonoi.ids import IdAllocator
+        from chonoi.rng import Streams
+        from chonoi.sim.quan import QuanSim
+        self.tuning = load_contract()["tuning"]
+        self.sim = QuanSim(self.tuning, {}, Streams(1), IdAllocator())
+
+    def test_t01_no_spawn_at_tick_119(self):
+        """T01: Khách chưa đến ở tick 119."""
+        self.sim.phase_tick = 119
+        self.assertFalse(self.sim._should_spawn_customer())
+
+    def test_t02_spawn_at_tick_120(self):
+        """T02: Khách đầu tiên đến ở tick 120."""
+        self.sim.phase_tick = 120
+        self.assertTrue(self.sim._should_spawn_customer())
+
+    def test_t03_next_spawn_interval(self):
+        """T03: Lượt khách tiếp theo đúng khoảng thời gian (1020, 1920)."""
+        self.sim.phase_tick = 121
+        self.assertFalse(self.sim._should_spawn_customer())
+        self.sim.phase_tick = 1019
+        self.assertFalse(self.sim._should_spawn_customer())
+        self.sim.phase_tick = 1020
+        self.assertTrue(self.sim._should_spawn_customer())
+        self.sim.phase_tick = 1919
+        self.assertFalse(self.sim._should_spawn_customer())
+        self.sim.phase_tick = 1920
+        self.assertTrue(self.sim._should_spawn_customer())
+
+    def test_t04_find_available_table_lowest_id(self):
+        """T04: Bàn trống có ID nhỏ nhất được chọn."""
+        # Mặc định chỉ có T1
+        tb = self.sim._find_available_table()
+        self.assertIsNotNone(tb)
+        self.assertEqual(tb["id"], "T1")
+
+        # Giả sử có thêm T2, T0
+        self.sim.tables = [{"id": "T2"}, {"id": "T0"}, {"id": "T1"}]
+        tb = self.sim._find_available_table()
+        self.assertEqual(tb["id"], "T0")
+
+    def test_t05_no_table_skips_turn(self):
+        """T05: Không còn bàn thì bỏ lượt."""
+        self.sim.customers.append({
+            "id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
+            "order_status": "reserved", "reserved": {"ca_loc": 1}
+        })
+        self.assertIsNone(self.sim._find_available_table())
+
+    def test_random_customers_false_disables_spawn(self):
+        """random_customers: False tắt lịch khách đến."""
+        from chonoi.ids import IdAllocator
+        from chonoi.rng import Streams
+        from chonoi.sim.quan import QuanSim
+        sim = QuanSim(self.tuning, {"random_customers": False}, Streams(1), IdAllocator())
+        sim.phase_tick = 120
+        self.assertFalse(sim._should_spawn_customer())
+
+
 if __name__ == "__main__":
     unittest.main()
