@@ -98,7 +98,8 @@ function text(s, x, y, o = {}) {
   ctx.fillStyle = o.color || "#e8eef2";
   ctx.textAlign = o.align || "left";
   ctx.textBaseline = o.base || "alphabetic";
-  ctx.fillText(s, x, y);
+  if (o.maxWidth === undefined) ctx.fillText(s, x, y);
+  else ctx.fillText(s, x, y, o.maxWidth);
 }
 function bar(x, y, w, h, frac, color, label) {
   ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fillRect(x, y, w, h);
@@ -115,7 +116,9 @@ function brief(d) {
 }
 function eventLog(w, h) {
   const ev = (snap.events || []).slice(-6);
-  ev.forEach((e, i) => text(`t${e.tick} ${e.name} ${brief(e.data)}`, w - 10, h - 70 - (ev.length - 1 - i) * 15, { size: 11, align: "right", color: "rgba(232,238,242,.75)" }));
+  const gather = snap.mode === "gather", baseline = h - (gather ? 94 : 70);
+  ev.forEach((e, i) => text(`t${e.tick} ${e.name} ${brief(e.data)}`, w - 10, baseline - (ev.length - 1 - i) * 15,
+    { size: 11, align: "right", color: "rgba(232,238,242,.75)", maxWidth: gather ? w - 20 : undefined }));
 }
 function overlay(w, h) {
   if (offline) text("Mất kết nối tới máy chủ (đã tắt chưa?)", w / 2, 30, { align: "center", color: "#ff8a80", size: 16 });
@@ -132,7 +135,7 @@ function drawGather(w, h) {
   const meta = snap.meta || {};
   const b = meta.bounds || { x: [0, 100], d: [0, 30] };
   const X = b.x[1], D = b.d[1], SKY = 6;
-  const top = 64, bottom = 56;
+  const top = 64, bottom = 82;
   const s = Math.max(1, Math.min((w - 20) / (X + 4), (h - top - bottom) / (D + SKY + 1)));
   const ox = (w - s * (X + 4)) / 2 + 2 * s, oy = top + SKY * s;
   const sx = (x) => ox + x * s, sy = (d) => oy + d * s;
@@ -185,30 +188,33 @@ function drawGather(w, h) {
     }
   }
   // HUD trên
-  text("⏱ " + fmtTime(snap.time_left_ticks), 14, 28, { size: 20 });
+  const oxyX = 148, oxyWidth = Math.min(220, Math.max(32, w - oxyX - 86));
+  text("Thời gian " + fmtTime(snap.time_left_ticks), 14, 28, { size: 16, maxWidth: oxyX - 28 });
   if (p && p.oxygen_ticks !== undefined && p.oxygen_max_ticks) {
     const low = p.oxygen_ticks < p.oxygen_max_ticks * 0.25;
-    bar(110, 12, 220, 18, p.oxygen_ticks / p.oxygen_max_ticks, low ? "#ef5350" : "#4fc3f7", "Oxy " + Math.ceil(p.oxygen_ticks / 60) + "s");
+    bar(oxyX, 12, oxyWidth, 18, p.oxygen_ticks / p.oxygen_max_ticks, low ? "#ef5350" : "#4fc3f7", "Oxy " + Math.ceil(p.oxygen_ticks / 60) + "s");
   }
   if (p && p.hp !== undefined && p.hp_max) {
-    let hs = "";
-    for (let i = 0; i < p.hp_max; i++) hs += i < p.hp ? "♥" : "♡";
-    text(hs, 345, 29, { size: 22, color: "#ff6b81" });
+    text(`Máu ${p.hp}/${p.hp_max}`, oxyX + oxyWidth + 14, 28, { size: 15, color: "#ff6b81" });
   }
   if (p && p.pos) text(`x ${p.pos[0].toFixed(1)}  d ${p.pos[1].toFixed(1)}`, 14, 52, { size: 12, color: "#9fb3c0" });
   if (p && p.catch_cd_ticks > 0) text("hồi chiêu bắt " + (p.catch_cd_ticks / 60).toFixed(1) + "s", 150, 52, { size: 12, color: "#9fb3c0" });
   // giỏ (khoang) dưới
   if (snap.hold && snap.hold_capacity) {
-    const cap = snap.hold_capacity, sz = Math.min(30, (w - 260) / cap - 4), y0 = h - bottom + 8;
+    const cap = snap.hold_capacity, gap = 3, y0 = h - bottom + 8;
+    const sz = Math.min(26, (w - 28 - gap * (cap - 1)) / cap);
     for (let i = 0; i < cap; i++) {
-      const x0 = 14 + i * (sz + 4);
+      const x0 = 14 + i * (sz + gap);
       ctx.fillStyle = "rgba(255,255,255,.12)"; ctx.fillRect(x0, y0, sz, sz);
-      if (snap.hold[i]) { ctx.fillStyle = kc(snap.hold[i]); ctx.fillRect(x0 + 3, y0 + 3, sz - 6, sz - 6); }
+      if (snap.hold[i]) { ctx.fillStyle = kc(snap.hold[i]); ctx.fillRect(x0 + 1, y0 + 1, sz - 2, sz - 2); }
     }
     const names = {}; snap.hold.forEach((k) => (names[k] = (names[k] || 0) + 1));
-    text("Giỏ " + snap.hold.length + "/" + cap + "  " + Object.keys(names).map((k) => (KIND_NAME[k] || k) + "×" + names[k]).join(", "), 14, y0 + sz + 16, { size: 12, color: "#cfd8dc" });
+    const materials = Object.entries(names).map(([kind, count]) => `${KIND_NAME[kind] || kind}×${count}`).join(", ");
+    text(`Giỏ ${snap.hold_count ?? snap.hold.length}/${cap} · ${materials || "trống"}`, 14, y0 + sz + 16,
+      { size: 12, color: "#cfd8dc", maxWidth: w - 28 });
   }
-  text("WASD/mũi tên bơi · E hái / cập bến · Space bắt cá · R chơi lại", w - 10, h - 14, { size: 12, align: "right", color: "#9fb3c0" });
+  text("WASD/mũi tên bơi · E hái/cập bến · Space bắt cá · R chơi lại", 14, h - 12,
+    { size: 12, color: "#9fb3c0", maxWidth: w - 28 });
 }
 
 // ----- cảnh QUÁN: nhìn từ trên xuống, x sang phải, z lên (bắc) -----
