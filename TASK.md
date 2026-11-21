@@ -121,7 +121,7 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Bàn nhận đúng `order_id` → `served`, ăn `eat_s × 60`; boa `floor(giá × tip_rate)` nếu tỷ lệ kiên nhẫn ≥ `tip_min_patience_ratio`; ăn xong → `paid` (`finished_eating`), boa dương + `tip_reputation`.
 - [x] Hết ca: khách đang ăn trả `closing`, khách chờ rời `closing` không trừ uy tín, rồi `quan_end`. Điểm = `earned + 100 × floor(reputation)`.
 - [x] Test `tests/test_p1_lat4.py`: AC-P1-09, AC-P1-10.
-- [ ] Mở PR, nhờ minhphuong150505 review.
+- [x] Mở PR, nhờ minhphuong150505 review.
 
 ### RachalHys — HUD + QA
 - [ ] HUD buổi tối: kho khả dụng, món gọi + kiên nhẫn từng khách, trạng thái bếp, món trên tay, tiền, uy tín.
