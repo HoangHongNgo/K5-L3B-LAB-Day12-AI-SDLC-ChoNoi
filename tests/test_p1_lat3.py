@@ -391,11 +391,12 @@ class CustomerArrivalSchedule(unittest.TestCase):
         self.assertEqual(tb["id"], "T0")
 
     def test_t05_no_table_skips_turn(self):
-        """T05: Không còn bàn thì bỏ lượt."""
-        self.sim.customers.append({
-            "id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
-            "order_status": "reserved", "reserved": {"ca_loc": 1}
-        })
+        """T05: Không còn bàn thì bỏ lượt (chiếm mọi bàn của tuning: v1.1 có T1–T4)."""
+        for i, table in enumerate(self.sim.tables, start=1):
+            self.sim.customers.append({
+                "id": f"C{i}", "table_id": table["id"], "dish_id": "ca_loc_nuong_trui",
+                "order_status": "reserved", "reserved": {"ca_loc": 1}
+            })
         self.assertIsNone(self.sim._find_available_table())
 
     def test_random_customers_false_disables_spawn(self):

@@ -249,7 +249,9 @@ class DockAndInventory(unittest.TestCase):
             fr += [{"tick": up, "move": [0, -1]}, {"tick": up + down + 30, "move": [-1, 0]},
                    {"tick": up + down + 30 + back, "move": [0, 0]}]
             fr += press(up + down + 30 + back + 5)
-            rows = run_gather(w, {"player": {"pos": [x0, 0]}, "nodes": nodes, "fish": fs}, fr, 900, inv)
+            # v1.1 (TICKET-02 4.3): cá fixture bơi khi random_fish bật -> tắt để giữ đàn ở chỗ đã dựng
+            rows = run_gather(w, {"player": {"pos": [x0, 0]}, "nodes": nodes, "fish": fs, "random_fish": False},
+                              fr, 900, inv)
             self.assertEqual(len(events(rows, "gather")), 1)
             self.assertEqual(len(events(rows, "fish_caught")), 1)
             self.assertEqual(events(rows, "gather_end")[0]["data"]["reason"], "docked")

@@ -231,14 +231,14 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 
 ### HoangHongNgo — Lát C (contract v1.1)
 - [ ] Phút 0–5: lưu ticket vào `docs/plan/phase-2.md`, báo bảng giao diện chốt sẵn ở trên cho cả nhóm.
-- [ ] `game.contract.json`: `contract_version:"1.1"`, toàn bộ số chuẩn mục 1.1–1.3, 6 nguyên liệu, 6 món, `day_plan` D1–D5, `shop.upgrades.oxygen/hp`, `gather.monsters`, khóa cá mới (mục 4.1).
-- [ ] `chonoi/contract.py`: kiểm khóa mới và dải hợp lệ; `day_plan.ingredients` phải bằng tổng công thức × số suất, sai thì mã 2.
+- [x] `game.contract.json`: `contract_version:"1.1"`, toàn bộ số chuẩn mục 1.1–1.3, 6 nguyên liệu, 6 món, `day_plan` D1–D5, `shop.upgrades.oxygen/hp`, `gather.monsters`, khóa cá mới (mục 4.1). — *haiquanng làm thay (nhánh `p2/contract-v11-haiquanng`); thêm `extensions: ["net"]`*
+- [x] `chonoi/contract.py`: kiểm khóa mới và dải hợp lệ; `day_plan.ingredients` phải bằng tổng công thức × số suất, sai thì mã 2. — *haiquanng làm thay; `tests/test_p2_contract.py`*
 - [ ] Cập nhật `docs/contracts/README.md`: event mới (`monster_hit`, `fish_spawned`, `day_start`, `phase_start`, `day_plan`, `paused`, `resumed`, `bought`, `buy_failed`, `shop_end`), trường snapshot mới, vỏ event có `day`.
 - [ ] Commit: `contract: v1.1 số chuẩn, day_plan, shop, monsters`.
 - [ ] Khung `docs/verification/phase-2.md`: liệt kê AC-P2-xx theo `docs/plan/phase-2.md`, cột cách kiểm chứng / bằng chứng / kết quả; ghi sẵn lệnh kiểm cho từng AC để các lát biết test nào cần viết.
 - [ ] Commit: `docs: khung verification Phase 2`.
 - [ ] Rà test P1 nào sẽ vỡ vì số chuẩn mới, gửi danh sách cho các lát (nhận từ RachalHys).
-- [ ] `headless.py`: thêm cờ `--mode day`, `--days 1..5` (mặc định 1, chỉ hợp lệ với `day`), sai thì mã 2; gọi `DaySim` của lát D (nhận từ phuthaitran).
+- [x] `headless.py`: thêm cờ `--mode day`, `--days 1..5` (mặc định 1, chỉ hợp lệ với `day`), sai thì mã 2; gọi `DaySim` của lát D (nhận từ phuthaitran). — *haiquanng làm thay; mode day yêu cầu contract 1.1; kho đọc 6 nguyên liệu theo dữ liệu*
 - [ ] Commit: `headless: cờ --mode day, --days`.
 
 ### haiquanng — Lát A (cá & hái)
