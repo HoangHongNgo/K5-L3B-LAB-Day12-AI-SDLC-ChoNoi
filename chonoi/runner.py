@@ -15,18 +15,28 @@ from .inventory import write_inventory
 from .jsonl import JsonlWriter
 from .rng import Streams
 from .sim.gather import GatherSim
+from .sim.pause import PauseSim
 from .sim.quan import QuanSim
 
 
-def build_sim(mode, tuning, scenario, seed, inventory):
+def build_sim(mode, tuning, scenario, seed, inventory, days=1):
+    """Dựng sim của mode và bọc `PauseSim` (pause xử lý ở lớp bọc chung, không nằm trong từng sim)."""
     streams, ids = Streams(seed), IdAllocator()
     if mode == "gather":
-        return GatherSim(tuning, scenario, streams, ids)
-    return QuanSim(tuning, scenario, streams, ids, inventory=inventory)
+        return PauseSim(GatherSim(tuning, scenario, streams, ids))
+    if mode == "day":
+        try:
+            from .sim.day import DaySim  # lát D (phuthaitran); import trễ để các mode kia chạy được khi chưa có
+        except ImportError:
+            raise NotImplementedError("--mode day cần chonoi/sim/day.py (DaySim của lát D)")
+        return PauseSim(DaySim(tuning, scenario, streams, days=days))
+    return PauseSim(QuanSim(tuning, scenario, streams, ids, inventory=inventory))
 
 
 def _common(sim, tick, sim_tick, phase_tick, tuning, state):
     mult = tuning["score"]["reputation_multiplier"]
+    if state == "playing" and getattr(sim, "paused", False):
+        state = "paused"
     return {
         "type": "snapshot", "tick": tick, "sim_tick": sim_tick, "mode": sim.mode, "phase": sim.phase,
         "phase_tick": phase_tick, "state": state, "time_left_ticks": sim.time_left_ticks,
@@ -38,10 +48,10 @@ def _common(sim, tick, sim_tick, phase_tick, tuning, state):
 class Session:
     """Một lượt chơi: dựng sim, bước từng tick, lấy snapshot / dòng end."""
 
-    def __init__(self, mode, tuning, scenario, seed, inventory=None):
+    def __init__(self, mode, tuning, scenario, seed, inventory=None, days=1):
         self.mode = mode
         self.tuning = tuning
-        self.sim = build_sim(mode, tuning, scenario, seed, inventory)
+        self.sim = build_sim(mode, tuning, scenario, seed, inventory, days)
         self.tick = 0
 
     @property
@@ -49,24 +59,38 @@ class Session:
         return self.sim.done
 
     def snapshot(self) -> dict:
-        s = _common(self.sim, self.tick, self.tick, self.tick, self.tuning, "finished" if self.sim.done else "playing")
-        s.update(self.sim.snapshot())
+        sim = self.sim
+        s = _common(sim, self.tick, sim.sim_tick, sim.phase_tick, self.tuning, "finished" if sim.done else "playing")
+        s.update(sim.snapshot())
         return s
 
     def step(self, inp) -> list:
         """Chạy một bước với `inp` (chonoi.inputs.InputState); trả các dòng event (tick = k + 1)."""
         events = self.sim.step(inp)
         self.tick += 1
-        return [{"type": "event", "tick": self.tick, "phase": self.sim.phase, "name": name, "data": data}
-                for name, data in events]
+        return [self._event_row(ev) for ev in events]
+
+    def _event_row(self, ev) -> dict:
+        """Vỏ event. Sim trả `(name, data)`; riêng `day` có thể trả `(name, data, {"phase","day"})` để ghi
+        đúng pha/Ngày của event kết thúc pha cũ (sau bước, `sim.phase` có thể đã sang pha mới)."""
+        name, data = ev[0], ev[1]
+        ctx = ev[2] if len(ev) > 2 else {}
+        row = {"type": "event", "tick": self.tick, "phase": ctx.get("phase", self.sim.phase)}
+        if self.mode == "day":
+            row["day"] = ctx.get("day", self.sim.day)
+        row.update({"name": name, "data": data})
+        return row
 
     def end_row(self) -> dict:
         sim = self.sim
         score = _common(sim, self.tick, self.tick, self.tick, self.tuning, "")["score"]
-        return {"type": "end", "ticks": self.tick, "sim_tick": self.tick, "mode": sim.mode,
-                "state": "finished" if sim.done else "playing",
-                "reason": sim.reason if sim.done else "tick_limit",
-                "money": sim.money, "earned": sim.earned, "reputation": sim.reputation, "score": score}
+        row = {"type": "end", "ticks": self.tick, "sim_tick": sim.sim_tick, "mode": sim.mode,
+               "state": "finished" if sim.done else "playing",
+               "reason": sim.reason if sim.done else "tick_limit",
+               "money": sim.money, "earned": sim.earned, "reputation": sim.reputation, "score": score}
+        if self.mode == "day":
+            row["days_completed"] = sim.days_completed
+        return row
 
     def write_inventory_if_done(self, inventory_out):
         """File kho: ghi MỘT lần khi có gather_end; chưa kết thúc thì giữ nguyên file đích."""
@@ -74,8 +98,9 @@ class Session:
             write_inventory(inventory_out, self.sim.inventory_items())
 
 
-def run(mode, tuning, scenario, seed, frames, ticks, out_path, snapshot_every, inventory=None, inventory_out=None):
-    sess = Session(mode, tuning, scenario, seed, inventory)
+def run(mode, tuning, scenario, seed, frames, ticks, out_path, snapshot_every, inventory=None, inventory_out=None,
+        days=1):
+    sess = Session(mode, tuning, scenario, seed, inventory, days)
     player = InputPlayer(frames)
     w = JsonlWriter(out_path)
     try:
