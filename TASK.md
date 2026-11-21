@@ -157,8 +157,8 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 ## 1.5 Bàn giao (phút 55–60)
 
 ### Mọi người
-- [ ] Ghi phần của mình vào `docs/ai-usage-log.md` (công cụ, việc dùng AI, token/chi phí nếu đo được). — xong: ChuTungDuongg, haiquanng, phuthaitran
-- [ ] Tạo `docs/members/<handle>.md` theo `docs/members/TEMPLATE.md` (có thể hoàn thiện ở phase sau). — xong: ChuTungDuongg, haiquanng, phuthaitran
+- [ ] Ghi phần của mình vào `docs/ai-usage-log.md` (công cụ, việc dùng AI, token/chi phí nếu đo được). — xong: ChuTungDuongg, haiquanng, phuthaitran, RachalHys
+- [ ] Tạo `docs/members/<handle>.md` theo `docs/members/TEMPLATE.md` (có thể hoàn thiện ở phase sau). — xong: ChuTungDuongg, haiquanng, phuthaitran, RachalHys
 
 ### HoangHongNgo
 - [x] Cập nhật `docs/clarify.md`, `docs/standup.md`, ghi nhanh vào `docs/retro.md`.
