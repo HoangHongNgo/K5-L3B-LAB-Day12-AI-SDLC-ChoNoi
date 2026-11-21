@@ -3,16 +3,11 @@
 Mặt cắt dòng sông nhìn NGANG: vị trí `[x, d]` (x sang phải, `d` độ sâu hướng xuống, d = 0 là mặt nước).
 `move = [x, d]`: thành phần thứ hai DƯƠNG = bơi xuống. Hướng mặt là góc từ +x, dương = xuống.
 
-Đã làm sẵn để smoke test chạy được: bơi + tăng/giảm tốc, chặn mép (d không âm), đồng hồ và hết giờ,
-cập bến (`interact` trong vùng bến -> `gather_end` reason `docked`), xuất kho, snapshot đầy đủ trường gather.
+Đã có: bơi + tăng/giảm tốc, chặn mép (d không âm), oxy, ngạt, ngất và bỏ giỏ theo LIFO,
+đồng hồ và hết giờ, cập bến (`interact` trong vùng bến -> `gather_end` reason `docked`),
+xuất kho, snapshot đầy đủ trường gather.
 
 Nhóm viết tiếp (đúng thứ tự một bước trong PRD mục 13.8, "Gather"):
-  TODO(nhóm, lát 1): bơi + oxy + biên + giỏ
-      - oxy: dưới nước (d > surface_depth) trừ 1 tick/tick, mặt nước hồi oxygen_refill_per_tick, kẹp [0, max]
-      - ngạt: oxy = 0 và đang dưới nước -> đếm zero_oxy_ticks, đủ choke_interval_ticks thì -1 Máu (choke)
-      - Máu về 0 -> ngất (faint, gather_end reason `fainted`, mất toàn bộ giỏ, kho rỗng)
-      - sự kiện dive / surface / oxygen_empty / choke / faint
-      - giỏ: thứ tự nhặt (LIFO), sức chứa hold_capacity
   TODO(nhóm, lát 2): hái + bắt cá + cập bến + kho
       - hái nút ở mặt nước (gather, hold_full), nút mọc lại (node_regrown đã có phần đếm ngược)
       - bắt đàn cá bằng `catch` (fish_caught, hold_full, hồi chiêu catch_cd_ticks, chỉ khi dưới nước)
@@ -41,6 +36,7 @@ class GatherSim:
         self.ids = ids
         p = scenario.get("player", {})
         self.pos = [float(c) for c in p.get("pos", t["start_pos"])]
+        self._depth_rounding_error = 0.0
         self.vel = [float(c) for c in p.get("vel", [0.0, 0.0])]
         self._tgt = None
         self._ramp_left = 0
@@ -107,11 +103,12 @@ class GatherSim:
                 n["regrow_ticks"] -= 1
                 if n["regrow_ticks"] == 0:
                     events.append(("node_regrown", {"node_id": n["id"]}))
-        # 2. bơi + chặn mép
+        # 2. bơi, chặn mép, tính oxy và ngạt theo độ sâu cuối bước
+        was_surface = self._at_surface()
         self._move(inp)
-        # TODO(nhóm, lát 1): so phân vùng đầu/cuối bước -> dive / surface (data: pos).
-        # TODO(nhóm, lát 1): oxy theo d CUỐI bước (mặt nước hồi, dưới nước trừ), oxygen_empty khi từ dương
-        #   xuống 0, đếm ngạt, choke (-1 Máu). Máu 0 -> faint + gather_end("fainted") với giỏ rỗng, return.
+        self._update_oxygen(events, was_surface)
+        if self.done:
+            return events
         # 3. interact: bến trước, rồi hái
         if inp.pressed("interact"):
             if self._in_dock():
@@ -131,6 +128,36 @@ class GatherSim:
     def _at_surface(self) -> bool:
         return self.pos[1] <= self.t["surface_depth"]
 
+    def _update_oxygen(self, events, was_surface: bool) -> None:
+        at_surface = self._at_surface()
+        if at_surface != was_surface:
+            events.append(("surface" if at_surface else "dive", {"pos": self.pos.copy()}))
+
+        if at_surface:
+            self.oxygen_ticks = min(self.oxygen_max, self.oxygen_ticks + self.t["oxygen_refill_per_tick"])
+            self.zero_oxy_ticks = 0
+            return
+
+        had_oxygen = self.oxygen_ticks > 0
+        self.oxygen_ticks = max(0, self.oxygen_ticks - 1)
+        if self.oxygen_ticks > 0:
+            return
+        if had_oxygen:
+            events.append(("oxygen_empty", {"oxygen_ticks": 0}))
+
+        self.zero_oxy_ticks += 1
+        if self.zero_oxy_ticks < self.t["choke_interval_ticks"]:
+            return
+
+        self.zero_oxy_ticks = 0
+        self.hp -= 1
+        events.append(("choke", {"hp": self.hp}))
+        if self.hp == 0:
+            lost = list(reversed(self.hold))
+            self.hold.clear()
+            events.append(("faint", {"cause": "choke", "lost": lost, "hp": 0}))
+            self._finish("fainted", events)
+
     def _in_dock(self) -> bool:
         return math.dist(self.pos, self.t["dock_pos"]) <= self.t["dock_radius"]
 
@@ -147,8 +174,18 @@ class GatherSim:
             self.heading = math.degrees(math.atan2(md, mx)) % 360
         b = self.t["bounds"]
         for i, axis in enumerate(AXES):
-            self.pos[i] += self.vel[i] / TICK
+            delta = self.vel[i] / TICK
             lo, hi = b[axis]
+            if axis == "d":
+                # Cộng bù sai số để đi tới đúng ngưỡng mặt nước sau nhiều bước.
+                delta -= self._depth_rounding_error
+                depth = self.pos[i] + delta
+                self._depth_rounding_error = (
+                    (depth - self.pos[i]) - delta if lo < depth < hi else 0.0
+                )
+                self.pos[i] = depth
+            else:
+                self.pos[i] += delta
             if self.pos[i] <= lo:
                 self.pos[i] = lo
                 self.vel[i] = max(0.0, self.vel[i])
