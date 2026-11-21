@@ -10,6 +10,7 @@ import math
 from fractions import Fraction
 
 from ..ids import id_key, sort_by_id
+from . import reservations as res_mod
 from .ramp import ramp_velocity
 
 TICK = 60.0
@@ -51,7 +52,7 @@ class QuanSim:
     phase = "quan"
 
     def __init__(self, tuning, scenario, streams, ids=None, *, inventory=None, menu_ids=None,
-                 money=0, earned=0, reputation=None, ctx=None, **kwargs):
+                 money=0, earned=0, reputation=None, ctx=None, reservations=None, **kwargs):
         if ids is None:
             from ..ids import IdAllocator
             ids = IdAllocator()
@@ -143,6 +144,43 @@ class QuanSim:
         self.done = False
         self.reason = None
         self.result = None
+        self._init_reservations(tuning, scenario, streams, menu_ids, reservations)
+
+    def _init_reservations(self, tuning, scenario, streams, menu_ids, entries):
+        """Mở rộng `reservations` (lát D): `day` truyền đơn đã công bố; quán độc lập tự công bố lúc dựng pha."""
+        self.book = None
+        self.initial_events = []
+        if not res_mod.enabled(tuning):
+            return
+        if entries is None:
+            if "reservations" in scenario:
+                res_mod.validate(scenario["reservations"], tuning)
+                entries = scenario["reservations"]
+            elif scenario.get("random_reservations", True):
+                entries = res_mod.generate(tuning, streams, menu_ids)
+            else:
+                entries = []
+            self.initial_events = res_mod.announced(entries)
+        self.book = res_mod.ReservationBook(tuning, entries)
+        for c in self.customers:
+            c.setdefault("reservation_id", None)
+
+    def _reserve_recipe(self, recipe):
+        """Giữ nguyên liệu cho một công thức (tươi nhất rồi id nhỏ); thiếu -> None."""
+        if not self.is_item_inventory:
+            avail = self._available_stock()
+            return dict(recipe) if all(avail.get(k, 0) >= n for k, n in recipe.items()) else None
+        taken = {iid for c in self.customers if c.get("order_status") == "reserved"
+                 and isinstance(c.get("reserved"), list) for iid in c["reserved"]}
+        chosen = []
+        for k, n in recipe.items():
+            cands = sorted((it for it in self.items if it["kind"] == k and it["fresh"] >= Fraction(30)
+                            and it["id"] not in taken), key=lambda it: (-it["fresh"], id_key(it["id"])))
+            if len(cands) < n:
+                return None
+            chosen.extend(it["id"] for it in cands[:n])
+            taken.update(it["id"] for it in cands[:n])
+        return sorted(chosen, key=id_key)
 
     @staticmethod
     def _merge(defaults, updates):
@@ -161,7 +199,7 @@ class QuanSim:
                           for it in sorted(self.items, key=lambda x: id_key(x["id"]))]
         else:
             stock_data = {k: self.stock[k] for k in sorted(self.stock) if self.stock[k] > 0}
-        return {
+        snap = {
             "player": {"pos": self.pos},
             "stock": stock_data,
             "hand": self.hand,
@@ -170,6 +208,11 @@ class QuanSim:
             "tables": [{"id": tb["id"], "pos": tb["pos"], "customer_id": occupied.get(tb["id"])} for tb in self.tables],
             "customers": sort_by_id(self.customers),
         }
+        if self.book is not None:
+            snap["reservations"] = self.book.snapshot()
+            for tb in snap["tables"]:
+                tb["reservation_id"] = self.book.table_reservation(tb["id"])
+        return snap
 
     def stats(self) -> dict:
         best_dish = None
@@ -196,6 +239,8 @@ class QuanSim:
         self._update_customer_patience()
         # 2. Hao tươi kho thô, spoiled events, re-reservation
         events.extend(self._decay_freshness_and_handle_spoiled())
+        if self.book is not None:
+            events.extend(self.book.after_spoil(self))
         # 3. Bếp chín -> ready
         events.extend(self._update_stoves())
         # 4. Di chuyển người chơi & interact
@@ -205,6 +250,8 @@ class QuanSim:
         # 5. Khách ăn xong trả tiền, hết kiên nhẫn rời, hoặc dọn cuối ca
         closing = self.time_left_ticks <= 0
         events.extend(self._settle_customers(closing))
+        if closing and self.book is not None:
+            events.extend(self.book.close(self))
         if closing:
             for s in self.stoves:
                 s.update(state="idle", dish=None, cook_ticks_left=0, ready_ticks=0)
@@ -227,7 +274,9 @@ class QuanSim:
                 "stats": self.stats(),
             }
             return events
-        # 6. Khách mới theo lịch (first_customer_tick, customer_interval_s)
+        # 6. Đặt trước theo id (nếu bật) rồi khách mới theo lịch (first_customer_tick, customer_interval_s)
+        if self.book is not None:
+            events.extend(self.book.process(self))
         if self._should_spawn_customer():
             table = self._find_available_table()
             if table is not None:
@@ -398,15 +447,21 @@ class QuanSim:
             price = c["base_price"] if c["base_price"] is not None else self.menu[c["dish_id"]]["price"]
         patience_max = int(round(self.t["patience_s"] * self.tick_hz))
         ratio = Fraction(c["patience_ticks_left"], patience_max)
+        reservation_id = c.get("reservation_id")
+        if reservation_id is not None and self.book is not None:
+            price = self.book.final_price(price)  # giá cuối của khách đặt trước, rồi mới tính boa
         tip = 0
         if ratio >= Fraction(str(self.t.get("tip_min_patience_ratio", 0.5))):
             tip = math.floor(price * Fraction(str(self.t.get("tip_rate", 0.2))))
         self.hand = None
         c.update(state="eating", order_status="served", base_price=price, tip=tip,
                  eat_ticks_left=int(round(self.t.get("eat_s", 10.0) * self.tick_hz)))
-        return [("served", {"order_id": c["id"], "table_id": c["table_id"],
-                            "dish_id": c["dish_id"], "patience_ticks_left": c["patience_ticks_left"],
-                            "base_price": price, "tip": tip})]
+        events = [("served", {"order_id": c["id"], "table_id": c["table_id"],
+                              "dish_id": c["dish_id"], "patience_ticks_left": c["patience_ticks_left"],
+                              "base_price": price, "tip": tip})]
+        if reservation_id is not None and self.book is not None:
+            events.extend(self.book.served(c, price))
+        return events
 
     def _settle_customers(self, closing) -> list:
         """Theo id bàn: ăn xong -> paid; còn giờ mà hết kiên nhẫn -> rời patience;
@@ -418,6 +473,10 @@ class QuanSim:
                     events.extend(self._pay(c, "finished_eating"))
                 elif closing:
                     events.extend(self._pay(c, "closing"))
+            elif c.get("reservation_id") is not None and self.book is not None:
+                # khách đặt trước: đóng ca do book.close() fail theo id đặt; hết kiên nhẫn -> fail patience
+                if not closing and c["patience_ticks_left"] <= 0:
+                    events.extend(self.book.fail(self, self.book.by_id(c["reservation_id"]), "patience"))
             elif closing:
                 events.extend(self._expire_customer(c, reason="closing"))
             elif c["patience_ticks_left"] <= 0:
@@ -491,7 +550,8 @@ class QuanSim:
 
     def _find_available_table(self):
         occupied = {c["table_id"]: c["id"] for c in self.customers}
-        free_tables = [tb for tb in self.tables if tb["id"] not in occupied]
+        held = self.book.held_tables() if self.book is not None else set()  # khách mới không ngồi bàn giữ
+        free_tables = [tb for tb in self.tables if tb["id"] not in occupied and tb["id"] not in held]
         if not free_tables:
             return None
         return sort_by_id(free_tables)[0]
@@ -555,6 +615,8 @@ class QuanSim:
             "base_price": None,
             "tip": 0,
         }
+        if self.book is not None:
+            new_customer["reservation_id"] = None
         self.customers.append(new_customer)
         events.append((
             "customer_arrived",

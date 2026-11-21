@@ -21,6 +21,7 @@ import inspect
 
 from ..errors import BadInput
 from ..ids import IdAllocator
+from . import reservations as res_mod
 
 MAX_DAYS = 5
 
@@ -40,10 +41,11 @@ def _gather_factory(tuning, scenario, streams, ids, *, day, active_upgrades):
     return _call_compatible(GatherSim, tuning, scenario, streams, ids, day=day, active_upgrades=active_upgrades)
 
 
-def _quan_factory(tuning, scenario, streams, ids, *, inventory, menu_ids, money, earned, reputation):
+def _quan_factory(tuning, scenario, streams, ids, *, inventory, menu_ids, money, earned, reputation,
+                  reservations=None):
     from .quan import QuanSim
     return _call_compatible(QuanSim, tuning, scenario, streams, ids, inventory=inventory, menu_ids=menu_ids,
-                            money=money, earned=earned, reputation=reputation)
+                            money=money, earned=earned, reputation=reputation, reservations=reservations)
 
 
 def _shop_factory(tuning, *, money, earned, upgrades, stock):
@@ -133,6 +135,7 @@ class DaySim:
         self.sim_tick = 0
         self.phase_tick = 0
         self.plan = None
+        self.reservations = None  # mở rộng `reservations`: đơn của Ngày (None khi tắt)
         self.cur = None
         self.done = False
         self.reason = None
@@ -173,6 +176,8 @@ class DaySim:
     def snapshot(self) -> dict:
         snap = dict(self.cur.snapshot())
         upgrades = getattr(self.cur, "upgrades", None) if self.cur.phase == "shop" else None
+        if self.reservations is not None and self.cur.phase == "gather":
+            snap["reservations"] = res_mod.snapshot_entries(self.reservations)
         snap.update(day=self.day, day_plan=self.plan,
                     upgrades=dict(upgrades if upgrades is not None else self.state.upgrades),
                     active_upgrades=dict(self.state.active_upgrades))
@@ -196,16 +201,47 @@ class DaySim:
         self.phase_tick = 0
         return [self._ev("phase_start", {})]
 
+    def _gather_template(self):
+        """Mẫu `gather` của Ngày (TICKET-03 Contract v1.2 › Scenario): Ngày đầu giữ nguyên id trong
+        `gather.hold`; các Ngày kế cấp id mới theo thứ tự mảng, giữ kind/fresh ban đầu của mẫu."""
+        block = copy.deepcopy(self.scenario.get("gather", {}))
+        hold = block.get("hold")
+        if self.days_completed > 0 and isinstance(hold, list):
+            block["hold"] = [dict(it, id=self.ids.new("I")) if isinstance(it, dict) else it for it in hold]
+        return block
+
     def _start_day(self):
         self.plan = plan_for(self.tuning, self.scenario.get("day"), self.day)
-        gather = self.f["gather"](self.tuning, copy.deepcopy(self.scenario.get("gather", {})), self.streams,
+        if self.days_completed == 0:  # id cá thể Ngày đầu đã dùng -> cấp tiếp sau hậu tố lớn nhất
+            for it in self.scenario.get("gather", {}).get("hold", []):
+                if isinstance(it, dict) and isinstance(it.get("id"), str):
+                    self.ids.reserve(it["id"])
+        gather = self.f["gather"](self.tuning, self._gather_template(), self.streams,
                                   self.ids, day=self.day, active_upgrades=dict(self.state.active_upgrades))
         self.cur = gather
         evs = [self._ev("day_start", {}, "gather"), self._ev("day_plan", copy.deepcopy(self.plan), "gather")]
-        return evs + self._phase_start(gather)
+        evs += self._phase_start(gather)
+        return evs + self._announce_reservations()
+
+    def _announce_reservations(self):
+        """Đặt trước (mở rộng): công bố R1, R2 sau phase_start(gather), món trong kế hoạch Ngày."""
+        self.reservations = None
+        if not res_mod.enabled(self.tuning):
+            return []
+        q = self.scenario.get("quan", {})
+        if "reservations" in q:
+            res_mod.validate(q["reservations"], self.tuning)
+            entries = copy.deepcopy(q["reservations"])
+        elif q.get("random_reservations", True):
+            entries = res_mod.generate(self.tuning, self.streams, list(self.plan["dishes"]))
+        else:
+            entries = []
+        self.reservations = entries
+        return [self._ev(name, data, "gather") for name, data in res_mod.announced(entries)]
 
     def _result(self):
-        res = getattr(self.cur, "result", None)
+        # `dir` không gọi property: lỗi bên trong `result` phải nổi lên, không rơi vào nhánh dự phòng.
+        res = self.cur.result if "result" in dir(self.cur) else None
         if res is None and self.cur.phase == "quan":
             # QuanSim trước khi gộp lát Q chưa có `result`: đọc trạng thái cuối theo cùng khóa.
             c = self.cur
@@ -217,17 +253,20 @@ class DaySim:
         res = self._result()
         if phase == "gather":
             block = copy.deepcopy(self.scenario.get("quan", {}))
-            items, menu_ids = dict(res["inventory"]["items"]), list(self.plan["dishes"])
+            # Bàn giao trong CÙNG tick đổi pha, nguyên id/kind/fresh (kho đếm v1.1 hoặc cá thể v1.2),
+            # không hao thêm; quán chạy từ bước sau.
+            items, menu_ids = copy.deepcopy(res["inventory"]["items"]), list(self.plan["dishes"])
             if self.f["quan"] is _quan_factory:
                 _validate_quan_opening(self.tuning, block, items, menu_ids)
+            extra = {} if self.reservations is None else {"reservations": copy.deepcopy(self.reservations)}
             quan = self.f["quan"](self.tuning, block, self.streams, self.ids, inventory=items, menu_ids=menu_ids,
                                   money=self.state.money, earned=self.state.earned,
-                                  reputation=self.state.reputation)
+                                  reputation=self.state.reputation, **extra)
             return self._phase_start(quan)
         if phase == "quan":
             self.state.apply_quan_result(res)
             shop = self.f["shop"](self.tuning, money=self.state.money, earned=self.state.earned,
-                                  upgrades=dict(self.state.upgrades), stock=dict(res.get("stock", {})))
+                                  upgrades=dict(self.state.upgrades), stock=copy.deepcopy(res.get("stock", {})))
             return self._phase_start(shop)
         # shop đóng: Ngày hoàn tất; kho dư bị bỏ.
         self.state.apply_shop_result(res)

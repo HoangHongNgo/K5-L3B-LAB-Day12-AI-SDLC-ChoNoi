@@ -489,12 +489,12 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Đã gộp [PR #23](https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi/pull/23) cho Phase 3 và [PR #31](https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi/pull/31) cho lượt rà soát Phase 4.
 
 ### phuthaitran — Lát D (day + đặt trước, mở rộng 2)
-- [ ] `day.py`: bàn giao kho cá thể **trong cùng tick chuyển pha**, hàng không hao thêm, ca quán chạy từ bước sau; id tiếp tục tăng xuyên pha và Ngày; Ngày kế cấp id mới theo thứ tự mảng với kind/fresh ban đầu của mẫu `gather.hold`.
-- [ ] Hàng thô ở Shop/chờ nhập không hao tươi; (nếu nhóm làm Chợ Chú Sáu) hàng mua vào kho quán Ngày kế với `fresh:100`, id mới, tách khỏi `gather_end.inventory`.
-- [ ] Đặt trước: mỗi Ngày công bố 2 đơn R1,R2 sau `phase_start(gather)` (`reservation_announced`), bàn khác nhau, món trong kế hoạch, tick đến theo seed trong [1800,10799]; snapshot gather trong `day` và quán có `reservations[]` + `state`, `customers[].reservation_id`, `tables[].reservation_id`.
-- [ ] Trạng thái `scheduled → holding → waiting → served | failed`; giữ bàn từ `max(0, arrival_tick − 1800)`; đến giờ: `occupied` / `stock` → fail; thành công → giữ nguyên liệu, `reservation_arrived` rồi `customer_arrived`, kiên nhẫn 60 s, giá `floor(giá đã chốt × 1.5)` rồi mới boa; `served` rồi `reservation_served`.
-- [ ] Lỡ đơn (`stock`/`occupied`/`burnt`/`patience`/`closing`): nhả hàng/bàn, hủy món, uy tín −1 đúng một lần, `reservation_failed`; món cháy phát `dish_burnt` (`order_status:"failed"`) trước; đóng ca fail các đơn chưa xong theo id.
-- [ ] Test `tests/test_p3_day.py` (bàn giao cùng tick, id xuyên Ngày) và `tests/test_p3_reservations.py` (hai đơn, fail từng lý do, một lần phạt, `random_reservations:false`).
+- [x] `day.py`: bàn giao kho cá thể **trong cùng tick chuyển pha**, hàng không hao thêm, ca quán chạy từ bước sau; id tiếp tục tăng xuyên pha và Ngày; Ngày kế cấp id mới theo thứ tự mảng với kind/fresh ban đầu của mẫu `gather.hold`.
+- [x] Hàng thô ở Shop/chờ nhập không hao tươi; (nếu nhóm làm Chợ Chú Sáu) hàng mua vào kho quán Ngày kế với `fresh:100`, id mới, tách khỏi `gather_end.inventory`.
+- [x] Đặt trước: mỗi Ngày công bố 2 đơn R1,R2 sau `phase_start(gather)` (`reservation_announced`), bàn khác nhau, món trong kế hoạch, tick đến theo seed trong [1800,10799]; snapshot gather trong `day` và quán có `reservations[]` + `state`, `customers[].reservation_id`, `tables[].reservation_id`.
+- [x] Trạng thái `scheduled → holding → waiting → served | failed`; giữ bàn từ `max(0, arrival_tick − 1800)`; đến giờ: `occupied` / `stock` → fail; thành công → giữ nguyên liệu, `reservation_arrived` rồi `customer_arrived`, kiên nhẫn 60 s, giá `floor(giá đã chốt × 1.5)` rồi mới boa; `served` rồi `reservation_served`.
+- [ ] Lỡ đơn (`stock`/`occupied`/`burnt`/`patience`/`closing`): nhả hàng/bàn, hủy món, uy tín −1 đúng một lần, `reservation_failed`; món cháy phát `dish_burnt` (`order_status:"failed"`) trước; đóng ca fail các đơn chưa xong theo id. — xong trừ `burnt` (mở rộng `burn` chưa có trên main).
+- [x] Test `tests/test_p3_day.py` (bàn giao cùng tick, id xuyên Ngày) và `tests/test_p3_reservations.py` (hai đơn, fail từng lý do, một lần phạt, `random_reservations:false`).
 - [ ] Mở PR sau lát Q (đặt trước chạm `quan.py` → phối hợp với minhphuong150505). Commit: `day: bàn giao kho cá thể`, `quan: đặt trước R1/R2`.
 
 ### RachalHys — Lát U (HUD) + QA

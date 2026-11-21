@@ -20,7 +20,7 @@ NODE_KINDS = ("bong_dien_dien", "bong_sung", "keo_neo")
 FISH_KINDS = ("ca_linh", "ca_loc", "ca_keo")
 MONSTER_KEYS = {"id", "kind", "pos", "waypoints", "target_idx", "state", "state_ticks_left", "recoil_dir"}
 QUAN_PLAYER_KEYS = {"pos", "vel"}
-QUAN_KEYS = {"player", "stock", "hand", "stoves", "tables", "customers", "random_customers",
+QUAN_KEYS = {"player", "stock", "hand", "stoves", "tables", "customers", "random_customers", "reservations", "random_reservations",
              "reputation", "time_left_ticks"}
 DAY_KEYS = {"money", "earned", "reputation", "upgrades", "day_plan"}
 
@@ -356,6 +356,12 @@ def _validate_quan(b, tuning):
 
     if "stock" in b:
         validate_items(b["stock"], kinds=all_kinds)
+    # mở rộng `reservations` (lát D): đơn tường minh thay toàn bộ danh sách; random_reservations:false tắt tự sinh
+    if "random_reservations" in b and not isinstance(b["random_reservations"], bool):
+        raise BadInput("random_reservations phải là boolean")
+    if "reservations" in b:
+        from .sim.reservations import validate as _validate_reservations
+        _validate_reservations(b["reservations"], tuning)
     if "random_customers" in b and not isinstance(b["random_customers"], bool):
         raise BadInput("random_customers phải là boolean")
 
