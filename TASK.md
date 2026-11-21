@@ -143,8 +143,8 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Chạy hai lần cùng seed, so `cmp` để kiểm giống từng byte.
 
 ### RachalHys
-- [ ] Lưu output thật vào `docs/proof/phase-1/` (log test, `gather.jsonl`, `catch.json`, `quan.jsonl`, ảnh HUD).
-- [ ] Điền `docs/verification/phase-1.md`: AC → cách kiểm → link bằng chứng → đạt/chưa đạt (ghi trung thực).
+- [x] Lưu log test, `gather.jsonl`, `catch.json`, `quan.jsonl` và ảnh HUD trong `docs/proof/phase-1/`.
+- [x] Điền ma trận 12 AC theo lần chạy trên `main` tại `a1c94cb`. Chạy lại khi có commit bàn giao chính thức.
 
 ### ChuTungDuongg + haiquanng
 - [ ] Chơi thử `gather` trên `main`: lặn tới ngạt, hái, bắt cá, cập bến; ghi lỗi thấy được vào kênh nhóm, sửa nhanh nếu kịp.

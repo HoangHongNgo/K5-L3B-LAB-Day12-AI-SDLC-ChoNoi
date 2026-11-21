@@ -1,0 +1,19 @@
+Revision main: a1c94cb2a78532dccbacd1c8b5d7f1db5adfe361
+AC-P1-01: v1.0, team_size=6, tick_hz=60, kho mẫu exit=0 stock={'bong_sung': 2, 'ca_loc': 1}
+AC-P1-02 oxygen_empty/choke: [(1, {'oxygen_ticks': 0})] [(60, {'hp': 2})]
+AC-P1-02 nổi đúng bước ngạt: [(1, {'pos': [20.0, 0.443]})] [] 6
+AC-P1-03 ngất: [(1, {'cause': 'choke', 'lost': ['bong_sung', 'ca_loc'], 'hp': 0})] [(1, {'reason': 'fainted', 'inventory': {'items': {}}})] {"items":{}}
+AC-P1-04 hái/mọc lại, kỳ vọng amount: [(1, {'node_id': 'N1', 'kind': 'bong_sung', 'count': 1})] [(1201, {'node_id': 'N1'})]
+AC-P1-05 bắt cá, kỳ vọng yield: [(1, {'fish_id': 'F1', 'kind': 'ca_linh', 'count': 3})] giỏ = 3
+AC-P1-06 hai tiến trình và lặp seed 42 giống từng byte: {'bong_sung': 2, 'ca_loc': 1}
+gather.jsonl 6bc3a907bb1c941be656463f91009d0644398b32057bef98ba04103b2eaed8f9
+catch.json b6bb9d2da81ecee69d01fd0860cef1b54edfcb140409c250b4ec3ba1e4410b65
+quan.jsonl e4d852552c5414a2aa58686488a8790b96728f50c251863ade23520a01fc71d3
+AC-P1-06 tick_limit: giữ nguyên file kho có sẵn.
+AC-P1-07 no_dish, kỳ vọng data {}: [(120, {'table_id': 'T1'}), (1020, {'table_id': 'T1'})]
+AC-P1-07 customer_arrived, kỳ vọng order_id / table_id / dish_id: [(120, {'customer_id': 'C1', 'table_id': 'T1', 'dish_id': 'ca_loc_nuong_trui', 'reserved': {'ca_loc': 1}})] [{'id': 'C1', 'table_id': 'T1', 'dish_id': 'ca_loc_nuong_trui', 'order_tick': 120, 'state': 'waiting', 'patience_ticks_left': 3600, 'eat_ticks_left': 0, 'order_status': 'reserved', 'reserved': {'ca_loc': 1}, 'base_price': None, 'tip': 0}]
+AC-P1-08 hết kiên nhẫn, kỳ vọng order_id và reputation trong event: [(1, {'customer_id': 'C1', 'table_id': 'T1', 'reason': 'patience'})] uy tín cuối = 2.5
+AC-P1-09 bấm E tại bếp có khách giữ chỗ, kỳ vọng cook_started: []
+AC-P1-10 hết kiên nhẫn đúng tick đóng ca, kỳ vọng closing và giữ uy tín: [(1, {'customer_id': 'C1', 'table_id': 'T1', 'reason': 'patience'})] [(1, {'reason': 'time', 'money': 0, 'earned': 0, 'shift_earned': 0, 'reputation': 2.5})]
+AC-P1-10 fixture assigned mục D, giao đúng bước cuối, kỳ vọng served → paid → quan_end: 2 đầu vào sai: hand có trường lạ: ['base_price']
+AC-P1-12 README có công thức điểm: True
