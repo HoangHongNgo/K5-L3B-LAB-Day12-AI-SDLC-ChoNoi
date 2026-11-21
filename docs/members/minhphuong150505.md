@@ -5,7 +5,8 @@
 - **Nhóm:** Quán Ăn Chợ Nổi — Lab 12 AI SDLC
 - **Repository nhóm:** [HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi](https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi)
 - **Repository gốc (giảng viên):** [VinUni-AI20k/K5-L3B-LAB-Day12-AI-SDLC](https://github.com/VinUni-AI20k/K5-L3B-LAB-Day12-AI-SDLC)
-- **Branch Rebuild chính thức:** `p4/rebuild-quan-minhphuong150505`
+- **Branch Hoàn thiện chính thức:** `p4/finalize-quan-minhphuong150505`
+- **Base SHA:** `43f2de45e154befa441adf23c081fcd6445a36e3` (HEAD mới nhất của `origin/main`)
 
 ---
 
@@ -28,8 +29,7 @@
   + `63ee371`: docs: record Minh Phuong phase 1 AI usage and contributions.
 - **Tình trạng kiểm toán Git Phase 1:**
   + PR #3 đã được merge vào `origin/main` (commit `9512b63`).
-  + Nhánh `revert-3-p1/lat3-minhphuong150505` (commit `2c251c7`) được tạo độc lập trên remote nhưng chưa từng được merge vào `main`.
-  + Toàn bộ code Phase 1 hợp lệ của Lát 3 đã nằm trong `origin/main` và chạy đạt 100% (36/36 test của `test_p1_lat3.py` pass).
+  + Toàn bộ code Phase 1 hợp lệ của Lát 3 nằm trong `origin/main` và chạy đạt 100% (36/36 test của `test_p1_lat3.py` pass).
 
 ---
 
@@ -72,7 +72,7 @@
   + **Phục vụ và Boa:** `tip = floor(base_price * 0.2)` nếu lúc phục vụ kiên nhẫn còn lại sau bước 1 `>= 50%`. Thanh toán `amount = base_price + tip`.
   + **Đóng ca và Snapshot/Result:** Snapshot `stock` và `result["stock"]` xuất mảng cá thể đúng schema v1.2 kèm độ tươi cuối ca.
   + **Scenario Validation v1.2:** Bổ sung xác thực mảng cá thể cho `quan.stock`, kiểm tra `reserved` trỏ đúng cá thể hợp lệ chưa ươn, không dùng chung cá thể, khớp recipe món.
-  + **Kiểm thử toàn diện Phase 3:** Xây dựng `tests/test_p3_quan.py` với 27 ca test bao phủ toàn bộ 7 nhóm yêu cầu và fixtures `p3_quan_tuning.json`, `p3_quan_scenario.json`.
+  + **Kiểm thử toàn diện Phase 3:** Xây dựng `tests/test_p3_quan.py` với 32 ca test bao phủ toàn bộ các nhóm yêu cầu và fixtures `p3_quan_tuning.json`, `p3_quan_scenario.json`.
 - **Commits Phase 3:**
   + `5aebe32`: `fix(p2): align menu fixtures and dishes day plan schema with ticket 02`
   + `2de3541`: `p3(quan): support item-based inventory and freshness lifecycle`
@@ -80,45 +80,54 @@
   + `2489fa6`: `docs(p3): update Minh Phuong phase 3 contribution report`
   + `1d11cd6`: `Merge branch 'main' into p3/quan-minhphuong150505`
 - **Kết quả kiểm thử:**
-  + Bộ test Phase 3 (`test_p3_quan.py`): 27/27 tests PASSED.
-  + Toàn bộ test suite repository: 234/234 tests PASSED.
+  + Bộ test Phase 3 (`test_p3_quan.py`): 32/32 tests PASSED.
+  + Toàn bộ test suite repository: 382 tests (381 passed, 1 skipped).
   + Kiểm tra tất định (Determinism): PASS (so sánh `cmp` trùng khớp từng byte).
 
 ---
 
-## 4. Phase 4 — Kiểm toán Toàn Diện và Trạng thái Release (Full Rebuild & Audit)
+## 4. Phase 4 — Kiểm toán Toàn Diện, Sửa Lỗi Tích Hợp và Trạng Thái Release (Final Audit & Integration)
 
 ### 4.1. Kiểm toán Git và Đối chiếu Repository
 - **Repository gốc của giảng viên (`upstream/main`):**
   + URL: `https://github.com/VinUni-AI20k/K5-L3B-LAB-Day12-AI-SDLC.git`
   + HEAD: `f0a1906` (`README: quy ước tên repo K5-L3B-LAB-Day12-AI-SDLC-<ten-nhom>`)
-  + Đối chiếu: Repository nhóm kế thừa chuẩn cấu trúc starter, bổ sung đầy đủ các pha mở rộng Phase 1, Phase 2 và Phase 3 theo hướng dẫn của giảng viên.
 - **Repository nhóm (`origin/main`):**
   + URL: `https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi`
-  + HEAD hiện tại trên main: `e5574e7` (đã tích hợp các PR #17..#21 từ các thành viên khác: DaySim, Shop, Monsters, Net, Proof).
-- **Branch Rebuild độc lập:**
-  + Tạo branch: `p4/rebuild-quan-minhphuong150505`.
-  + Base commit: `1d11cd6` (commit trên `origin/p3/quan-minhphuong150505` đã tích hợp sạch sẽ giữa `origin/main` `e5574e7` và toàn bộ mã nguồn Quán của Minh Phương).
-  + Lý do chọn base: Đảm bảo kế thừa trọn vẹn cả lịch sử phát triển Quán (Phase 1, 2, 3) lẫn các cải tiến mới nhất từ main của đồng đội, không gây mất mát dữ liệu hay xung đột giả.
+  + HEAD hiện tại trên main: `43f2de4` (đã merge PR #28 từ ChuTungDuongg).
+- **Nhánh hoàn thiện chính thức:**
+  + Branch: `p4/finalize-quan-minhphuong150505` tạo từ base `origin/main` (`43f2de4`).
+  + Các commit mới:
+    + `fbfad89`: `fix(scenario): validate item-based inventory and customer reservations in validate_quan_against_inventory`
+    + `fff3c0a`: `fix(quan): maintain stock synchronization and support contract v1.3`
+    + `04414ab`: `test(quan): cover item-based inventory validation and contract v1.3 compatibility`
 
-### 4.2. Tình trạng TICKET-04 và Phạm vi Phase 4
-- **Kết quả rà soát tài liệu:**
-  + Kiểm tra toàn bộ git log, commit history, branch remotes, tags, issues và thư mục repo: `find . -name "*TICKET*"`, `grep -rnwi "TICKET-04"`.
-  + File tồn tại trong repo: `PRD0.md`, `TICKET2.md`, `TICKET3.md`. **Không tồn tại file `TICKET4.md` hay `TICKET-04`**.
-  + Link Claude artifact (`https://claude.ai/artifact/E35v787wSx2wDgPTNhMVDg`) không thể truy cập từ môi trường sandbox.
-- **Tuân thủ quy định & Trạng thái Phase 4:**
-  + Tuân thủ nghiêm ngặt cảnh báo của Master Prompt: *"Nếu không có TICKET-04: Không tự sáng tạo yêu cầu Phase 4. Đánh dấu các chức năng chưa thể triển khai do thiếu TICKET-04 là BLOCKED. Không tuyên bố đã hoàn thành Phase 4 đầy đủ."*
-  + **Trạng thái Phase 4:** `BLOCKED (Chờ tài liệu đặc tả TICKET-04)`.
-  + Phần việc thuộc trách nhiệm của Nguyễn Minh Phương: Đã hoàn thiện 100% việc kiểm toán, tối ưu hóa mã nguồn Quán ăn, đảm bảo tính đúng đắn và chuẩn bị đầy đủ các tiêu chí release v1.0.0.
+### 4.2. Rà soát TICKET-04 và Phạm vi Phase 4
+- **Đặc tả TICKET-04 (commit `1151d10` trên `origin/main`):**
+  + Phát hành v1.0.0, Test Contract v1.3.
+  + Lõi: Benchmark có render (`<bench_cmd> --seed 42 --duration 30 --out bench.json`), Cảnh báo dễ nhận biết (thủy quái, oxy, khách sắp giận) kèm chế độ tương phản cao, đóng gói và phát hành.
+  + Soak headless: `<soak_cmd> --seed 7 --days 10 --out soak.json`.
+  + Yêu cầu hợp đồng: Gameplay, tuning, kho và JSONL của Quán ăn tiếp tục tuân thủ theo v1.2.
+- **Nhiệm vụ thuộc Nguyễn Minh Phương:**
+  + Đảm bảo `QuanSim` và `scenario.py` tương thích xuôi 100% với Test Contract v1.3.
+  + Sửa lỗi trong `validate_quan_against_inventory`: trước đây hàm này duyệt `res.items()` giả định dictionary, gây lỗi `AttributeError` khi kịch bản chứa danh sách `item_id`. Đã nâng cấp để kiểm tra đầy đủ danh sách cá thể, kiểm tra cá thể ươn (`fresh < 30`), cá thể trùng lặp giữa các đơn và khớp công thức món.
+  + Đảm bảo đồng bộ hóa `self.stock` tự động với `self.items` trong `QuanSim` tại các sự kiện hao tươi, cá thể bị ươn (`spoiled`) và khi bắt đầu nấu (`_start_cooking`).
+  + Cập nhật `_init_customers` sử dụng đúng `self.tick_hz` cho bộ đếm kiên nhẫn.
+  + Bổ sung 5 ca test kiểm thử hồi quy mới trong `tests/test_p3_quan.py`.
 
 ### 4.3. Kiểm tra Tính Tất định (Determinism) & Toàn bộ Test Suite
-- **Tính tất định (Determinism Check via `filecmp.cmp`):**
-  + Kịch bản Quán v1.0 (`quan_one_customer.json`, seed 42, 1200 ticks): PASS (so sánh nhị phân trùng khớp 100% từng byte).
-  + Kịch bản Quán v1.1 (`p2_quan_scenario.json`, seed 42, 1200 ticks): PASS (so sánh nhị phân trùng khớp 100% từng byte).
-  + Kịch bản Quán v1.2 (`p3_quan_scenario.json`, seed 42, 1200 ticks): PASS (so sánh nhị phân trùng khớp 100% từng byte).
+- **Tính tất định (Determinism Check via `cmp`):**
+  + Kịch bản Quán chuẩn (`--mode quan --seed 42 --ticks 1500`): PASS (trùng khớp 100% từng byte).
+  + Kịch bản Quán v1.2 (`p3_quan_scenario.json`, seed 42, 1500 ticks): PASS (trùng khớp 100% từng byte).
 - **Toàn bộ Test Suite Repo:**
-  + **310/310 tests PASSED** trên toàn bộ repository (thời gian chạy ~6.8 giây).
-  + Tỷ lệ đạt: **100%** (không có lỗi hay regression).
+  + **382 tests ran: 381 PASSED, 1 skipped, 0 failures, 0 errors** (thời gian chạy ~7.4s).
+  + `test_p1_lat3.py`: 36/36 tests PASSED.
+  + `test_p2_quan.py`: 34/34 tests PASSED.
+  + `test_p3_quan.py`: 32/32 tests PASSED.
+
+### 4.4. Những việc còn phụ thuộc (Dependencies / Blocker)
+1. **Nâng cấp `game.contract.json`:** `origin/main` hiện đang đặt `"contract_version": "1.1"`. Integrator (`HoangHongNgo`) cần cập nhật lên `"1.3"` và khai báo `bench_cmd`, `soak_cmd` theo TICKET-04.
+2. **Tích hợp kho cá thể trong `day.py`:** Trong `chonoi/sim/day.py` (do `phuthaitran` phụ trách), các dòng 220 và 230 đang ép kiểu `dict(res["inventory"]["items"])` và `stock=dict(res.get("stock", {}))`. Khi chạy kho cá thể v1.2/v1.3 (dạng list các dicts), `day.py` sẽ gặp `TypeError`. Cần `phuthaitran` và Integrator cập nhật adapter trước khi kích hoạt chạy soak đa ngày.
 
 ---
 
@@ -132,11 +141,11 @@
    - Khi kiểm tra ngưỡng tính boa (≥ 50% kiên nhẫn), phát hiện timer kiên nhẫn bị giảm 1 tick ở Bước 1 trước khi phục vụ ở Bước 3. Do đó nếu fixture để đúng 1800 tick, bước phục vụ sẽ nhận 1799 tick (< 50%). Tôi đã hiệu chỉnh fixture lên 1801 tick để bảo đảm test đúng biên nghiệp vụ.
 3. **Giai đoạn Phase 3:**
    - Khi tính giá món theo độ tươi lúc bắt đầu nấu: ban đầu test fixture mong đợi giá chốt theo độ tươi ban đầu (fresh 80 -> giá 48 cho món 60đ). Tuy nhiên, theo thứ tự hợp đồng TICKET-03, kho thô bị hao tươi ở Bước 2 (giảm 1/240 điểm tươi) trước khi người chơi tương tác nấu ở Bước 4. Tại Bước 4, độ tươi thực tế là `80 - 1/240 = 79.9958`, do đó `floor(60 * 79.9958 / 100) = 47`. Tôi đã phân tích đúng thứ tự thực thi theo hợp đồng và xác nhận giá trị 47 là chính xác tuyệt đối.
-4. **Giai đoạn Rebuild & Phase 4:**
-   - Phát hiện docstring bị lặp lại 2 lần liên tiếp trong hàm `_order_ref` của `chonoi/sim/quan.py`, đã được dọn dẹp sạch sẽ.
-   - Kiểm tra kỹ lưỡng sự khác biệt giữa hợp đồng repo và tuning fixtures: nhận diện rõ `game.contract.json` trên main vẫn ở v1.0 (do Integrator chưa merge v1.1/v1.2), trong khi toàn bộ nghiệp vụ Quán đã được thiết kế backward-compatible, chạy hoàn hảo trên cả 3 phiên bản v1.0, v1.1, và v1.2.
+4. **Giai đoạn Phase 4 (Final Audit & Integration):**
+   - Khi kiểm toán hàm `validate_quan_against_inventory` trong `scenario.py`, phát hiện code cũ duyệt `res = c.get("reserved", recipe)` rồi gọi `for rk, rv in res.items():`. Khi kịch bản truyền vào kho cá thể với `reserved` là danh sách các item IDs (chuỗi), hàm này lập tức gặp lỗi `AttributeError: 'list' object has no attribute 'items'`. Tôi đã phát hiện qua việc viết ca kiểm thử hộp đen độc lập, sau đó mở rộng hàm để xác thực trọn vẹn danh sách ID cá thể, kiểm tra cá thể ươn và trùng lặp.
+   - Phát hiện `QuanSim` chỉ kiểm tra `tuning.get("contract_version") == "1.2"`, nếu chạy dưới contract v1.3 của Phase 4 sẽ bị fallback nhầm về kho đếm cũ. Đã sửa thành `contract_ver in ("1.2", "1.3") or contract_ver >= "1.2"`.
 
 ### Điều học được về Software Architecture và AI Collaboration:
 - **Tất định tuyệt đối nhờ Kiểu dữ liệu Phân số (`Fraction`):** Xử lý hao tươi với `Fraction(1, 240)` thay vì số thực `float` giúp loại bỏ hoàn toàn lỗi tích lũy dấu phẩy động qua hàng nghìn tick, bảo đảm ngưỡng so sánh 30 điểm và tính toán giá trị luôn đồng nhất giữa các môi trường chạy.
-- **Tính Tương thích Ngược (Backward Compatibility):** Xây dựng một module sim duy nhất có thể tự động thích ứng giữa mô hình đếm số lượng (v1.0/v1.1) và mô hình mảng cá thể (v1.2) giúp toàn bộ hệ thống test suite lớn (310 tests) luôn xanh mà không làm đứt gãy công việc của các đồng đội khác.
-- **Tính Kỷ luật trong SDLC:** Khi thiếu đặc tả Phase 4 (TICKET-04), thái độ đúng đắn của một kỹ sư là báo rõ trạng thái BLOCKED, hoàn thiện tuyệt đối những phần đã có đặc tả và kiểm chứng chất lượng thay vì tự ý bịa đặt tính năng gây xung đột và rủi ro cho đợt release v1.0.0 của nhóm.
+- **Tính Tương thích Ngược và Xuôi (Forward & Backward Compatibility):** Xây dựng một module sim duy nhất có thể tự động thích ứng giữa mô hình đếm số lượng (v1.0/v1.1) và mô hình mảng cá thể (v1.2/v1.3) giúp toàn bộ hệ thống test suite lớn (382 tests) luôn xanh mà không làm đứt gãy công việc của các đồng đội khác.
+- **Tính Kỷ luật trong SDLC:** Phát hiện và giải quyết triệt để lỗi biên, phân định rõ ràng giữa phần việc độc lập đã hoàn thành 100% và các điểm phụ thuộc của hệ thống (blockers) để đội ngũ Integrator có đầy đủ thông tin xử lý khi release v1.0.0.

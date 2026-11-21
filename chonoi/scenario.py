@@ -623,16 +623,49 @@ def validate_quan_against_inventory(scenario_quan: dict, inventory, tuning: dict
 
     customers = scenario_quan.get("customers", [])
     total_reserved = {}
+    seen_reserved_ids = set()
+    inv_item_map = {it["id"]: it for it in cleaned_inv} if isinstance(cleaned_inv, list) else {}
+
     for c in customers:
         did = c.get("dish_id")
         if plan_dishes is not None and did not in plan_dishes:
             raise BadInput(f"khách {c.get('id')} gọi món {did} không thuộc kế hoạch ngày")
 
         status = c.get("order_status", "reserved" if c.get("state", "waiting") == "waiting" else "served")
-        if status == "reserved":
-            recipe = menu[did]["recipe"]
-            res = c.get("reserved", recipe)
+        res = c.get("reserved")
+
+        if status != "reserved":
+            if res:
+                raise BadInput(f"khách {c.get('id')}: trạng thái đơn hàng {status} mâu thuẫn với nguyên liệu giữ")
+            continue
+
+        recipe = menu[did]["recipe"]
+        if isinstance(res, list):
+            res_kinds = {}
+            for iid in res:
+                if not isinstance(iid, str) or not iid:
+                    raise BadInput(f"customers.{c.get('id')}.reserved: item_id phải là chuỗi khác rỗng")
+                if isinstance(cleaned_inv, list):
+                    if iid not in inv_item_map:
+                        raise BadInput(f"customers.{c.get('id')}.reserved: item_id {iid} không có trong kho")
+                    if iid in seen_reserved_ids:
+                        raise BadInput(f"customers.{c.get('id')}.reserved: cá thể {iid} bị dùng chung giữa nhiều đơn")
+                    seen_reserved_ids.add(iid)
+                    it = inv_item_map[iid]
+                    if it["fresh"] < 30:
+                        raise BadInput(f"customers.{c.get('id')}.reserved: cá thể {iid} bị ươn (fresh < 30)")
+                    k = it["kind"]
+                    res_kinds[k] = res_kinds.get(k, 0) + 1
+                    total_reserved[k] = total_reserved.get(k, 0) + 1
+                else:
+                    raise BadInput(f"customers.{c.get('id')}.reserved: kho đếm không tương thích với giữ chỗ theo cá thể")
+            if isinstance(cleaned_inv, list) and res_kinds != recipe:
+                raise BadInput(f"customers.{c.get('id')}: nguyên liệu giữ không phù hợp công thức món {did}")
+        elif isinstance(res, dict):
             for rk, rv in res.items():
+                total_reserved[rk] = total_reserved.get(rk, 0) + rv
+        else:
+            for rk, rv in recipe.items():
                 total_reserved[rk] = total_reserved.get(rk, 0) + rv
 
     for rk, rv in total_reserved.items():
