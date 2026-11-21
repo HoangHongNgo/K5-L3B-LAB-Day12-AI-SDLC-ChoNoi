@@ -112,6 +112,21 @@ class QuanSim:
             "customers": sort_by_id(self.customers),
         }
 
+    def stats(self) -> dict:
+        best_dish = None
+        if self.dish_served_counts:
+            best_count = max(self.dish_served_counts.values())
+            best_dishes = [d for d, c in self.dish_served_counts.items() if c == best_count]
+            best_dish = sorted(best_dishes)[0]
+        return {
+            "served": self.stats_served,
+            "left": self.stats_left,
+            "money_shift": self.shift_earned,
+            "tips": self.tips,
+            "reputation_delta": round(self.reputation - self.start_reputation, 3),
+            "best_dish": best_dish,
+        }
+
     def step(self, inp):
         events = []
         self.time_left_ticks = max(0, self.time_left_ticks - 1)
@@ -136,6 +151,14 @@ class QuanSim:
             self.reason = "time"
             events.append(("quan_end", {"reason": "time", "money": self.money, "earned": self.earned,
                                         "shift_earned": self.shift_earned, "reputation": self.reputation}))
+            self.result = {
+                "money": self.money,
+                "earned": self.earned,
+                "shift_earned": self.shift_earned,
+                "reputation": self.reputation,
+                "stock": {k: v for k, v in sorted(self.stock.items()) if v > 0},
+                "stats": self.stats(),
+            }
             return events
         # 5. Khách mới theo lịch (first_customer_tick, customer_interval_s)
         if self._should_spawn_customer():
