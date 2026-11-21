@@ -500,7 +500,7 @@ export function createCafe(THREE) {
     const [x0,x1]=bounds.x, [z0,z1]=bounds.z;
     return [(pos[0]-x0)/(x1-x0)*16-8,5-(pos[1]-z0)/(z1-z0)*10];
   }
-  function update(state,width,height,seconds=0,screen='') {
+  function update(state,width,height,seconds=0,screen='',targetId=null) {
     if(!state) return;
     const bounds=state.meta?.bounds;
     if(!bounds?.x || !bounds?.z) return;
@@ -549,7 +549,8 @@ export function createCafe(THREE) {
         p.scale.setScalar((.13+Math.sin(t*Math.PI)*.085)*(1-t));
       });
       const text=ready?' · Chín':cooking?' · Nấu':'';
-      m.tag.material=badge(st.id+text,ready?'#dbf2a5':cooking?'#ffd48c':'#ffe6b0');
+      const next = !screen && st.id === targetId;
+      m.tag.material=badge((next ? '▸ ' : '')+st.id+text,next?'#ffc865':ready?'#dbf2a5':cooking?'#ffd48c':'#ffe6b0');
     }
     for(const object of furniture.values()) object.root.visible=false;
     const occupants=new Map((state.customers||[]).map(c=>[c.table_id,c]));
@@ -561,7 +562,8 @@ export function createCafe(THREE) {
       m.meal.visible=eating;
       m.guest.torso.rotation.x=eating?.075*Math.sin(seconds*2.7):0;
       const text=eating?' · Ăn':deliver?' · Bưng':c?' · Chờ':'';
-      m.tag.material=badge(tb.id+text,deliver?'#c8f9ae':c?'#ffe0ac':'#f5e1bb');
+      const next = !screen && tb.id === targetId;
+      m.tag.material=badge((next ? '▸ ' : '')+tb.id+text,next?'#ffc865':deliver?'#c8f9ae':c?'#ffe0ac':'#f5e1bb');
     }
   }
   return {scene,camera,update};

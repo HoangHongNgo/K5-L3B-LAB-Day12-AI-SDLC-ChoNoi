@@ -30,7 +30,7 @@ function paint(time) {
             if (snapshot.state !== "paused" && !reducedMotion.matches) sceneTime += elapsed;
             const room = snapshot.shop_room;
             const state = room ? {meta: {bounds: room.bounds}, tables: room.tables, stoves: room.stoves} : snapshot;
-            world.update(state, width, height, sceneTime, view.screen);
+            world.update(state, width, height, sceneTime, view.screen, view.targetId);
             renderer.render(world.scene, world.camera);
             document.body.classList.add("has-3d");
         }

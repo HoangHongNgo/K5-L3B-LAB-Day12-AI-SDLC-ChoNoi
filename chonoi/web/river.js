@@ -492,6 +492,9 @@ export function createRiver(THREE) {
     color:0xffe4a1,transparent:true,opacity:.42,depthWrite:false,side:T.DoubleSide
   }));
   scene.add(ring);
+  const targetFlag = new T.Mesh(new T.ConeGeometry(.22, .43, 4), new T.MeshBasicMaterial({color:0xffcd6e}));
+  targetFlag.rotation.z = Math.PI;
+  scene.add(targetFlag);
   const templates=new Map(), active=new Map(), spare=new Map();
   function visual(type, datum) {
     const key=type+":"+datum.kind;
@@ -516,7 +519,7 @@ export function createRiver(THREE) {
   }
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   let frame=0, facing=1;
-  function update(state,width,height,seconds=0,screen="") {
+  function update(state,width,height,seconds=0,screen="",targetId=null) {
     const meta=state.meta || {}, player=state.player, dp=meta.dock_pos || [2,0];
     const [px,depth]=player?.pos || dp;
     const title=screen==="menu", ratio=width/Math.max(1,height);
@@ -538,6 +541,8 @@ export function createRiver(THREE) {
       skyObjects.position.x=centerX*.90+6;
     }
     dock.position.set(dp[0],-dp[1],0);
+    targetFlag.visible = targetId === "@dock" && !screen;
+    if (targetFlag.visible) targetFlag.position.set(dp[0], 1.7 - dp[1], .85);
     for(let i=0;i<boats.length;i++) {
       boats[i].position.y=.035*Math.sin(seconds*1.3+i);
       boats[i].rotation.z=.009*Math.sin(seconds+i*2.7);
@@ -568,6 +573,10 @@ export function createRiver(THREE) {
         const rec=visual(type,item), model=rec.model;
         rec.seen=frame;
         model.position.set(item.pos[0],-item.pos[1],type==="node"?.20:.38);
+        if (!screen && item.id === targetId) {
+          targetFlag.visible = true;
+          targetFlag.position.set(item.pos[0], .9 - item.pos[1] + .08*Math.sin(seconds*3), .85);
+        }
         if(type==="node") {
           model.children[1].visible=item.ready!==false;
           model.scale.setScalar(item.ready===false?.65:1);

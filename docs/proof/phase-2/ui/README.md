@@ -6,6 +6,11 @@ Chạy `python3 -m chonoi.live --mode day --port 8012` với preset v1.1. [Menu 
 
 Trên Chrome, người chơi di chuyển bằng bàn phím và nút cảm ứng. Thử tắt WebGL vẫn chơi được trên Canvas 2D. Trong ca kiểm tra rút ngắn, giỏ bàn giao 2 bông súng và 1 cá lóc, đồng hồ Shop giữ nguyên trong lúc pause, mua bình oxy trừ 200 nghìn và ngày 2 bắt đầu với 2.700 tick oxy. Bộ unittest đã chạy 371 ca, 370 đạt và 1 ca được bỏ qua.
 
+### Luồng chơi đã kiểm tra trên trình duyệt
+
+- Chọn theo dõi cá lóc trên màn hình 390 × 844, đổi mục tiêu về bến và cập bến khi giỏ trống. Quán hiển thị các món thiếu nguyên liệu. Thu dọn đưa người chơi tới sổ cuối ca, qua tiệm rồi sang ngày 2.
+- Dùng kho mẫu, bỏ chọn cá lóc nướng trui và mở quán với gỏi bông súng. Chờ khách, theo phiếu đến bếp B2, nấu, bưng đến T1 rồi phục vụ. Khách trả 48 nghìn. Khi hết nguyên liệu cho món đã chọn, thu dọn kết thúc ca.
+
 ## Bản UI ban đầu
 
 Giao diện ở `fdb79ba`, kiểm trên Chromium headless 1280×720. Bản ghép thử dùng `main` `c3dcd80`, lát cá `db3c462`, lát Shop/DayState `71f5ada` và các fixture số chuẩn v1.1. Manifest và bộ kiểm tra cấu hình chính thức của lát C vẫn cần được tích hợp.

@@ -7,6 +7,8 @@
 <title>Quán ăn Chợ Nổi</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/assets/game.css">
+<link rel="stylesheet" href="/assets/flow.css">
+<link rel="stylesheet" href="/assets/forage.css">
 </head>
 <body>
 <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -32,8 +34,10 @@
     <button id="hud-menu" class="icon-button" aria-label="Tạm dừng" title="Tạm dừng"><svg class="icon"><use href="#i-pause"/></svg></button>
   </div>
   <div id="hud-stats" class="hud-stats"></div>
-  <section class="ledger"><h2><svg class="icon"><use href="#i-basket"/></svg><span id="ledger-title"></span></h2><div id="ledger-rows"></div></section>
-  <div class="hud-bottom"><p id="hud-prompt"></p><div id="key-hints"></div></div>
+  <section class="ledger"><div id="forage-guide" hidden></div><div id="service-guide" hidden></div>
+    <button id="wait-turn" class="secondary" type="button" hidden>Chờ lượt khách kế tiếp</button>
+    <h2><svg class="icon"><use href="#i-basket"/></svg><span id="ledger-title"></span></h2><div id="ledger-rows"></div></section>
+  <div class="hud-bottom"><output id="event-feedback" aria-live="polite" hidden></output><p id="hud-prompt"></p><div id="key-hints"></div></div>
   <div class="touch-controls" aria-label="Điều khiển cảm ứng">
     <div class="dpad"><button data-move="u" aria-label="Lên">↑</button><button data-move="l" aria-label="Trái">←</button><button data-move="d" aria-label="Xuống">↓</button><button data-move="r" aria-label="Phải">→</button></div>
     <div class="touch-actions"><button data-action="interact">Tương tác</button><button data-action="catch">Bắt cá</button></div>
@@ -60,6 +64,9 @@
   <footer class="lobby-footer"><div class="journey-label"><span class="line"></span>Một ngày<br><em>trên sông</em></div><div id="journey"></div></footer>
 </section>
 <script type="module" src="/assets/scene.js"></script>
+<script src="/assets/flow.js"></script>
+<script src="/assets/forage.js"></script>
+<script src="/assets/service.js"></script>
 <script>
 "use strict";
 /*
@@ -125,7 +132,7 @@ addEventListener("keydown", (e) => {
   if (e.repeat) { if (k === " " || k.startsWith("arrow")) e.preventDefault(); return; }
   if (!screen.hidden) {
     if (k === "tab") {
-      const buttons = Array.from(screen.querySelectorAll("button:not(:disabled)")).filter(button => button.offsetWidth);
+      const buttons = Array.from(screen.querySelectorAll("button:not(:disabled), input:not(:disabled)")).filter(button => button.offsetWidth);
       const atFirst = document.activeElement === buttons[0] || document.activeElement === screenTitle;
       if (buttons.length && ((e.shiftKey && atFirst) || (!e.shiftKey && document.activeElement === buttons.at(-1)))) {
         e.preventDefault();
@@ -156,6 +163,8 @@ addEventListener("keydown", (e) => {
     press("pause");
     return;
   }
+  if (e.target.closest("select") && k.startsWith("arrow")) return;
+  if (e.target.closest("button, select") && (k === " " || k === "enter")) return;
   if (snap?.phase === "shop") return;
   if (MOVE_KEYS[k]) { down.add(MOVE_KEYS[k]); e.preventDefault(); }
   else if (k === "e") down.add("interact");
@@ -279,10 +288,13 @@ document.getElementById("exit-game").onclick=()=>showScreen("exit","Đã rời p
 function startPlay() {
   dayStarted=true;
   if (snap.mode === "day") showDayIntro(snap);
+  else if (snap.mode === "quan" && snap.opening_menu) showEveningIntro(snap);
   else continueDay();
 }
 function showMenu() {
   dayStarted=false; shop.hidden=true;
+  window.ForageGuide?.reset(document.getElementById("forage-guide"));
+  window.flashAction?.("");
   const play=action("Bắt đầu chơi",startPlay); play.prepend(icon("play"));
   const help=action("Cách chơi",()=>showHelp(),true); help.prepend(icon("book"));
   const copy = snap.mode === "quan" ? "Nhận đơn, nhóm bếp và cùng Má Tư đãi khách một bữa cơm trên sông."
@@ -301,21 +313,17 @@ function showDayIntro(state) {
   introTimer = setTimeout(continueDay, 4000);
 }
 function showEveningIntro(state) {
-  const handoff = (state.events || []).findLast((e) => e.name === "gather_end" && e.day === state.day);
-  const stock = handoff?.data?.inventory?.items || state.stock || {};
-  const available = state.stock ? availableStock(state) : stock;
-  const total = Object.values(stock).reduce((sum, count) => sum + count, 0);
-  const menu = state.menu || {};
-  const dishes = Object.keys(state.day_plan?.dishes || {}).filter((id) => {
-    const recipe = menu[id]?.recipe;
-    return recipe && Object.entries(recipe).every(([kind, count]) => (available[kind] || 0) >= count);
-  }).map(dishName);
-  showScreen("evening-intro", `Mở quán · Ngày ${state.day}`, [
-    listSection(`Nhập kho ${total} nguyên liệu`, ingredientLines(stock), "Kho trống."),
-    listSection("Món có thể nấu", dishes, "Chưa đủ nguyên liệu cho món nào trong kế hoạch."),
-  ], [action("Mở quán", continueDay)]);
+  if (!state.opening_menu || !window.openingBoard) {
+    showScreen("evening-intro", "Chuẩn bị mở quán", [
+      listSection("Kho khả dụng", ingredientLines(availableStock(state)), "Kho trống."),
+    ], [action("Mở quán", continueDay)]);
+    return;
+  }
+  const board = openingBoard(state, state.opening_stock || availableStock(state));
+  showScreen("evening-intro", state.day ? `Thực đơn · Ngày ${state.day}` : "Thực đơn hôm nay",
+    [board.content], [board.openButton]);
 }
-async function continueDay() {
+async function continueDay(menuIds) {
   if (introBusy) return;
   clearTimeout(introTimer);
   introBusy = true;
@@ -323,7 +331,7 @@ async function continueDay() {
   try {
     const {day, phase, tick} = snap;
     const response = await fetch("/continue", {
-      method: "POST", body: JSON.stringify({ day, phase, tick }),
+      method: "POST", body: JSON.stringify({ day, phase, tick, service_id: snap.service_id, menu_ids: Array.isArray(menuIds) ? menuIds : undefined }),
       headers: { "Content-Type": "application/json" },
     });
     if (!response.ok) throw new Error("continue");
@@ -415,7 +423,7 @@ function updateDayScreen(previous) {
   if (snap.mode !== "day") {
     if (snap.menu_pending) {
       const starting = dayStarted && previous?.menu_pending && !screenName;
-      if (!starting && !["menu","help","exit"].includes(screenName) && !introBusy) showMenu();
+      if (!starting && !["menu","help","exit","evening-intro"].includes(screenName) && !introBusy) showMenu();
       return;
     }
     if (snap.error || snap.finished) {
@@ -523,6 +531,7 @@ const MONSTER_COLOR = "#c9a0ff";
 const distance = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
 function availableStock(state) {
+  if (state.available_stock) return state.available_stock;
   const available = { ...state.stock };
   for (const customer of state.customers || []) {
     for (const [kind, count] of Object.entries(customer.reserved || {})) {
@@ -669,6 +678,15 @@ function renderHud() {
   hud.hidden = !screen.hidden || !shop.hidden || !["gather","quan"].includes(phase);
   if (hud.hidden) return;
   const morning = phase === "gather";
+  const forageGuide = document.getElementById("forage-guide");
+  const serviceGuide = document.getElementById("service-guide");
+  forageGuide.hidden = !morning || !window.ForageGuide;
+  serviceGuide.hidden = morning || !window.ServiceGuide;
+  if (morning) window.ForageGuide?.render(snap, forageGuide);
+  const waitButton = document.getElementById("wait-turn");
+  waitButton.hidden = morning || !snap.can_wait;
+  if (!waitButton.hidden) waitButton.textContent = snap.wait_to_close ? "Thu dọn đến hết ca" : "Chờ lượt khách kế tiếp";
+  window.showRecentAction?.(snap);
   const meta = snap.meta || {};
   const p = snap.player || {};
   const day = snap.day ? "Ngày " + snap.day + " · " : "";
@@ -695,7 +713,10 @@ function renderHud() {
     rows(hudStats,[{text:"Oxy " + (oxy/60).toFixed(1) + " s",warn:low},{fraction:Math.round(oxy/maxOxy*100)/100,warn:low},
       "Máu " + p.hp + "/" + p.hp_max, "Độ sâu " + (p.pos?.[1] || 0).toFixed(1) + " m","Vợt " + cooldown]);
     const hold = {};
-    for (const kind of snap.hold || []) hold[kind] = (hold[kind] || 0) + 1;
+    for (const item of snap.hold || []) {
+      const kind = item.kind || item;
+      hold[kind] = (hold[kind] || 0) + 1;
+    }
     const goals = snap.day_plan?.ingredients || {};
     setText(ledTitle,"Giỏ " + (snap.hold_count ?? snap.hold?.length ?? 0) + "/" + snap.hold_capacity);
     const items = Object.keys({...goals,...hold}).map(kind => (KIND_NAME[kind] || kind) + " · " + (hold[kind] || 0) + (goals[kind] ? "/" + goals[kind] + " cần" : ""));
@@ -729,8 +750,7 @@ function renderHud() {
       stations.push({text:table.id + " · " + status,warn:low});
     }
     rows(ledger,stations);
-    const nearby=[...(snap.stoves || []),...(snap.tables || [])].filter(s=>near(p.pos,s.pos,meta.interact_radius)).sort((a,b)=>distance(a.pos,p.pos)-distance(b.pos,p.pos));
-    if (nearby.length) prompt="E · Tương tác " + nearby[0].id;
+    prompt = window.ServiceGuide?.render(snap, serviceGuide) || "";
   }
   const touchAction = document.querySelector('[data-action="interact"]');
   const nearbyAction = prompt.match(/E · (.+)$/)?.[1];
@@ -740,7 +760,9 @@ function renderHud() {
 }
 function frame() {
   requestAnimationFrame(frame);  // đặt trước để lỗi vẽ không làm dừng vòng lặp
-  window.gameView = { state:snap, screen:["help","exit"].includes(screenName) ? "menu" : screenName };
+  const guide = document.getElementById(snap?.phase === "quan" ? "service-guide" : "forage-guide");
+  window.gameView = { state:snap, screen:["help","exit"].includes(screenName) ? "menu" : screenName,
+    targetId: screen.hidden && shop.hidden && !guide.hidden ? guide.dataset.targetId : null };
   if (document.body.classList.contains("has-3d")) return;
   const [w, h] = fit();
   ctx.fillStyle = "#10161c"; ctx.fillRect(0, 0, w, h);

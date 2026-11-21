@@ -6,7 +6,8 @@ Máy chủ HTTP nhỏ (ThreadingHTTPServer) phục vụ `chonoi/web/index.html` 
     GET  /state  -> snapshot JSON hiện tại (cùng trường như dòng snapshot của headless) + `meta` + `events`
     POST /input  -> {"move": [a, b], "interact": bool, "catch": bool}   (trạng thái phím đang giữ)
     POST /restart -> chơi lại từ đầu (cùng seed, cùng scenario)
-    POST /continue -> vào pha mới trong bản trình duyệt sau màn giới thiệu/kết quả
+    POST /continue -> vào pha mới, nhận menu_ids tùy chọn khi mở quán
+    POST /wait -> chờ lượt khách kế hoặc đóng ca, giữ nguyên thứ tự tick của mô phỏng
 
 Mô phỏng chạy 60 tick/s trong một luồng nền, dùng CÙNG lớp sim như headless (qua `runner.Session`).
 Client chỉ ĐỌC snapshot và tự bỏ qua trường chưa có, nên luật do nhóm viết thêm trường nào cũng không vỡ.
@@ -14,6 +15,7 @@ Ngẫu nhiên vẫn đi qua `Streams` (seed); chỉ nhịp chạy theo đồng h
 """
 
 import argparse
+import copy
 import json
 import os
 import sys
@@ -39,9 +41,10 @@ PLAY_BUTTONS = ("interact", "catch", "pause")
 WEB_ASSETS = {
     "/": ("index.html", "text/html"),
     "/index.html": ("index.html", "text/html"),
-    "/assets/game.css": ("game.css", "text/css"),
+    **{"/assets/" + name: (name, "text/css") for name in ("game.css", "forage.css", "flow.css")},
     **{"/assets/" + name: (name, "text/javascript") for name in (
-        "scene.js", "river.js", "cafe.js", "vendor/three.module.min.js", "vendor/three.core.min.js",
+        "scene.js", "river.js", "cafe.js", "forage.js", "service.js", "flow.js",
+        "vendor/three.module.min.js", "vendor/three.core.min.js",
     )},
 }
 
@@ -58,9 +61,12 @@ class LiveGame:
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._thread = None
+        self._run_number = 0
         self._reset()
 
     def _reset(self):
+        self._run_number += 1
+        self._arrival_preview = None
         day_mode = self.mode == "day"
         self.session = Session(*self._args, days=5) if day_mode else Session(*self._args)
         self.inputs = LiveInputs(DAY_BUTTONS if day_mode else PLAY_BUTTONS)
@@ -158,12 +164,74 @@ class LiveGame:
                     sys.stderr.write(f"lỗi ghi kho: {e}\n")
 
     # --- API cho handler -----------------------------------------------------------
+    def _restaurant(self):
+        return self.session.sim.cur if self.mode == "day" else self.session.sim.inner
+
+    def _service_id(self, state):
+        return f"{self._run_number}/{state.get('day', 0)}"
+
+    @staticmethod
+    def _cookable(room, available):
+        allowed = room.menu_ids
+        if allowed is None:
+            allowed = room.ctx.get("plan_dishes", room.menu)
+        return sorted(dish for dish in allowed
+                      if all(available.get(kind, 0) >= count
+                             for kind, count in room.menu[dish]["recipe"].items()))
+
+    def _can_wait(self, state):
+        return (state["phase"] == "quan" and state["state"] == "playing"
+                and not self.menu_pending and not self.intro_pending
+                and not state["customers"] and not state["hand"]
+                and all(stove["state"] == "idle" for stove in state["stoves"]))
+
+    def _wait_to_close(self, room):
+        if not room.random_customers or not self._cookable(room, room._available_stock()):
+            return True
+        first = room.t["first_customer_tick"]
+        interval = round(room.t["customer_interval_s"] * room.tick_hz)
+        until_arrival = first - room.phase_tick
+        if until_arrival <= 0:
+            until_arrival = interval - (room.phase_tick - first) % interval
+        if until_arrival >= room.time_left_ticks:
+            return True
+        if not room.is_item_inventory:
+            return False
+
+        # Kho từng món có thể ươn trước lúc khách đến. Trong lúc quán trống, chỉ
+        # cần xét một lần cho lượt khách kế vì lượng nguyên liệu chỉ giảm theo tick.
+        key = (room, room.phase_tick + until_arrival)
+        if self._arrival_preview is None or self._arrival_preview[0] != key:
+            preview = copy.deepcopy(room)
+            for _ in range(until_arrival):
+                preview._decay_freshness_and_handle_spoiled()
+            closes = not self._cookable(preview, preview._available_stock())
+            self._arrival_preview = (key, closes)
+        return self._arrival_preview[1]
+
     def state_json(self) -> bytes:
         with self._lock:
             snap = self.session.snapshot()
             snap["menu_pending"] = self.menu_pending
             snap["meta"] = self.tuning[snap["phase"]]
             snap["menu"] = self.tuning["menu"]
+            if snap["phase"] == "gather" and snap.get("active_upgrades", {}).get("net"):
+                active_net = self.session.sim.cur.net
+                if active_net is not None:
+                    snap["active_net"] = active_net
+            if snap["phase"] == "quan":
+                room = self._restaurant()
+                snap["service_id"] = self._service_id(snap)
+                if isinstance(snap.get("stock"), list):
+                    snap["available_stock"] = room._available_stock()
+                if self.menu_pending or self.intro_pending:
+                    available = snap.get("available_stock")
+                    if available is None:
+                        available = room._available_stock()
+                    snap["opening_stock"] = {kind: count for kind, count in available.items() if count > 0}
+                    snap["opening_menu"] = self._cookable(room, available)
+                snap["can_wait"] = self._can_wait(snap)
+                snap["wait_to_close"] = snap["can_wait"] and self._wait_to_close(room)
             if snap["phase"] == "shop":
                 room = self.tuning["quan"]
                 snap["shop_room"] = {key: room[key] for key in ("bounds", "stoves", "tables")}
@@ -208,10 +276,40 @@ class LiveGame:
             if not (self.menu_pending or self.intro_pending):
                 raise ValueError("màn giới thiệu đã thay đổi")
             state = self.session.snapshot()
-            if any(body.get(k) != state.get(k) for k in ("day", "phase", "tick")):
+            if ("service_id" in body and body["service_id"] != self._service_id(state)
+                    or not self._matches(body, state, ("day", "phase", "tick"))):
                 raise ValueError("màn giới thiệu đã thay đổi")
+            if "menu_ids" in body:
+                if state["phase"] != "quan":
+                    raise ValueError("chỉ chọn thực đơn lúc mở quán")
+                ids = body["menu_ids"]
+                if not isinstance(ids, list) or not all(isinstance(dish, str) for dish in ids):
+                    raise ValueError("menu_ids phải là danh sách mã món")
+                room = self._restaurant()
+                feasible = self._cookable(room, room._available_stock())
+                if len(set(ids)) != len(ids) or not set(ids).issubset(feasible) or (feasible and not ids):
+                    raise ValueError("chọn ít nhất một món nấu được, mỗi món một lần")
+                room.menu_ids = list(ids)
             self.intro_pending = False
             self.menu_pending = False
+
+    @staticmethod
+    def _matches(body, state, keys):
+        return all(type(body.get(k)) is type(state.get(k)) and body.get(k) == state.get(k) for k in keys)
+
+    def wait_for_customer(self, body):
+        with self._lock:
+            state = self.session.snapshot()
+            if (body.get("service_id") != self._service_id(state)
+                    or not self._matches(body, state, ("phase", "day"))
+                    or not self._can_wait(state)):
+                raise ValueError("ca hoặc lượt khách đã thay đổi")
+            room = self._restaurant()
+            self.inputs = LiveInputs(DAY_BUTTONS if self.mode == "day" else PLAY_BUTTONS)
+            for _ in range(room.time_left_ticks):
+                self._tick_once()
+                if room.customers or room.done:
+                    break
 
     def restart(self):
         with self._lock:
@@ -258,12 +356,14 @@ class _Handler(BaseHTTPRequestHandler):
             return
         raw = self.rfile.read(n) if n else b""
         try:
-            if path in ("/input", "/continue"):
+            if path in ("/input", "/continue", "/wait"):
                 body = json.loads(raw.decode("utf-8") or "{}")
                 if not isinstance(body, dict):
                     raise ValueError("body phải là object")
                 if path == "/continue":
                     self.game.continue_intro(body)
+                elif path == "/wait":
+                    self.game.wait_for_customer(body)
                 else:
                     self.game.set_input(body)
             elif path == "/restart":

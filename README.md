@@ -48,6 +48,8 @@ Bản chơi trên trình duyệt dựng chợ nổi bằng Three.js. Lúc lặn,
 
 Chơi trọn vòng lặn, mở quán, mua nâng cấp và sang ngày tiếp theo bằng `python3 -m chonoi.live --mode day --port 8012`. Mở địa chỉ được in ra và chọn **Bắt đầu chơi**. Nhấn **P** hoặc **Esc** để tạm dừng.
 
+Buổi sáng, chọn nguyên liệu trong **Theo dõi thực đơn** để xem hướng bơi, khoảng cách và độ sâu. Khi giỏ đủ mục tiêu, hướng dẫn chuyển sang nguyên liệu còn thiếu hoặc bến. Trước giờ mở quán, chọn các món muốn bán từ số nguyên liệu đang có. Trong ca, phiếu phục vụ chỉ tới bếp có đơn hoặc đúng bàn đang chờ món trên tay. Lúc quán trống, có thể chờ nhanh tới khách kế tiếp hoặc thu dọn khi không còn đơn nào có thể đến.
+
 `chonoi.live` phục vụ cả thư viện đồ họa từ máy chạy game. Trình duyệt hỗ trợ WebGL 2 hiển thị cảnh 3D, các trình duyệt khác dùng bản Canvas 2D. Hai giao diện đọc cùng snapshot của mô phỏng Python. Lệnh headless chỉ chạy mô phỏng.
 
 ### `net` — Vợt hút cá (haiquanng)

@@ -1,0 +1,17 @@
+.opening-board fieldset {margin:16px 0 0; padding:0; border:0}
+.opening-board legend {padding:0 0 5px; color:var(--gold); font-weight:650}
+.opening-board label {display:flex; align-items:center; gap:12px; padding:9px 0; border-top:1px solid #e4e6c932; cursor:pointer}
+.opening-board input {width:18px; height:18px; flex:none; accent-color:var(--gold)}
+.opening-board label:has(input:disabled) {color:#b2c4bf; cursor:default}
+.opening-board label>span:last-child {margin-left:auto; white-space:nowrap; font-size:.85em}
+.opening-board strong,.opening-board small,.service-stage,.service-dish,.service-detail {display:block}
+.opening-board small,.service-detail {font-size:.86em}
+.ledger #forage-guide,.ledger #service-guide {padding-bottom:9px; border-bottom:1px solid #f0daa450; margin-bottom:8px}
+.service-stage {color:var(--gold); font-weight:650}
+#wait-turn {margin-bottom:8px; padding:6px 10px; border-radius:6px; font-size:.87em}
+#event-feedback {color:var(--ivory); text-align:center; white-space:normal; width:max-content; max-width:min(88vw,480px)}
+.ledger {overscroll-behavior:contain}
+@media (max-width:680px) {
+  .opening-board label {gap:7px}
+  .ledger {max-width:49vw; max-height:52vh}
+}
