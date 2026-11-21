@@ -7,10 +7,12 @@ from contextlib import redirect_stderr
 from pathlib import Path
 from unittest.mock import patch
 
+from chonoi.errors import BadInput
 from chonoi.headless import main as headless_main
 from chonoi.inputs import InputPlayer
 from chonoi.rng import Streams
 from chonoi.runner import Session
+from chonoi.scenario import load_scenario
 from chonoi.sim.gather import GatherSim
 from helpers import Workdir, events, read_jsonl, snapshots, write_json
 
@@ -97,6 +99,17 @@ class MonsterMovement(unittest.TestCase):
                 self.assertEqual(session.snapshot()["monsters"][0]["state"], want_state)
 
 
+    def test_decimal_coordinates_preserve_inclusive_detection_and_exit(self):
+        for player_x, monster_x, state in [(6.1, 16.1, "patrol"), (16.2, 32.2, "chase")]:
+            with self.subTest(player_x=player_x, state=state):
+                session = gather_session({
+                    "player": {"pos": [player_x, 10]},
+                    "monsters": [monster([monster_x, 10], state=state)],
+                })
+                one_step(session)
+                self.assertEqual(session.snapshot()["monsters"][0]["state"], "chase")
+
+
 class MonsterDamage(unittest.TestCase):
     def test_hit_selects_closest_then_numeric_id_and_drops_half_lifo(self):
         scenario = read_fixture(FIXTURES / "p2_monster_hit.json")["gather"]
@@ -115,6 +128,7 @@ class MonsterDamage(unittest.TestCase):
     def test_hit_uses_post_move_player_and_monster_positions(self):
         for player, move, start_x in [
             ({"pos": [20, 10]}, [0, 0], 21.55),
+            ({"pos": [1.05, 10]}, [0, 0], 2.60),
             ({"pos": [20, 9.95], "vel": [0, 4]}, [0, 1], 21),
         ]:
             with self.subTest(player=player):
@@ -122,6 +136,13 @@ class MonsterDamage(unittest.TestCase):
                 rows = one_step(session, {"tick": 0, "move": move})
                 self.assertEqual([name for name, _ in rows], ["monster_hit"])
                 self.assertEqual(rows[0][1]["pos"], session.snapshot()["player"]["pos"])
+
+    def test_decimal_coordinates_preserve_id_tie_after_movement(self):
+        session = gather_session({
+            "player": {"pos": [1.65, 10]},
+            "monsters": [monster([2.7, 10]), monster([0.6, 10], id="M2")],
+        })
+        self.assertEqual(one_step(session)[0][1]["monster_id"], "M1")
 
     def test_player_just_above_species_depth_cannot_be_hit(self):
         session = gather_session({
@@ -259,6 +280,23 @@ class MonsterHeadless(unittest.TestCase):
         first = snapshots(rows)[0]["monsters"][0]
         self.assertEqual((first["target_idx"], first["state"], first["state_ticks_left"], first["recoil_dir"]),
                          (0, "recoil", 15, [-1, 0]))
+
+    def test_scenario_validation_accepts_only_stats_within_active_limits(self):
+        tuning = monster_tuning()
+        levels = {"oxygen": 2, "hp": 2}
+        player = {"hp": 5, "oxygen_ticks": 3600}
+        with Workdir() as w:
+            path = w.path("upgraded.json")
+            write_json(path, {"gather": {"player": player}})
+            with self.assertRaises(BadInput):
+                load_scenario(path, "gather", tuning)
+            loaded = load_scenario(path, "gather", tuning, active_upgrades=levels)
+            self.assertEqual(loaded["player"], player)
+            for field in ("hp", "oxygen_ticks"):
+                with self.subTest(field=field):
+                    write_json(path, {"gather": {"player": {**player, field: player[field] + 1}}})
+                    with self.assertRaises(BadInput):
+                        load_scenario(path, "gather", tuning, active_upgrades=levels)
 
     def test_malformed_monster_fixtures_exit_before_output(self):
         cases = [

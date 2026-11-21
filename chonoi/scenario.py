@@ -10,6 +10,7 @@ import math
 
 from .errors import BadInput
 from .inventory import KINDS_P1, validate_items
+from .sim.gather import gather_limits
 from .sim.monsters import INACTIVE_STATES, MONSTER_STATES, monster_bounds
 
 GATHER_KEYS = {"player", "hold", "nodes", "fish", "random_fish", "time_left_ticks", "monsters"}
@@ -35,7 +36,7 @@ def _check_ids(name, arr):
         seen.add(e["id"])
 
 
-def load_scenario(path, mode: str, tuning: dict) -> dict:
+def load_scenario(path, mode: str, tuning: dict, *, active_upgrades=None) -> dict:
     if path is None:
         return {}
     try:
@@ -60,7 +61,7 @@ def load_scenario(path, mode: str, tuning: dict) -> dict:
         if isinstance(t, bool) or not isinstance(t, int) or not (1 <= t <= dur):
             raise BadInput(f"time_left_ticks phải là số nguyên trong [1, {dur}]")
     if mode == "gather":
-        _validate_gather(block, tuning)
+        _validate_gather(block, tuning, active_upgrades=active_upgrades)
     else:
         _validate_quan(block, tuning)
     return block
@@ -84,7 +85,7 @@ def _pos(name, pos, bounds, axes=("x", "d")):
             raise BadInput(f"{name} nằm ngoài vùng nước ({axis} ∈ [{lo}, {hi}])")
 
 
-def _validate_gather(b, tuning):
+def _validate_gather(b, tuning, *, active_upgrades=None):
     g = tuning["gather"]
     bounds = g["bounds"]
     for arr in ("nodes", "fish"):
@@ -117,10 +118,10 @@ def _validate_gather(b, tuning):
     for key in ("invuln_ticks", "catch_cd_ticks", "zero_oxy_ticks", "oxygen_ticks", "hp"):
         if key in p:
             _nonneg_int(f"player.{key}", p[key])
-    omax = int(round(g["oxygen_max_s"] * 60))
+    omax, hp_max = gather_limits(tuning, active_upgrades)
     if "oxygen_ticks" in p and p["oxygen_ticks"] > omax:
         raise BadInput("player.oxygen_ticks vượt oxy tối đa")
-    if "hp" in p and not (1 <= p["hp"] <= g["hp_max"]):
+    if "hp" in p and not (1 <= p["hp"] <= hp_max):
         raise BadInput("player.hp phải trong [1, hp_max]")
     if "zero_oxy_ticks" in p:
         pos = p.get("pos", g["start_pos"])

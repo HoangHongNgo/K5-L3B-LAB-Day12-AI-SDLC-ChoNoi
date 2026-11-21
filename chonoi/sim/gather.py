@@ -35,13 +35,20 @@ def _active_limit(tuning, active_upgrades, upgrade, field):
     raise BadInput(f"cấp nâng cấp {upgrade} không hợp lệ: {level}")
 
 
+def gather_limits(tuning, active_upgrades=None):
+    """Giới hạn oxy (tick) và Máu của ca theo cấp đang áp dụng."""
+    active_upgrades = active_upgrades or {}
+    oxygen_max_s = _active_limit(tuning, active_upgrades, "oxygen", "oxygen_max_s")
+    hp_max = _active_limit(tuning, active_upgrades, "hp", "hp_max")
+    return int(round(oxygen_max_s * TICK)), hp_max
+
+
 class GatherSim:
     mode = "gather"
     phase = "gather"
 
     def __init__(self, tuning, scenario, streams, ids=None, *, day=1, active_upgrades=None):
         t = tuning["gather"]
-        active_upgrades = active_upgrades or {}
         self.t = t
         self.rng = streams
         self.ids = IdAllocator() if ids is None else ids
@@ -52,10 +59,8 @@ class GatherSim:
         self._tgt = None
         self._ramp_left = 0
         self.heading = float(p.get("heading_deg", t["start_heading_deg"]))
-        oxygen_max_s = _active_limit(tuning, active_upgrades, "oxygen", "oxygen_max_s")
-        self.oxygen_max = int(round(oxygen_max_s * TICK))
+        self.oxygen_max, self.hp_max = gather_limits(tuning, active_upgrades)
         self.oxygen_ticks = p.get("oxygen_ticks", self.oxygen_max)
-        self.hp_max = _active_limit(tuning, active_upgrades, "hp", "hp_max")
         self.hp = p.get("hp", self.hp_max)
         self.zero_oxy_ticks = p.get("zero_oxy_ticks", 0)
         self.invuln_ticks = p.get("invuln_ticks", 0)

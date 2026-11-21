@@ -6,6 +6,8 @@ from ..ids import sort_by_id
 
 INACTIVE_STATES = {"recoil", "stunned"}
 MONSTER_STATES = {"patrol", "chase"} | INACTIVE_STATES
+# Bù sai số phép tính khoảng cách ở biên và khi hai khoảng cách bằng nhau.
+DISTANCE_TOLERANCE = 1e-10
 
 
 def monster_bounds(bounds, species):
@@ -52,7 +54,9 @@ class MonsterSim:
             self._advance(monster, player_pos, spec)
             if can_hit and player_pos[1] >= spec["depths"][0]:
                 distance = math.dist(monster["pos"], player_pos)
-                if distance <= spec["hit_radius"] and distance < closest_dist:
+                if distance <= spec["hit_radius"] + DISTANCE_TOLERANCE and (
+                    distance < closest_dist - DISTANCE_TOLERANCE
+                ):
                     closest, closest_dist = monster, distance
 
         if closest is None:
@@ -64,9 +68,9 @@ class MonsterSim:
         distance = math.dist(monster["pos"], player_pos)
         depth_allowed = player_pos[1] >= spec["depths"][0]
         if monster["state"] == "chase":
-            if not depth_allowed or distance > spec["exit_radius"]:
+            if not depth_allowed or distance > spec["exit_radius"] + DISTANCE_TOLERANCE:
                 monster["state"] = "patrol"
-        elif depth_allowed and distance <= spec["detect_radius"]:
+        elif depth_allowed and distance <= spec["detect_radius"] + DISTANCE_TOLERANCE:
             monster["state"] = "chase"
 
         if monster["state"] == "chase":
@@ -81,7 +85,7 @@ class MonsterSim:
         dx, dd = target[0] - x, target[1] - depth
         distance = math.hypot(dx, dd)
         # Sau nhiều bước, phép cộng float có thể để lại sai số rất nhỏ tại waypoint.
-        if distance <= travel or math.isclose(distance, travel, rel_tol=0.0, abs_tol=1e-10):
+        if distance <= travel + DISTANCE_TOLERANCE:
             monster["pos"] = self._clamp(monster["kind"], target)
             return True
         monster["pos"] = self._clamp(monster["kind"], (x + travel * dx / distance,
