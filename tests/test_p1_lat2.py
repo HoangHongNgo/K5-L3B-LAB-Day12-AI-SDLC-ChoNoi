@@ -129,5 +129,67 @@ class Gather(unittest.TestCase):
             self.assertEqual(snapshots(rows)[-1]["hold"], ["bong_sung"])
 
 
+class Catch(unittest.TestCase):
+    """AC-P1-05: bắt cá chỉ dưới nước, đủ yield, cooldown, hold_full giữ đàn."""
+
+    def test_catch_yield_and_cooldown(self):
+        for kind in ("ca_linh", "ca_loc"):
+            with Workdir() as w:
+                rows = run_gather(w, {"player": {"pos": [50, 10]}, "nodes": [],
+                                      "fish": [fish("F1", kind, [50, 11])]}, press(0, "catch"), 2)
+                ev = events(rows, "fish_caught")
+                self.assertEqual(len(ev), 1, kind)
+                self.assertEqual(ev[0]["data"], {"fish_id": "F1", "kind": kind, "count": G["fish_yield"][kind]})
+                snap = [s for s in snapshots(rows) if s["tick"] == 1][0]
+                self.assertEqual(snap["hold"], [kind] * G["fish_yield"][kind])
+                self.assertEqual(snap["fish"], [])
+                self.assertEqual(snap["player"]["catch_cd_ticks"], CATCH_CD)
+
+    def test_no_catch_at_surface(self):
+        with Workdir() as w:
+            rows = run_gather(w, {"player": {"pos": [50, 0]}, "nodes": [],
+                                  "fish": [fish("F1", "ca_loc", [50, 1])]}, press(0, "catch"), 2)
+            self.assertEqual(events(rows, "fish_caught"), [])
+            self.assertEqual(len(snapshots(rows)[-1]["fish"]), 1)
+
+    def test_cooldown_blocks_then_allows(self):
+        fs = [fish("F1", "ca_loc", [50, 10]), fish("F2", "ca_loc", [50, 11])]
+        with Workdir() as w:  # bấm lại ở bước CATCH_CD - 1: còn hồi chiêu
+            rows = run_gather(w, {"player": {"pos": [50, 10]}, "nodes": [], "fish": fs},
+                              press(0, "catch") + press(CATCH_CD - 1, "catch"), CATCH_CD + 2)
+            self.assertEqual(len(events(rows, "fish_caught")), 1)
+        with Workdir() as w:  # bấm ở bước CATCH_CD: hết hồi chiêu
+            rows = run_gather(w, {"player": {"pos": [50, 10]}, "nodes": [], "fish": fs},
+                              press(0, "catch") + press(CATCH_CD, "catch"), CATCH_CD + 2)
+            ev = events(rows, "fish_caught")
+            self.assertEqual([e["data"]["fish_id"] for e in ev], ["F1", "F2"])
+            self.assertEqual(ev[1]["tick"] - ev[0]["tick"], CATCH_CD)
+
+    def test_hold_full_keeps_fish_no_cooldown(self):
+        with Workdir() as w:
+            hold = ["bong_sung"] * (G["hold_capacity"] - 2)
+            rows = run_gather(w, {"player": {"pos": [50, 10]}, "hold": hold, "nodes": [],
+                                  "fish": [fish("F1", "ca_linh", [50, 10])]}, press(0, "catch"), 2)
+            self.assertEqual(events(rows, "fish_caught"), [])
+            hf = events(rows, "hold_full")
+            self.assertEqual(hf[0]["data"], {"action": "catch", "fish_id": "F1",
+                                             "required": G["fish_yield"]["ca_linh"], "free": 2})
+            last = snapshots(rows)[-1]
+            self.assertEqual(last["hold"], hold)
+            self.assertEqual([f["id"] for f in last["fish"]], ["F1"])
+            self.assertEqual(last["player"]["catch_cd_ticks"], 0)
+
+    def test_exact_radius_and_tie_by_id(self):
+        with Workdir() as w:
+            r = G["catch_radius"]
+            fs = [fish("F2", "ca_loc", [50 - r, 10]), fish("F1", "ca_linh", [50 + r, 10])]
+            rows = run_gather(w, {"player": {"pos": [50, 10]}, "nodes": [], "fish": fs}, press(0, "catch"), 2)
+            self.assertEqual(events(rows, "fish_caught")[0]["data"]["fish_id"], "F1")
+        with Workdir() as w:
+            fs = [fish("F1", "ca_loc", [50, 12.01])]
+            rows = run_gather(w, {"player": {"pos": [50, 10]}, "nodes": [], "fish": fs}, press(0, "catch"), 2)
+            self.assertEqual(events(rows, "fish_caught"), [])
+
+
 if __name__ == "__main__":
     unittest.main()
