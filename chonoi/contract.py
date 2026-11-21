@@ -295,6 +295,34 @@ def check_dishes(name, dishes, menu):
             raise BadInput(f"{name}.dishes.{dish} phải là số nguyên dương")
 
 
+def resolve_day_plan(tuning, overrides=None):
+    """Kế hoạch 5 Ngày hiệu lực: preset của contract, áp `overrides` (mảng `{day, dishes, ingredients?}` của
+    scenario `day.day_plan`). `ingredients` luôn tính lại từ `dishes`; nếu override có khai thì phải khớp,
+    sai → BadInput. Trả mảng 5 phần tử `{day, dishes, ingredients}`."""
+    menu = tuning["menu"]
+    plan = {e["day"]: {"day": e["day"], "dishes": dict(e["dishes"]), "ingredients": dict(e["ingredients"])}
+            for e in tuning["day_plan"]}
+    if overrides is None:
+        return [plan[d] for d in sorted(plan)]
+    if not isinstance(overrides, list):
+        raise BadInput("day.day_plan phải là mảng {day, dishes, ingredients?}")
+    seen = set()
+    for i, o in enumerate(overrides):
+        name = f"day.day_plan[{i}]"
+        if not isinstance(o, dict) or not {"day", "dishes"} <= set(o) or set(o) - {"day", "dishes", "ingredients"}:
+            raise BadInput(f"{name} phải có day, dishes và (tùy chọn) ingredients")
+        d = o["day"]
+        if isinstance(d, bool) or not isinstance(d, int) or d not in plan or d in seen:
+            raise BadInput(f"{name}.day phải là số nguyên 1..{DAYS}, không trùng")
+        seen.add(d)
+        check_dishes(name, o["dishes"], menu)
+        want = plan_ingredients(o["dishes"], menu)
+        if "ingredients" in o and o["ingredients"] != want:
+            raise BadInput(f"{name}.ingredients không khớp công thức × số suất (cần {want})")
+        plan[d] = {"day": d, "dishes": dict(o["dishes"]), "ingredients": want}
+    return [plan[d] for d in sorted(plan)]
+
+
 def _validate_day_plan(plan, menu):
     if not isinstance(plan, list) or len(plan) != DAYS:
         raise BadInput(f"tuning.day_plan phải là mảng đúng {DAYS} Ngày")
