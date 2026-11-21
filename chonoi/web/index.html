@@ -7,10 +7,41 @@
 <style>
   html, body { margin: 0; height: 100%; background: #10161c; color: #e8eef2; font: 14px/1.4 system-ui, sans-serif; overflow: hidden; }
   canvas { display: block; width: 100vw; height: 100vh; }
+  [hidden] { display: none !important; }
+  .screen {
+    position: fixed; inset: 0; display: grid; place-items: safe center; padding: 20px;
+    background: rgba(12, 22, 28, .84); overflow: auto;
+  }
+  .card {
+    width: min(100%, 620px); box-sizing: border-box; padding: clamp(22px, 5vw, 44px);
+    background: #202d2e; border: 1px solid #5c6c64; border-radius: 18px; font-size: 18px;
+    box-shadow: 0 16px 48px #0007;
+  }
+  .card h1 { margin: 0 0 12px; font-size: clamp(28px, 6vw, 46px); color: #ffe0a1; line-height: 1.12; }
+  .card h2 { margin: 18px 0 4px; font-size: 20px; }
+  .card p, .card ul { margin: 8px 0; }
+  .card ul { padding-left: 24px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+  button {
+    padding: 10px 18px; border: 1px solid #b7a27e; border-radius: 8px;
+    background: #ffd48e; color: #25221b; font: 700 18px system-ui, sans-serif; cursor: pointer;
+  }
+  button.secondary { background: transparent; color: #f3e9d8; }
+  button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  button:disabled { opacity: .55; cursor: default; }
+  #screen-message { color: #ffae9f; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
+<section id="screen" class="screen" role="dialog" aria-modal="true" aria-labelledby="screen-title" hidden>
+  <div class="card">
+    <h1 id="screen-title" tabindex="-1"></h1>
+    <div id="screen-content"></div>
+    <div id="screen-actions" class="actions"></div>
+    <p id="screen-message" role="alert" hidden></p>
+  </div>
+</section>
 <script>
 "use strict";
 /*
@@ -21,6 +52,12 @@
 const cv = document.getElementById("c");
 const ctx = cv.getContext("2d");
 let snap = null, offline = false;
+const screen = document.getElementById("screen");
+const screenTitle = document.getElementById("screen-title");
+const screenContent = document.getElementById("screen-content");
+const screenActions = document.getElementById("screen-actions");
+const screenMessage = document.getElementById("screen-message");
+let screenName = "", introTimer, introBusy = false, dayStarted = false;
 
 // ---------- vào: phím ----------
 const down = new Set();
@@ -28,7 +65,7 @@ const MOVE_KEYS = { w: "u", arrowup: "u", s: "d", arrowdown: "d", a: "l", arrowl
 let queue = [], inflight = false, lastSent = "";
 
 function currentInput() {
-  const mode = snap ? snap.mode : "gather";
+  const mode = snap?.phase || snap?.mode;
   const dx = (down.has("r") ? 1 : 0) - (down.has("l") ? 1 : 0);
   let dy = (down.has("d") ? 1 : 0) - (down.has("u") ? 1 : 0);   // gather: xuống = d dương
   if (mode === "quan") dy = -dy;                                // quan: lên (bắc) = z dương
@@ -51,10 +88,16 @@ async function flush() {
   }
   inflight = false;
 }
-function keyName(e) { return e.key.length === 1 ? e.key.toLowerCase() : e.key.toLowerCase(); }
 addEventListener("keydown", (e) => {
-  const k = keyName(e);
+  const k = e.key.toLowerCase();
   if (e.repeat) { if (k === " " || k.startsWith("arrow")) e.preventDefault(); return; }
+  if (!screen.hidden) {
+    if (screenName === "day-intro" && !e.ctrlKey && !e.metaKey && !e.altKey && k !== "tab") {
+      e.preventDefault();
+      continueDay();
+    }
+    return;
+  }
   if (MOVE_KEYS[k]) { down.add(MOVE_KEYS[k]); e.preventDefault(); }
   else if (k === "e") down.add("interact");
   else if (k === " ") { down.add("catch"); e.preventDefault(); }
@@ -62,20 +105,127 @@ addEventListener("keydown", (e) => {
   pushInput();
 });
 addEventListener("keyup", (e) => {
-  const k = keyName(e);
+  if (!screen.hidden) return;
+  const k = e.key.toLowerCase();
   if (MOVE_KEYS[k]) down.delete(MOVE_KEYS[k]);
   else if (k === "e") down.delete("interact");
   else if (k === " ") down.delete("catch");
   pushInput();
 });
-addEventListener("blur", () => { down.clear(); pushInput(); });
+addEventListener("blur", () => { down.clear(); if (screen.hidden) pushInput(); });
+
+function element(tag, value) {
+  const node = document.createElement(tag);
+  node.textContent = value;
+  return node;
+}
+function action(label, onClick, secondary = false) {
+  const button = element("button", label);
+  button.type = "button";
+  if (secondary) button.className = "secondary";
+  button.addEventListener("click", onClick);
+  return button;
+}
+function listSection(title, lines, empty) {
+  const section = document.createElement("section");
+  section.append(element("h2", title));
+  if (lines.length) {
+    const list = document.createElement("ul");
+    list.append(...lines.map((line) => element("li", line)));
+    section.append(list);
+  } else {
+    section.append(element("p", empty));
+  }
+  return section;
+}
+function showScreen(name, title, content = [], actions = []) {
+  clearTimeout(introTimer);
+  if (down.size) {
+    down.clear();
+    pushInput();
+  }
+  screenName = name;
+  screenTitle.textContent = title;
+  screenContent.replaceChildren(...content);
+  screenActions.replaceChildren(...actions);
+  screenMessage.hidden = true;
+  screen.hidden = false;
+  screenTitle.focus();
+}
+function closeScreen() {
+  clearTimeout(introTimer);
+  screenName = "";
+  screen.hidden = true;
+}
+function ingredientLines(counts) {
+  return Object.entries(counts || {}).filter(([, count]) => count > 0)
+    .map(([kind, count]) => `${KIND_NAME[kind] || kind} × ${count}`);
+}
+function showMenu() {
+  dayStarted = false;
+  showScreen("menu", "Quán Ăn Chợ Nổi", [], [
+    action("Chơi", () => {
+      dayStarted = true;
+      showDayIntro(snap);
+    }),
+    action("Thoát", () => showScreen("exit", "Đã thoát", [], [action("Về menu", showMenu)]), true),
+  ]);
+}
+function showDayIntro(state) {
+  const plan = state.day_plan || {};
+  const dishes = Object.entries(plan.dishes || {}).map(([id, count]) => `${dishName(id)} × ${count} suất`);
+  showScreen("day-intro", `Ngày ${state.day}`, [
+    listSection("Má Tư định nấu", dishes, "Chưa có món trong kế hoạch."),
+    listSection("Nguyên liệu cần lấy", ingredientLines(plan.ingredients), "Không có mục tiêu thu gom."),
+  ], [action("Bắt đầu lặn", continueDay)]);
+  introTimer = setTimeout(continueDay, 4000);
+}
+function showEveningIntro(state) {
+  const handoff = (state.events || []).findLast((e) => e.name === "gather_end" && e.day === state.day);
+  const stock = handoff?.data?.inventory?.items || state.stock || {};
+  const total = Object.values(stock).reduce((sum, count) => sum + count, 0);
+  const menu = state.menu || {};
+  const dishes = Object.keys(state.day_plan?.dishes || {}).filter((id) => {
+    const recipe = menu[id]?.recipe;
+    return recipe && Object.entries(recipe).every(([kind, count]) => (stock[kind] || 0) >= count);
+  }).map(dishName);
+  showScreen("evening-intro", `Mở quán · Ngày ${state.day}`, [
+    listSection(`Nhập kho ${total} nguyên liệu`, ingredientLines(stock), "Kho trống."),
+    listSection("Món có thể nấu", dishes, "Chưa đủ nguyên liệu cho món nào trong kế hoạch."),
+  ], [action("Mở quán", continueDay)]);
+}
+async function continueDay() {
+  if (introBusy) return;
+  clearTimeout(introTimer);
+  introBusy = true;
+  try {
+    const response = await fetch("/continue", { method: "POST" });
+    if (!response.ok) throw new Error("continue");
+    closeScreen();
+  } catch (e) {
+    screenMessage.textContent = "Chưa thể vào chơi. Hãy thử lại.";
+    screenMessage.hidden = false;
+  } finally {
+    introBusy = false;
+  }
+}
+function updateDayScreen(previous) {
+  if (snap.mode !== "day") return;
+  if (previous?.mode !== "day") showMenu();
+  if (!dayStarted || (snap.phase === previous?.phase && snap.day === previous?.day)) return;
+  if (snap.phase === "gather") showDayIntro(snap);
+  if (snap.phase === "quan") showEveningIntro(snap);
+}
 
 // ---------- ra: poll snapshot ----------
 async function poll() {
   try {
     const r = await fetch("/state", { cache: "no-store" });
+    if (!r.ok) throw new Error("state");
+    const previous = snap;
     snap = await r.json();
     offline = false;
+    updateDayScreen(previous);
   } catch (e) { offline = true; }
   setTimeout(poll, 16);
 }
@@ -88,6 +238,9 @@ const DISH_NAME = {
   ca_loc_nuong_trui: "Cá lóc nướng trui",
   goi_bong_sung: "Gỏi bông súng",
   lau_ca_linh_dien_dien: "Lẩu cá linh bông điên điển",
+  canh_chua_ca_loc: "Canh chua cá lóc bông điên điển",
+  ca_keo_nuong: "Cá kèo nướng muối ớt",
+  lau_mam: "Lẩu mắm miền Tây",
 };
 const kc = (k) => KIND_COLOR[k] || "#bbbbbb";
 
@@ -132,7 +285,7 @@ function eventLog(w, h, bottom) {
 function overlay(w, h) {
   if (offline) text("Mất kết nối tới máy chủ (đã tắt chưa?)", w / 2, 30, { align: "center", color: "#ff8a80", size: 16 });
   if (snap.error) text("Luật của nhóm báo lỗi — xem terminal. R để chơi lại.", w / 2, 52, { align: "center", color: "#ff8a80", size: 15 });
-  if (snap.finished) {
+  if (snap.finished && snap.mode !== "day") {
     ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(w / 2 - 190, h / 2 - 50, 380, 100);
     text("Buổi " + (snap.mode === "gather" ? "sáng" : "tối") + " kết thúc: " + (snap.reason || ""), w / 2, h / 2 - 12, { align: "center", size: 20 });
     text("Nhấn R để chơi lại", w / 2, h / 2 + 20, { align: "center", color: "#cfd8dc" });
@@ -307,7 +460,9 @@ function frame() {
   const [w, h] = fit();
   ctx.fillStyle = "#10161c"; ctx.fillRect(0, 0, w, h);
   if (snap) {
-    if (snap.mode === "quan") drawQuan(w, h); else drawGather(w, h);
+    const phase = snap.phase || snap.mode;
+    if (phase === "quan") drawQuan(w, h);
+    if (phase === "gather") drawGather(w, h);
     overlay(w, h);
   } else {
     text(offline ? "Không kết nối được máy chủ…" : "Đang tải…", w / 2, h / 2, { align: "center", size: 18 });

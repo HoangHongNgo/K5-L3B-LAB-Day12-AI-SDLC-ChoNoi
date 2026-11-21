@@ -273,8 +273,8 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Commit: `day: máy pha gather→quan→shop, --mode day`.
 
 ### RachalHys — Lát U (UI)
-- [ ] Màn hình menu chính (Chơi/Thoát), DayIntro (Ngày + danh sách Má Tư, tự chuyển sau 4 s hoặc khi nhấn phím), EveningIntro (số nhập kho + món nấu được), dùng snapshot giả trước.
-- [ ] Commit: `ui: menu chính, DayIntro, EveningIntro`.
+- [x] Menu chính, DayIntro và EveningIntro. Playwright kiểm trên Chromium với snapshot giả ở 320 px và 1280×720, gồm bỏ qua DayIntro bằng phím, tự chuyển sau 4 giây và lọc món EveningIntro theo kho/kế hoạch.
+- [x] Commit: `ui: menu chính, DayIntro, EveningIntro`.
 
 ### Phút 20 — Smoke tích hợp (HoangHongNgo dẫn, cả nhóm)
 - [ ] Trên nhánh tích hợp tạm: `gather --inventory-out kho.json` → `quan --inventory kho.json`, đối chiếu snapshot kho ở tick 0, lưu `docs/proof/phase-2/integration.*`.
