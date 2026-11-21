@@ -106,8 +106,48 @@ class QuanSim:
         return sort_by_id(free_tables)[0]
 
     def _spawn_customer(self, table):
-        # Sẽ triển khai chi tiết ở Commit 4
-        return []
+        events = []
+        avail = self._available_stock()
+        valid_dishes = []
+        for did in sorted(self.menu.keys()):
+            recipe = self.menu[did]["recipe"]
+            if all(avail.get(k, 0) >= req for k, req in recipe.items()):
+                valid_dishes.append(did)
+
+        if not valid_dishes:
+            events.append(("no_dish", {"table_id": table["id"]}))
+            return events
+
+        rng = self.rng.get("customers")
+        chosen_dish = rng.choice(valid_dishes)
+        recipe = dict(self.menu[chosen_dish]["recipe"])
+
+        customer_id = self.ids.new("C")
+        pat_ticks = int(round(self.t["patience_s"] * self.tick_hz))
+        new_customer = {
+            "id": customer_id,
+            "table_id": table["id"],
+            "dish_id": chosen_dish,
+            "order_tick": self.phase_tick,
+            "state": "waiting",
+            "patience_ticks_left": pat_ticks,
+            "eat_ticks_left": 0,
+            "order_status": "reserved",
+            "reserved": recipe,
+            "base_price": None,
+            "tip": 0,
+        }
+        self.customers.append(new_customer)
+        events.append((
+            "customer_arrived",
+            {
+                "customer_id": customer_id,
+                "table_id": table["id"],
+                "dish_id": chosen_dish,
+                "reserved": recipe,
+            }
+        ))
+        return events
 
     def _move(self, inp):
         speed = self.t["walk_speed"]

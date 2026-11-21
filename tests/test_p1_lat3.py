@@ -408,5 +408,85 @@ class CustomerArrivalSchedule(unittest.TestCase):
         self.assertFalse(sim._should_spawn_customer())
 
 
+class DishSelectionAndReservation(unittest.TestCase):
+    def test_t06_select_valid_dish_headless(self):
+        """T06: Khách đến chọn món hợp lệ theo kho và phát customer_arrived."""
+        with Workdir() as w:
+            sc = write_json(w.path("sc.json"), {
+                "quan": {"stock": {"ca_loc": 1}}
+            })
+            out = w.path("o.jsonl")
+            code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "125",
+                                     "--scenario", sc, "--out", out)
+            self.assertEqual(code, 0, err)
+            rows = read_jsonl(out)
+            arrived_ev = events(rows, "customer_arrived")
+            self.assertEqual(len(arrived_ev), 1)
+            ev = arrived_ev[0]
+            self.assertEqual(ev["tick"], 120)
+            self.assertEqual(ev["data"]["customer_id"], "C1")
+            self.assertEqual(ev["data"]["table_id"], "T1")
+            self.assertEqual(ev["data"]["dish_id"], "ca_loc_nuong_trui")
+            self.assertEqual(ev["data"]["reserved"], {"ca_loc": 1})
+
+    def test_t07_no_dish_when_empty_stock(self):
+        """T07: Không có món nào đủ nguyên liệu -> no_dish."""
+        with Workdir() as w:
+            sc = write_json(w.path("sc.json"), {
+                "quan": {"stock": {}}
+            })
+            out = w.path("o.jsonl")
+            code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "125",
+                                     "--scenario", sc, "--out", out)
+            self.assertEqual(code, 0, err)
+            rows = read_jsonl(out)
+            no_dish_ev = events(rows, "no_dish")
+            self.assertEqual(len(no_dish_ev), 1)
+            self.assertEqual(no_dish_ev[0]["tick"], 120)
+            self.assertEqual(no_dish_ev[0]["data"], {"table_id": "T1"})
+            # Không có khách nào được tạo
+            self.assertEqual(len(events(rows, "customer_arrived")), 0)
+            last_snap = snapshots(rows)[-1]
+            self.assertEqual(len(last_snap["customers"]), 0)
+
+    def test_t08_available_stock_and_no_over_reserve(self):
+        """T08: Tính nguyên liệu khả dụng chính xác, không giữ vượt tồn."""
+        from chonoi.contract import load_contract
+        from chonoi.ids import IdAllocator
+        from chonoi.rng import Streams
+        from chonoi.sim.quan import QuanSim
+        tuning = load_contract()["tuning"]
+        sim = QuanSim(tuning, {"stock": {"ca_loc": 1, "bong_sung": 2}}, Streams(1), IdAllocator())
+        self.assertEqual(sim._available_stock(), {"ca_loc": 1, "bong_sung": 2})
+
+        # C1 đến và giữ ca_loc: 1
+        table = sim._find_available_table()
+        evs = sim._spawn_customer(table)
+        self.assertEqual(len(evs), 1)
+        self.assertEqual(evs[0][0], "customer_arrived")
+        # ca_loc_nuong_trui hoặc goi_bong_sung có thể được chọn
+        chosen_dish = sim.customers[0]["dish_id"]
+        avail = sim._available_stock()
+        if chosen_dish == "ca_loc_nuong_trui":
+            self.assertEqual(avail["ca_loc"], 0)
+            self.assertEqual(avail["bong_sung"], 2)
+        else:
+            self.assertEqual(avail["ca_loc"], 1)
+            self.assertEqual(avail["bong_sung"], 0)
+
+    def test_customer_dish_selection_deterministic(self):
+        """Cùng seed tạo ra cùng món được chọn."""
+        with Workdir() as w:
+            sc = write_json(w.path("sc.json"), {
+                "quan": {"stock": {"ca_loc": 5, "ca_linh": 5, "bong_sung": 5, "bong_dien_dien": 5}}
+            })
+            for i in (1, 2):
+                code, err = run_headless("--mode", "quan", "--seed", "42", "--ticks", "125",
+                                         "--scenario", sc, "--out", w.path(f"o{i}.jsonl"))
+                self.assertEqual(code, 0, err)
+            with open(w.path("o1.jsonl"), "rb") as f1, open(w.path("o2.jsonl"), "rb") as f2:
+                self.assertEqual(f1.read(), f2.read())
+
+
 if __name__ == "__main__":
     unittest.main()
