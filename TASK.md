@@ -260,11 +260,11 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Commit: `gather: oxy/ngạt số chuẩn, Cá Sấu patrol/chase`.
 
 ### minhphuong150505 — Lát Q (quán)
-- [ ] Quán đọc bếp B1/B2, bàn T1–T4, 6 món từ contract (không hard-code); **cả 2 bếp** idle lấy đơn `reserved` cũ nhất (order_tick, id bàn), duyệt bếp theo id.
-- [ ] Lịch khách `120 + 900·k`, kiên nhẫn 3.600, ăn 600, boa `floor(giá×0.2)` khi còn ≥ 50% kiên nhẫn.
-- [ ] Thêm tham số `menu_ids` (lọc theo id món kế hoạch **trước** khi lọc nguyên liệu khả dụng); `None` là cả 6 món.
-- [ ] Fixture `tests/fixtures/p2_quan_*.json` (4 bàn, 2 bếp, kho dựng sẵn).
-- [ ] Commit: `quan: 2 bếp 4 bàn, 6 món, lọc theo kế hoạch`.
+- [x] Quán đọc bếp B1/B2, bàn T1–T4, 6 món từ contract (không hard-code); **cả 2 bếp** idle lấy đơn `reserved` cũ nhất (order_tick, id bàn), duyệt bếp theo id.
+- [x] Lịch khách `120 + 900·k`, kiên nhẫn 3.600, ăn 600, boa `floor(giá×0.2)` khi còn ≥ 50% kiên nhẫn.
+- [x] Thêm tham số `menu_ids` (lọc theo id món kế hoạch **trước** khi lọc nguyên liệu khả dụng); `None` là cả 6 món.
+- [x] Fixture `tests/fixtures/p2_quan_*.json` (4 bàn, 2 bếp, kho dựng sẵn).
+- [x] Commit: `quan: 2 bếp 4 bàn, 6 món, lọc theo kế hoạch`.
 
 ### phuthaitran — Lát D (vòng ngày)
 - [ ] `chonoi/sim/day.py`: máy pha `gather → quan → shop → (Ngày kế | end)`; event `day_start → day_plan → phase_start(gather)`; sau `gather_end` dựng quán và phát `phase_start(quan)` cùng tick; pha mới chạy gameplay từ bước sau.
@@ -314,9 +314,10 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Mở PR, nhờ haiquanng review.
 
 ### minhphuong150505 — Lát Q
-- [ ] Hàm `validate_quan_against_inventory` để lát D gọi lúc mở quán: kiểm kho/khách/bếp/món thuộc kế hoạch trên kho thực.
-- [ ] Đóng ca số chuẩn: khách đang ăn trả ngay, khách chờ rời không trừ uy tín, dọn món và phần giữ.
-- [ ] Test `tests/test_p2_quan.py`: 2 bếp nấu song song, lọc kế hoạch, `no_dish`, khách vẫn gọi tiếp món đủ hàng khi đã bán đủ suất.
+- [x] `scenario.py` cho `--mode day`: cấm `quan.stock`/`quan.reputation`; khối `day {money,earned,reputation,upgrades,day_plan}` với `0 ≤ money ≤ earned`; `day.day_plan` ghi đè theo Ngày, tính lại `ingredients` và so với giá trị khai nếu có, sai thì mã 2.
+- [x] Hàm `validate_quan_against_inventory` để lát D gọi lúc mở quán: kiểm kho/khách/bếp/món thuộc kế hoạch trên kho thực.
+- [x] Đóng ca số chuẩn: khách đang ăn trả ngay, khách chờ rời không trừ uy tín, dọn món và phần giữ.
+- [x] Test `tests/test_p2_quan.py`: 2 bếp nấu song song, lọc kế hoạch, `no_dish`, khách vẫn gọi tiếp món đủ hàng khi đã bán đủ suất.
 - [ ] Mở PR, nhờ phuthaitran review.
 
 ### phuthaitran — Lát D
