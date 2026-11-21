@@ -284,15 +284,21 @@ class GatherSim:
             self._faint(events, "monster")
 
     def _drop_hold(self, count):
-        cutoff = len(self.hold) - count
-        lost = self.hold[cutoff:][::-1]
-        del self.hold[cutoff:]
+        if count == 0:
+            return []
+        lost = self.hold[-count:][::-1]
+        if isinstance(lost[0], dict):
+            # Chọn theo thứ tự trong giỏ, rồi lấy id/kind/fresh từ adapter bàn giao.
+            items_by_id = {item["id"]: item for item in self.inventory_items()}
+            lost = [items_by_id[item["id"]].copy() for item in lost]
+        del self.hold[-count:]
         return lost
 
     def _faint(self, events, cause):
         lost = self._drop_hold(len(self.hold))
-        events.append(("faint", {"cause": cause, "lost": lost, "hp": 0}))
         self._finish("fainted", events)
+        # _finish có thể dừng dòng lũ trước khi phát gather_end.
+        events.insert(-1, ("faint", {"cause": cause, "lost": lost, "hp": 0}))
 
     def _in_dock(self) -> bool:
         return math.dist(self.pos, self.t["dock_pos"]) <= self.t["dock_radius"]

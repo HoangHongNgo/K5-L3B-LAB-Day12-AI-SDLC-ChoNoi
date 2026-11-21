@@ -353,7 +353,7 @@ git tag phase-2 && git push origin phase-2
 ### RachalHys
 - [x] Chạy regression P1 với fixture số chuẩn v1.1 trên bản ghép thử. Giữ test kiểm đủ bàn theo danh sách thực, tắt cá/khách ngẫu nhiên trong fixture cần vị trí hoặc đơn cố định.
 - [x] Chụp HUD/menu/pause và đo FPS ở 1280×720. Ảnh và giới hạn kiểm chứng ở [proof lát U](docs/proof/phase-2/ui/README.md), để haiquanng nối vào proof chung.
-- [ ] Kiểm pause thật trong Shop và chạy lại regression trên manifest v1.1 chính thức sau khi lát C được gộp.
+- [x] Kiểm pause thật ở gather, quán và Shop trên `89e2437` sau khi gộp PR #24. Regression P1 đạt 119/119, bộ test toàn repo đạt 369 ca và bỏ qua 1 ca dành cho v1.0. [Ảnh pause và kết quả v1.1](docs/proof/phase-2/ui/README.md).
 
 ### haiquanng — Proof
 - [ ] Viết bằng chứng vào `docs/proof/phase-2/`: log test đầy đủ, `integration.*` (từ smoke phút 20), `day.jsonl` (`--days 1` và `--days 3`), kết quả `cmp` hai lần cùng seed, thời gian headless 1 Ngày, ảnh HUD/FPS của RachalHys. Mỗi file ghi commit đã chạy. — *haiquanng: script `docs/proof/phase-2/run_proof.py` đã có (nhánh `p2/proof-haiquanng`); chạy lại trên commit gắn tag khi có contract v1.1 và cờ `--days`*
@@ -473,10 +473,10 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Phút 20 dẫn smoke bàn giao: dùng scenario `{"gather":{"hold":[{"id":"I1","kind":"ca_linh","fresh":100}],"random_fish":false,"monsters":[]}}` với `interact:true` ở frame 0 để cập bến, rồi `quan --inventory kho.json --ticks 0`; so chính xác id, kind, fresh với file sau lần hao ở bước gather. Lưu `docs/proof/phase-3/integration.*`.
 
 ### ChuTungDuongg — Lát B (Lặn trên kho cá thể)
-- [ ] `lost` trong `monster_hit`/`faint` là mảng cá thể `{id,kind,fresh}` theo thứ tự bỏ LIFO (thứ tự vào giỏ); `floor(n/2)` vẫn như cũ.
-- [ ] Ngất: bỏ toàn bộ phần còn lại theo LIFO, `faint` → `gather_end(fainted)`, kho `{"items":[]}`.
+- [x] `lost` trong `monster_hit`/`faint` là mảng cá thể `{id,kind,fresh}` theo thứ tự bỏ LIFO (thứ tự vào giỏ); `floor(n/2)` vẫn như cũ.
+- [x] Ngất: bỏ toàn bộ phần còn lại theo LIFO, `faint` → `gather_end(fainted)`, kho `{"items":[]}`.
 - [ ] Đảm bảo thứ tự tick gather theo ticket: đồng hồ/cooldown/hồi nút/**tươi** → (dòng lũ, hook của lát X) → bơi/oxy/ngạt → thủy quái/hit → bến trước hái → bắt cá → hết giờ → cập nhật cá/sinh thêm.
-- [ ] Test `tests/test_p3_gather_lifo.py`: LIFO với id không liền nhau, faint ghi kho rỗng, ươn vẫn chiếm ô khi rơi hàng.
+- [x] Test `tests/test_p3_gather_lifo.py`: LIFO với id không liền nhau, faint ghi kho rỗng, ươn vẫn chiếm ô khi rơi hàng.
 - [ ] Mở PR sau lát A, nhờ haiquanng review. Commit: `gather: lost/faint theo cá thể LIFO`.
 - [ ] Khi xong sớm: vào pair với haiquanng ở lát X (test hướng/biên dòng lũ).
 
@@ -544,7 +544,7 @@ git tag phase-3 && git push origin phase-3
 ```
 
 ### Mọi người
-- [ ] Ghi phần của mình vào `docs/ai-usage-log.md`; cập nhật `docs/members/<handle>.md`; có ≥ 1 commit có nội dung ở Phase 3.
+- [ ] Ghi phần của mình vào `docs/ai-usage-log.md`; cập nhật `docs/members/<handle>.md`; có ≥ 1 commit có nội dung ở Phase 3. — xong: ChuTungDuongg
 - [ ] Mở rộng: khai `extensions` trong contract, test + bằng chứng trong README (nhóm 6 người cần **≥ 2 mục** cả buổi lab: `current` — haiquanng, `reservations` — phuthaitran; các mục Phase 2 `net`/`snake`/`burn` tính tiếp nếu đã gộp). Phần "Tự do sáng tạo" ghi ở README, phải tắt được ở headless.
 
 ---
