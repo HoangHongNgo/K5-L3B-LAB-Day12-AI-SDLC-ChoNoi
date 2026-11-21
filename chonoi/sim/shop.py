@@ -10,6 +10,7 @@ Một bước: giảm thời gian còn lại -> xử lý một `buy` (nếu fram
 - Lệnh của mở rộng chưa bật (weapon, net, buy:<kind>, sell:<kind>) bị bỏ qua (mục 4.2).
 - Đóng bằng cạnh `shop_done` -> `shop_end {reason:"done"}`; hết `max_ticks` -> `shop_end {reason:"time"}`.
   Nút ở bước cuối được ưu tiên là `done`.
+Shop không giữ uy tín: DaySim đọc uy tín từ DayState trong pha Shop.
 """
 
 EXTENSION_UPGRADES = ("weapon", "net")
@@ -20,12 +21,11 @@ class ShopSim:
     mode = "shop"
     phase = "shop"
 
-    def __init__(self, tuning, *, money, earned, upgrades, stock, reputation=None):
+    def __init__(self, tuning, *, money, earned, upgrades, stock):
         self.t = tuning["shop"]
         self.upgrade_table = self.t["upgrades"]
         self.money = money
         self.earned = earned
-        self.reputation = tuning["quan"]["reputation_initial"] if reputation is None else reputation
         self.upgrades = dict(upgrades)
         self.stock = {k: v for k, v in sorted(stock.items()) if v > 0}
         self.time_left_ticks = int(self.t["max_ticks"])
@@ -38,7 +38,7 @@ class ShopSim:
                 "stock": dict(self.stock)}
 
     def snapshot(self) -> dict:
-        return {"stock": dict(self.stock), "upgrades": dict(self.upgrades)}
+        return {"stock": dict(self.stock), "upgrades": dict(self.upgrades), "time_left_ticks": self.time_left_ticks}
 
     def step(self, inp) -> list:
         if self.done:

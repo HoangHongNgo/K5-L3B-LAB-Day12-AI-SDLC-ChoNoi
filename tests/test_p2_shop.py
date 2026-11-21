@@ -134,6 +134,8 @@ class Snapshot(unittest.TestCase):
     def test_snapshot_and_result(self):
         s = shop(money=300, earned=500, upgrades={"hp": 1}, stock={"ca_loc": 1, "bong_sung": 0})
         snap = s.snapshot()
+        self.assertEqual(snap["time_left_ticks"], MAX)
+        self.assertFalse(hasattr(s, "reputation"))  # DaySim lấy uy tín từ DayState
         self.assertEqual(snap["stock"], {"ca_loc": 1})
         self.assertEqual(snap["upgrades"], {"hp": 1})
         self.assertEqual(s.time_left_ticks, MAX)
