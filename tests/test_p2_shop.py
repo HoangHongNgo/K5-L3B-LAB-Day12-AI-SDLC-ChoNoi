@@ -77,7 +77,10 @@ class Buy(unittest.TestCase):
 
     def test_disabled_extension_is_ignored(self):
         """Mở rộng chưa bật (không có trong shop.upgrades): bỏ qua, không phát event."""
-        s = shop(money=10_000)
+        t = copy.deepcopy(T)
+        for name in ("net", "weapon"):
+            t["shop"]["upgrades"].pop(name, None)
+        s = ShopSim(t, money=10_000, earned=10_000, upgrades={}, stock={})
         for cmd in ("net", "weapon", "buy:ca_loc", "sell:ca_loc"):
             self.assertEqual(s.step(inp(cmd)), [], cmd)
         self.assertEqual((s.money, s.upgrades), (10_000, {}))

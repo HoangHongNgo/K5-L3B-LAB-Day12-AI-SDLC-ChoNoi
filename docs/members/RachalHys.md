@@ -9,4 +9,5 @@
 
 - Tôi làm menu và hai màn giới thiệu, HUD v1.1, pause UI, Shop, DayResult và Summary. [Menu và intro](https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi/commit/3b7b625) · [HUD và vòng ngày](https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi/commit/fdb79ba)
 - Tôi rà regression Phase 1 với số chuẩn mới và chạy năm ngày trên bản ghép thử. Đợt ghép đầu lộ lỗi Ngày 0 và uy tín về 3 trong Shop. Bản ghép lại với commit sửa của lát S chạy đến tổng kết và giữ đúng uy tín xuyên ngày. [Bằng chứng UI](../proof/phase-2/ui/README.md)
+- Sau khi gộp lát C, tôi kiểm Esc/P trên trình duyệt ở cả ba pha, kể cả lúc mua nâng cấp trong Shop. Tôi thay ảnh pause mô phỏng bằng ảnh từ bản chạy v1.1 và chạy lại 119 ca regression Phase 1.
 - Qua lần này, tôi thấy fixture giúp tách phần giao diện để làm sớm, còn vòng ngày thật cần chạy qua đủ các lần đổi pha để phát hiện lỗi bàn giao.
