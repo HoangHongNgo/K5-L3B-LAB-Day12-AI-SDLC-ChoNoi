@@ -267,10 +267,10 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Commit: `quan: 2 bếp 4 bàn, 6 món, lọc theo kế hoạch`.
 
 ### phuthaitran — Lát D (vòng ngày)
-- [ ] `chonoi/sim/day.py`: máy pha `gather → quan → shop → (Ngày kế | end)`; event `day_start → day_plan → phase_start(gather)`; sau `gather_end` dựng quán và phát `phase_start(quan)` cùng tick; pha mới chạy gameplay từ bước sau.
-- [ ] Làm với **sim giả (stub)** cùng giao diện chốt sẵn (`step/snapshot/done/result`) cho gather, quan và shop để không phải chờ lát A/B/Q/S.
-- [ ] Output day: vỏ event có `day`, dòng `end` có `days_completed`, `reason:"days_complete"` (cờ CLI do HoangHongNgo làm).
-- [ ] Commit: `day: máy pha gather→quan→shop, --mode day`.
+- [x] `chonoi/sim/day.py`: máy pha `gather → quan → shop → (Ngày kế | end)`; event `day_start → day_plan → phase_start(gather)`; sau `gather_end` dựng quán và phát `phase_start(quan)` cùng tick; pha mới chạy gameplay từ bước sau.
+- [x] Làm với **sim giả (stub)** cùng giao diện chốt sẵn (`step/snapshot/done/result`) cho gather, quan và shop để không phải chờ lát A/B/Q/S.
+- [x] Output day: vỏ event có `day`, dòng `end` có `days_completed`, `reason:"days_complete"` (cờ CLI do HoangHongNgo làm).
+- [x] Commit: `day: máy pha gather→quan→shop, --mode day`.
 
 ### RachalHys — Lát U (UI)
 - [x] Menu chính, DayIntro và EveningIntro. Playwright kiểm trên Chromium với snapshot giả ở 320 px và 1280×720, gồm bỏ qua DayIntro bằng phím, tự chuyển sau 4 giây và lọc món EveningIntro theo kho/kế hoạch.
@@ -321,10 +321,10 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Mở PR, nhờ phuthaitran review.
 
 ### phuthaitran — Lát D
-- [ ] Day: giỏ mới, kho dư bỏ sau Shop; Ngày hoàn tất khi Shop đóng (kể cả Ngày cuối). Trạng thái xuyên Ngày lấy từ `DayState` của haiquanng.
-- [ ] Thay stub bằng `GatherSim`/`QuanSim`/`ShopSim`/`DayState` thật khi lát A/B/Q/S đã gộp (bàn giao kho trong bộ nhớ; ngất vẫn mở quán với kho rỗng).
-- [ ] Snapshot mọi pha có `day`, `day_plan`, `upgrades`, `active_upgrades`.
-- [ ] Test `tests/test_p2_day.py`: thứ tự event đổi pha, `days_complete`.
+- [x] Day: giỏ mới, kho dư bỏ sau Shop; Ngày hoàn tất khi Shop đóng (kể cả Ngày cuối). Trạng thái xuyên Ngày lấy từ `DayState` của haiquanng.
+- [ ] Thay stub bằng `GatherSim`/`QuanSim`/`ShopSim`/`DayState` thật khi lát A/B/Q/S đã gộp (bàn giao kho trong bộ nhớ; ngất vẫn mở quán với kho rỗng). — GatherSim/QuanSim thật đã nối (mặc định); còn chờ ShopSim/DayState của lát S.
+- [x] Snapshot mọi pha có `day`, `day_plan`, `upgrades`, `active_upgrades`.
+- [x] Test `tests/test_p2_day.py`: thứ tự event đổi pha, `days_complete`.
 - [ ] Mở PR, nhờ minhphuong150505 review.
 
 ### RachalHys — Lát U
