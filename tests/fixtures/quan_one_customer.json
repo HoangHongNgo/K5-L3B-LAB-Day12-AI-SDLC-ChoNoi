@@ -3,6 +3,7 @@
     "player": {"pos": [2, 7], "vel": [0, 0]},
     "stock": {"bong_sung": 2, "ca_loc": 1},
     "hand": null,
+    "random_customers": false,
     "reputation": 3.0,
     "customers": [
       {

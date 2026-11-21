@@ -351,8 +351,9 @@ git tag phase-2 && git push origin phase-2
 ```
 
 ### RachalHys
-- [ ] Chạy regression P1 với số chuẩn; test nào đổi phải có lý do trong commit.
-- [ ] Chụp ảnh HUD/menu/pause và đo FPS ở 1280×720, gửi cho haiquanng để đưa vào `docs/proof/phase-2/`.
+- [x] Chạy regression P1 với fixture số chuẩn v1.1 trên bản ghép thử. Giữ test kiểm đủ bàn theo danh sách thực, tắt cá/khách ngẫu nhiên trong fixture cần vị trí hoặc đơn cố định.
+- [x] Chụp HUD/menu/pause và đo FPS ở 1280×720. Ảnh và giới hạn kiểm chứng ở [proof lát U](docs/proof/phase-2/ui/README.md), để haiquanng nối vào proof chung.
+- [ ] Kiểm pause thật trong Shop và chạy lại regression trên manifest v1.1 chính thức sau khi lát C được gộp.
 
 ### haiquanng — Proof
 - [ ] Viết bằng chứng vào `docs/proof/phase-2/`: log test đầy đủ, `integration.*` (từ smoke phút 20), `day.jsonl` (`--days 1` và `--days 3`), kết quả `cmp` hai lần cùng seed, thời gian headless 1 Ngày, ảnh HUD/FPS của RachalHys. Mỗi file ghi commit đã chạy.
