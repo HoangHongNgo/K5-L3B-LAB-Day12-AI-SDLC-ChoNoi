@@ -183,9 +183,14 @@ def _validate_gather(b, tuning, *, active_upgrades=None):
         _validate_monsters(b["monsters"], g["monsters"]["species"], bounds)
     if "random_fish" in b and not isinstance(b["random_fish"], bool):
         raise BadInput("random_fish phải là boolean")
+    # kind theo dữ liệu (v1.1 thêm ca_keo, keo_neo): nguyên liệu của thực đơn, nút và cá trong tuning
+    recipe_kinds = {k for dish in tuning["menu"].values() for k in dish.get("recipe", {})}
+    node_kinds = set(NODE_KINDS) | {n["kind"] for n in g["nodes"]}
+    fish_kinds = set(FISH_KINDS) | set(g["fish_yield"])
+    hold_kinds = set(KINDS_P1) | recipe_kinds | node_kinds | fish_kinds
     if "hold" in b:
         h = b["hold"]
-        if not isinstance(h, list) or any(k not in KINDS_P1 for k in h):
+        if not isinstance(h, list) or any(k not in hold_kinds for k in h):
             raise BadInput("hold phải là mảng id nguyên liệu hợp lệ")
         if len(h) > g["hold_capacity"]:
             raise BadInput("hold vượt sức chứa")
@@ -218,16 +223,18 @@ def _validate_gather(b, tuning, *, active_upgrades=None):
         if p["zero_oxy_ticks"] > 0 and not (oxy == 0 and pos[1] > g["surface_depth"]):
             raise BadInput("player.zero_oxy_ticks > 0 chỉ khi oxy = 0 và đang dưới nước")
     for n in b.get("nodes", []):
-        if n.get("kind") not in NODE_KINDS:
-            raise BadInput(f"nodes.{n['id']}: kind phải là một trong {NODE_KINDS}")
+        if n.get("kind") not in node_kinds:
+            raise BadInput(f"nodes.{n['id']}: kind phải là một trong {sorted(node_kinds)}")
         _pos(f"nodes.{n['id']}.pos", n.get("pos"), bounds)
         if n["pos"][1] != 0:
             raise BadInput(f"nodes.{n['id']}: nút hái nằm ở mặt nước (d = 0)")
         if "regrow_ticks" in n:
             _nonneg_int(f"nodes.{n['id']}.regrow_ticks", n["regrow_ticks"])
     for f in b.get("fish", []):
-        if f.get("kind") not in FISH_KINDS:
-            raise BadInput(f"fish.{f['id']}: kind phải là một trong {FISH_KINDS}")
+        if f.get("kind") not in fish_kinds:
+            raise BadInput(f"fish.{f['id']}: kind phải là một trong {sorted(fish_kinds)}")
+        if "age_ticks" in f:
+            _nonneg_int(f"fish.{f['id']}.age_ticks", f["age_ticks"])
         _pos(f"fish.{f['id']}.pos", f.get("pos"), bounds)
         if f["pos"][1] <= g["surface_depth"]:
             raise BadInput(f"fish.{f['id']}: đàn cá phải ở dưới nước")
