@@ -120,14 +120,17 @@ def _validate_quan_opening(tuning, quan_block, inventory, menu_ids):
 class DaySim:
     mode = "day"
 
-    def __init__(self, tuning, scenario, streams, ids=None, *, days=1, factories=None):
-        if isinstance(days, bool) or not isinstance(days, int) or not (1 <= days <= MAX_DAYS):
+    def __init__(self, tuning, scenario, streams, ids=None, *, days=1, factories=None, repeat_plan=False):
+        if isinstance(days, bool) or not isinstance(days, int) or days < 1:
+            raise BadInput("--days phải là số nguyên dương")
+        if not repeat_plan and days > MAX_DAYS:
             raise BadInput(f"--days phải là số nguyên trong [1, {MAX_DAYS}]")
         self.tuning = tuning
         self.scenario = scenario or {}
         self.streams = streams
         self.ids = IdAllocator() if ids is None else ids
         self.days = days
+        self.repeat_plan = repeat_plan
         self.f = dict(DEFAULT_FACTORIES, **(factories or {}))
         self.state = self.f["state"](tuning, self.scenario.get("day", {}))
         self.day = getattr(self.state, "day", 1)
@@ -216,7 +219,8 @@ class DaySim:
         return block
 
     def _start_day(self):
-        self.plan = plan_for(self.tuning, self.scenario.get("day"), self.day)
+        plan_day = (self.day - 1) % len(self.tuning["day_plan"]) + 1 if self.repeat_plan else self.day
+        self.plan = plan_for(self.tuning, self.scenario.get("day"), plan_day)
         if self.days_completed == 0:  # id cá thể Ngày đầu đã dùng -> cấp tiếp sau hậu tố lớn nhất
             for it in self.scenario.get("gather", {}).get("hold", []):
                 if isinstance(it, dict) and isinstance(it.get("id"), str):
