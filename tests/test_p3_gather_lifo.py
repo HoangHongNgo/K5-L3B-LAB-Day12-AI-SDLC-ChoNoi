@@ -55,6 +55,16 @@ class GatherLifo(unittest.TestCase):
             "lost": [self.scenario["hold"][4], self.scenario["hold"][3]],
         })])
         self.assertEqual(sim.snapshot()["hold"], self.scenario["hold"][:3])
+        self.assertEqual(sim.snapshot()["hold_count"], 3)
+
+    def test_single_spoiled_item_still_occupies_a_slot_after_zero_loss(self):
+        self.scenario["hold"] = [self.scenario["hold"][4]]
+        sim = ItemHoldFixture(self.tuning, self.scenario)
+        hit, = sim.step(InputPlayer([]).advance(0))
+        self.assertEqual(hit[0], "monster_hit")
+        self.assertEqual(hit[1]["lost"], [])
+        self.assertEqual(sim.snapshot()["hold_count"], 1)
+        self.assertEqual(sim.snapshot()["hold"], self.scenario["hold"])
 
     def test_lethal_hit_drops_remaining_items_and_runner_writes_empty_list(self):
         self.scenario["player"]["hp"] = 1
@@ -90,8 +100,11 @@ class GatherLifo(unittest.TestCase):
     def test_active_current_ends_before_faint_and_terminal_inventory(self):
         self.scenario["player"].update(hp=2, oxygen_ticks=0, zero_oxy_ticks=59)
         self.scenario["time_left_ticks"] = 1
+        self.scenario["nodes"] = [{"id": "N1", "kind": "bong_sung", "pos": [20, 0], "regrow_ticks": 1}]
+        self.scenario["fish"] = [{"id": "F1", "kind": "ca_loc", "pos": [20, 12]}]
         sim = ActiveCurrentFixture(self.tuning, self.scenario)
         rows = sim.step(InputPlayer([{"tick": 0, "catch": True}]).advance(0))
         self.assertEqual([name for name, _ in rows],
-                         ["choke", "monster_hit", "current_end", "faint", "gather_end"])
+                         ["node_regrown", "choke", "monster_hit", "current_end", "faint", "gather_end"])
         self.assertEqual(rows[-1][1], {"reason": "fainted", "inventory": {"items": []}})
+        self.assertEqual([fish["id"] for fish in sim.snapshot()["fish"]], ["F1"])
