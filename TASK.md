@@ -124,10 +124,11 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Mở PR, nhờ minhphuong150505 review.
 
 ### RachalHys — HUD + QA
-- [ ] HUD buổi tối: kho khả dụng, món gọi + kiên nhẫn từng khách, trạng thái bếp, món trên tay, tiền, uy tín.
-- [ ] README: chạy từ clone sạch ≤ 3 lệnh (macOS/Linux), điều khiển, cách tính điểm, lệnh test 1 dòng (AC-P1-12).
-- [ ] Review test của 4 lát, bổ sung chỗ thiếu ca biên (đúng mép bán kính, đúng tick hết ca).
-- [ ] Commit: `ui: HUD buổi tối`, `docs: README cách chạy và điều khiển`.
+- [x] HUD buổi tối: kho khả dụng, món gọi + kiên nhẫn từng khách, trạng thái bếp, món trên tay, tiền, uy tín.
+- [x] README: chạy từ clone sạch ≤ 3 lệnh (macOS/Linux), điều khiển, cách tính điểm, lệnh test 1 dòng (AC-P1-12).
+- [x] Review test của 4 lát, bổ sung ca cập bến đúng mép bán kính ở bước cuối và ca `tick_limit` giữ nguyên file kho có sẵn.
+  - Kiểm Chromium 320 và 1024 px với bản ghép thử lát 4. Bộ test pass 110/110 trên nhánh HUD và 136/136 trên bản ghép thử.
+- [x] Commit: `ui: HUD buổi tối`, `docs: README cách chạy và điều khiển`.
 
 ### HoangHongNgo
 - [ ] Standup phút 40; lát nào chậm → người đã xong vào hỗ trợ.
