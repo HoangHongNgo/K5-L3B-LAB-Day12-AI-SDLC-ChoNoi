@@ -28,6 +28,8 @@
 - Sáng tạo thêm được khuyến khích nhưng phải tắt ở headless (xem README, mục "Tự do sáng tạo").
 
 ## Skills / hooks của nhóm
+- `.agents/skills/speckit`: quy trình theo đặc tả (hiến pháp → specify → clarify → plan → tasks → implement → kiểm). Dùng khi nhận ticket hoặc PRD mới, trước khi viết mã.
+- `.agents/skills/game-design`: nguyên tắc thiết kế, cân bằng và tiếp cận cho Chợ Nổi. Dùng khi thêm cơ chế, chỉnh tuning hoặc giao diện.
 - Sau đổi schema kho hoặc JSONL, chạy `python3 docs/proof/phase-3/smoke.py` để đối chiếu hai tiến trình và day.
 - Sau đổi vòng ngày, chạy `python3 -m tools.soak --seed 7 --days 10 --out /tmp/cho-noi-soak.json`.
 - Trước bàn giao Phase 4, chạy `bench_cmd` và `soak_cmd` theo manifest v1.3. Đóng gói bằng `python3 tools/package_release.py HEAD --out /tmp/ChoNoi-v1.0.0.zip` và chơi thử cả từ clone sạch lẫn từ ZIP giải nén.
