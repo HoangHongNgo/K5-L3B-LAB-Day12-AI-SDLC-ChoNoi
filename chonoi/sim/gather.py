@@ -4,14 +4,11 @@ Mặt cắt dòng sông nhìn NGANG: vị trí `[x, d]` (x sang phải, `d` đ�
 `move = [x, d]`: thành phần thứ hai DƯƠNG = bơi xuống. Hướng mặt là góc từ +x, dương = xuống.
 
 Đã có: bơi + tăng/giảm tốc, chặn mép (d không âm), oxy, ngạt, ngất và bỏ giỏ theo LIFO,
-đồng hồ và hết giờ, cập bến (`interact` trong vùng bến -> `gather_end` reason `docked`),
-xuất kho, snapshot đầy đủ trường gather.
+đồng hồ và hết giờ, cập bến (`interact` trong vùng bến -> `gather_end` reason `docked`, xét TRƯỚC hái),
+hái nút ở mặt nước (gather, hold_full, mọc lại sau regrow_s), bắt đàn cá dưới nước (fish_caught,
+hold_full, hồi chiêu catch_cd_ticks), giỏ dùng chung `_add_to_hold`, xuất kho (ghi đúng một lần do runner lo),
+snapshot đầy đủ trường gather.
 
-Nhóm viết tiếp (đúng thứ tự một bước trong PRD mục 13.8, "Gather"):
-  TODO(nhóm, lát 2): hái + bắt cá + cập bến + kho
-      - hái nút ở mặt nước (gather, hold_full), nút mọc lại (node_regrown đã có phần đếm ngược)
-      - bắt đàn cá bằng `catch` (fish_caught, hold_full, hồi chiêu catch_cd_ticks, chỉ khi dưới nước)
-      - cập bến xét TRƯỚC hái (đã có); ghi kho đúng một lần do runner lo
 Các tính năng của phase sau chưa nằm trong khung này.
 """
 

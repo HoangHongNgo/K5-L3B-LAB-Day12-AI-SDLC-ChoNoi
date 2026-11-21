@@ -38,9 +38,9 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Tạo nhánh `p1/lat1-ChuTungDuongg`, dựng hàm trống `_update_oxygen(events, was_surface)`.
 
 ### haiquanng — Lát 2
-- [ ] Đọc PRD-0 mục F "Gather" (đoạn 3–5) và mục G.
-- [ ] Viết `_add_to_hold` (đã thống nhất với lát 1), commit sớm để lát 1 dùng chung.
-- [ ] Tạo nhánh `p1/lat2-haiquanng`.
+- [x] Đọc PRD-0 mục F "Gather" (đoạn 3–5) và mục G.
+- [x] Viết `_add_to_hold` (đã thống nhất với lát 1), commit sớm để lát 1 dùng chung.
+- [x] Tạo nhánh `p1/lat2-haiquanng`.
 
 ### minhphuong150505 — Lát 3
 - [ ] Đọc PRD-0 mục D (khối `quan`), mục F "Quán" (đoạn 4–5).
@@ -53,9 +53,10 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Tạo nhánh `p1/lat4-phuthaitran`.
 
 ### RachalHys — QA lead + HUD
-- [ ] Lập khung `docs/verification/phase-1.md` với 12 dòng AC-P1-01..12 (cột cách kiểm chứng).
-- [ ] Đọc `chonoi/web/index.html` và `chonoi/live.py`, liệt kê trường HUD còn thiếu so với PRD-0 mục 2.
-- [ ] Tạo nhánh `p1/hud-RachalHys`.
+- [x] Lập khung `docs/verification/phase-1.md` với 12 dòng AC-P1-01..12 (cột cách kiểm chứng).
+- [x] Đọc `chonoi/web/index.html` và `chonoi/live.py`, liệt kê trường HUD còn thiếu so với PRD-0 mục 2.
+  - Rà bằng fixture trên trình duyệt. HUD sáng đã hiện thời gian, oxy, Máu và giỏ. HUD tối hiện tồn vật lý thay cho kho khả dụng và tên món trên bếp bị hiện thành `[object Object]`.
+- [x] Tạo nhánh `p1/hud-RachalHys`.
 
 ---
 
@@ -68,9 +69,9 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Commit: `gather: oxy, dive/surface, oxygen_empty`.
 
 ### haiquanng — Lát 2
-- [ ] Hái: chỉ ở mặt nước, ngoài bến; nút `ready` gần nhất trong `interact_radius` (tính cả đúng mép, hòa theo id); đủ chỗ → `gather` + `regrow_ticks = regrow_s × 60`; thiếu chỗ → `hold_full` (`action`, `node_id`, `required`, `free`).
-- [ ] Chạy thử `--inventory-out` thật bằng smoke dock.json và đưa file cho lát 3/4 (**mốc phút 25**).
-- [ ] Commit: `gather: hái nút, hold_full, regrow`.
+- [x] Hái: chỉ ở mặt nước, ngoài bến; nút `ready` gần nhất trong `interact_radius` (tính cả đúng mép, hòa theo id); đủ chỗ → `gather` + `regrow_ticks = regrow_s × 60`; thiếu chỗ → `hold_full` (`action`, `node_id`, `required`, `free`).
+- [ ] Chạy thử `--inventory-out` thật bằng smoke dock.json và đưa file cho lát 3/4 (**mốc phút 25**). — *haiquanng: `--inventory-out` thật đã chạy trong `test_full_run_gather_catch_dock_then_quan` (quán đọc đúng `stock`); chưa tạo `dock.json` và chưa gửi file cho lát 3/4.*
+- [x] Commit: `gather: hái nút, hold_full, regrow`.
 
 ### minhphuong150505 — Lát 3
 - [ ] Lịch khách theo `phase_tick`: `first_customer_tick`, rồi mỗi `customer_interval_s × 60`; bàn trống id nhỏ nhất; không có bàn → bỏ lượt.
@@ -103,10 +104,10 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Mở PR, nhờ haiquanng review.
 
 ### haiquanng — Lát 2
-- [ ] Bắt cá: cạnh `catch`, `catch_cd_ticks == 0`, dưới nước; đàn gần nhất trong `catch_radius` (hòa theo id); đủ chỗ → thêm đủ `fish_yield`, xóa đàn, `fish_caught`, cooldown `catch_cooldown_s × 60`; thiếu chỗ → `hold_full`, giữ đàn, không đặt cooldown.
-- [ ] Kiểm bước cuối: E đúng mép bến → `docked`; hái/bắt hợp lệ ở bước cuối vẫn vào kho; chạm `--ticks` trước khi xong thì không ghi kho.
-- [ ] Test `tests/test_p1_lat2.py`: AC-P1-04, AC-P1-05, AC-P1-06.
-- [ ] Mở PR, nhờ ChuTungDuongg review.
+- [x] Bắt cá: cạnh `catch`, `catch_cd_ticks == 0`, dưới nước; đàn gần nhất trong `catch_radius` (hòa theo id); đủ chỗ → thêm đủ `fish_yield`, xóa đàn, `fish_caught`, cooldown `catch_cooldown_s × 60`; thiếu chỗ → `hold_full`, giữ đàn, không đặt cooldown.
+- [x] Kiểm bước cuối: E đúng mép bến → `docked`; hái/bắt hợp lệ ở bước cuối vẫn vào kho; chạm `--ticks` trước khi xong thì không ghi kho.
+- [x] Test `tests/test_p1_lat2.py`: AC-P1-04, AC-P1-05, AC-P1-06.
+- [x] Mở PR, nhờ ChuTungDuongg review.
 
 ### minhphuong150505 — Lát 3
 - [ ] Kiên nhẫn giảm từ bước sau khi đến; còn giờ mà về 0 → `customer_left` `patience`, uy tín + `left_reputation_delta` (kẹp), nhả giữ chỗ, bỏ món của đơn.
@@ -154,8 +155,8 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 ## 1.5 Bàn giao (phút 55–60)
 
 ### Mọi người
-- [ ] Ghi phần của mình vào `docs/ai-usage-log.md` (công cụ, việc dùng AI, token/chi phí nếu đo được).
-- [ ] Tạo `docs/members/<handle>.md` theo `docs/members/TEMPLATE.md` (có thể hoàn thiện ở phase sau).
+- [ ] Ghi phần của mình vào `docs/ai-usage-log.md` (công cụ, việc dùng AI, token/chi phí nếu đo được). — xong: ChuTungDuongg, haiquanng
+- [ ] Tạo `docs/members/<handle>.md` theo `docs/members/TEMPLATE.md` (có thể hoàn thiện ở phase sau). — xong: ChuTungDuongg, haiquanng
 
 ### HoangHongNgo
 - [ ] Cập nhật `docs/clarify.md`, `docs/standup.md`, ghi nhanh vào `docs/retro.md`.
