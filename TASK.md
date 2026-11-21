@@ -198,17 +198,19 @@ git tag phase-1 && git push origin phase-1
    - `QuanSim(tuning, scenario, streams, *, inventory, menu_ids=None, money=0, earned=0, reputation=None)`: `menu_ids=None` là cả 6 món (quán chạy riêng); khác `None` thì lọc theo kế hoạch ngày.
    - Cả hai sim có `step(inputs) -> events`, `snapshot() -> dict`, thuộc tính `done`, `result` (dict trạng thái cuối: tiền, earned, uy tín, kho dư…).
    - `pause` xử lý ở **lớp bọc chung** (`chonoi/sim/pause.py`), không nằm trong từng sim.
+   - `ShopSim(tuning, *, money, earned, upgrades, stock)`: cùng giao diện `step/snapshot/done/result`; `result` trả `money`, `upgrades` (cấp đã mua). Lát D gọi Shop như một pha, không tự viết luật mua.
 
 | Lát | Người | File sở hữu | Người review |
 |---|---|---|---|
-| C — Contract v1.1 + pause | HoangHongNgo | `game.contract.json`, `chonoi/contract.py`, `docs/contracts/`, `chonoi/sim/pause.py` | RachalHys |
+| C — Contract v1.1 + pause + kiểm chứng | HoangHongNgo | `game.contract.json`, `chonoi/contract.py`, `docs/contracts/`, `chonoi/sim/pause.py`, `docs/verification/phase-2.md`, `docs/proof/phase-2/` | RachalHys |
 | A — Cá bơi/sinh + nút/catch | haiquanng | `chonoi/sim/fish.py` (mới), phần hái/catch trong `gather.py` | ChuTungDuongg |
+| S — Shop & nâng cấp | haiquanng | `chonoi/sim/shop.py` (mới), `tests/test_p2_shop.py` | phuthaitran |
 | B — Cá Sấu, Máu, ngất | ChuTungDuongg | `chonoi/sim/monsters.py` (mới), phần oxy/ngạt/faint trong `gather.py` | haiquanng |
 | Q — 2 bếp/4 bàn, 6 món, lọc kế hoạch | minhphuong150505 | `chonoi/sim/quan.py`, `chonoi/scenario.py` (phần quan/day) | phuthaitran |
-| D — Vòng ngày + Shop | phuthaitran | `chonoi/sim/day.py`, `chonoi/sim/shop.py` (mới), nhánh `--mode day` trong `headless.py` | minhphuong150505 |
-| U — Menu, pause UI, HUD + QA | RachalHys | `chonoi/web/`, `chonoi/live.py`, `docs/verification/phase-2.md`, regression test | HoangHongNgo |
+| D — Vòng ngày | phuthaitran | `chonoi/sim/day.py` (mới), nhánh `--mode day` trong `headless.py` | minhphuong150505 |
+| U — Menu, pause UI, HUD | RachalHys | `chonoi/web/`, `chonoi/live.py`, regression test P1 | HoangHongNgo |
 
-Quy ước: nhánh `p2/<lát>-<handle>`, test xanh trước khi mở PR. Thứ tự gộp: **C → A → B → Q → D → U**. Test P1 nào phải đổi vì số chuẩn mới thì ghi lý do trong commit.
+Quy ước: nhánh `p2/<lát>-<handle>`, test xanh trước khi mở PR. Thứ tự gộp: **C → A → B → Q → S → D → U**. Test P1 nào phải đổi vì số chuẩn mới thì ghi lý do trong commit.
 
 ```bash
 PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
@@ -230,6 +232,8 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] `chonoi/contract.py`: kiểm khóa mới và dải hợp lệ; `day_plan.ingredients` phải bằng tổng công thức × số suất, sai thì mã 2.
 - [ ] Cập nhật `docs/contracts/README.md`: event mới (`monster_hit`, `fish_spawned`, `day_start`, `phase_start`, `day_plan`, `paused`, `resumed`, `bought`, `buy_failed`, `shop_end`), trường snapshot mới, vỏ event có `day`.
 - [ ] Commit: `contract: v1.1 số chuẩn, day_plan, shop, monsters`.
+- [ ] Khung `docs/verification/phase-2.md`: liệt kê AC-P2-xx theo `docs/plan/phase-2.md`, cột cách kiểm chứng / bằng chứng / kết quả; ghi sẵn lệnh kiểm cho từng AC để các lát biết test nào cần viết.
+- [ ] Commit: `docs: khung verification Phase 2`.
 
 ### haiquanng — Lát A (cá & hái)
 - [ ] `chonoi/sim/fish.py`: đàn cá bơi 1.5 m/s trong `fish_x`, dải độ sâu theo loài; đổi hướng theo seed ở bước bơi thứ 120, 240… (theo `age_ticks`); phản xạ mép (chạm góc đảo cả hai thành phần).
@@ -237,6 +241,10 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Thêm nút N5/N6 (kèo nèo); catch dùng **vị trí cá trước khi bơi**.
 - [ ] Fixture `tests/fixtures/p2_fish_*.json` (`random_fish:false`).
 - [ ] Commit: `gather: cá bơi, phản xạ mép, đàn ban đầu`.
+
+### haiquanng — Lát S (Shop, khung)
+- [ ] `chonoi/sim/shop.py` theo giao diện `ShopSim` chốt sẵn: đọc `shop.upgrades.oxygen/hp` và `shop.max_ticks` từ contract (không hard-code giá/cấp); snapshot có `stock` dư và `time_left_ticks`.
+- [ ] Commit: `shop: khung ShopSim, đọc nâng cấp từ contract`.
 
 ### ChuTungDuongg — Lát B (Cá Sấu & Máu)
 - [ ] Oxy số chuẩn: cơ sở 1.800 tick, +6/tick ở mặt nước; ngạt mất 1 Máu mỗi 60 tick **tính cả bước vừa chạm 0**, reset khi oxy > 0 hoặc lên mặt nước; ngạt xuyên bất tử, không làm rơi hàng.
@@ -254,12 +262,11 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 
 ### phuthaitran — Lát D (vòng ngày)
 - [ ] `chonoi/sim/day.py`: máy pha `gather → quan → shop → (Ngày kế | end)`; event `day_start → day_plan → phase_start(gather)`; sau `gather_end` dựng quán và phát `phase_start(quan)` cùng tick; pha mới chạy gameplay từ bước sau.
-- [ ] Làm với **sim giả (stub)** cùng giao diện chốt sẵn (`step/snapshot/done/result`) để không phải chờ lát A/B/Q.
+- [ ] Làm với **sim giả (stub)** cùng giao diện chốt sẵn (`step/snapshot/done/result`) cho gather, quan và shop để không phải chờ lát A/B/Q/S.
 - [ ] `headless.py`: `--mode day`, `--days 1..5` (mặc định 1), sai thì mã 2. Vỏ event có `day`, dòng `end` có `days_completed`, `reason:"days_complete"`.
 - [ ] Commit: `day: máy pha gather→quan→shop, --mode day`.
 
-### RachalHys — Lát U (UI + QA)
-- [ ] Khung `docs/verification/phase-2.md`: liệt kê AC-P2-xx theo `docs/plan/phase-2.md`, cột cách kiểm chứng / bằng chứng / kết quả.
+### RachalHys — Lát U (UI)
 - [ ] Màn hình menu chính (Chơi/Thoát), DayIntro (Ngày + danh sách Má Tư, tự chuyển sau 4 s hoặc khi nhấn phím), EveningIntro (số nhập kho + món nấu được), dùng snapshot giả trước.
 - [ ] Rà test P1 nào sẽ vỡ vì số chuẩn mới, gửi danh sách cho các lát.
 - [ ] Commit: `ui: menu chính, DayIntro, EveningIntro`.
@@ -282,7 +289,13 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Sinh cá tại `phase_tick = 360·k` **sau khi cá bơi**: dưới trần 12, điểm cách mọi đàn đang sống > 1 m, trọng số 40/30/30 chuẩn hóa theo loài còn điểm, chọn đều một điểm, hướng theo seed; cá mới bơi từ bước sau; phát `fish_spawned`.
 - [ ] Scenario: `fish[].age_ticks`; `random_fish:false` thì cá fixture đứng yên, không sinh.
 - [ ] Test `tests/test_p2_fish.py`: phản xạ mép/góc, đổi hướng ở bước 120, sinh đúng tick, bỏ lượt khi hết điểm, catch theo vị trí trước khi bơi.
-- [ ] Mở PR, nhờ ChuTungDuongg review.
+- [ ] Mở PR lát A, nhờ ChuTungDuongg review.
+
+### haiquanng — Lát S (Shop, luật)
+- [ ] `buy` (`oxygen`, `hp`) mua cấp kế tiếp, đủ đúng giá vẫn mua, trừ `money` giữ `earned`, phát `bought` (`upgrade,level,price,money`); thiếu tiền/đã tối đa/lệnh lạ thì `buy_failed` (`funds`/`max_level`/`unknown`), tiền và cấp giữ nguyên.
+- [ ] Đóng bằng `shop_done` → `shop_end(done)`, hoặc sau 600 tick hoạt động → `shop_end(time)`; buy xử lý trước `shop_done` trong cùng bước, kể cả bước cuối.
+- [ ] Test `tests/test_p2_shop.py`: đúng giá vẫn mua, mua 2 cấp liên tiếp, `max_level`, `funds`, lệnh lạ, buy + shop_done cùng bước, tự đóng ở tick 600.
+- [ ] Mở PR lát S, nhờ phuthaitran review (người sẽ nối Shop vào day).
 
 ### ChuTungDuongg — Lát B
 - [ ] Hit sau khi cả hai di chuyển: ≤ 1.5 m, d ≥ 10, hết bất tử thì −1 Máu, bỏ `floor(n/2)` hàng theo LIFO, bất tử 90 tick, `monster_hit`; tối đa 1 hit/bước, chọn con gần nhất, hòa theo id.
@@ -300,11 +313,10 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Mở PR, nhờ phuthaitran review.
 
 ### phuthaitran — Lát D
-- [ ] `chonoi/sim/shop.py`: `buy` (`oxygen`, `hp`) mua cấp kế tiếp, đủ đúng giá vẫn mua, trừ `money` giữ `earned`; thiếu tiền/đã tối đa/lệnh lạ thì `buy_failed` (`funds`/`max_level`/`unknown`); mua được thì `bought`. Đóng bằng `shop_done` → `shop_end(done)`, hoặc sau 600 tick → `shop_end(time)`; buy xử lý trước `shop_done` trong cùng bước.
 - [ ] Day: tiền/earned/uy tín/cấp giữ qua Ngày; oxy và Máu hồi đầy theo `active_upgrades`; giỏ mới, kho dư bỏ sau Shop; chỉ sao `upgrades → active_upgrades` khi dựng Ngày mới. Ngày hoàn tất khi Shop đóng (kể cả Ngày cuối).
-- [ ] Thay stub bằng `GatherSim`/`QuanSim` thật khi lát A/B/Q đã gộp (bàn giao kho trong bộ nhớ; ngất vẫn mở quán với kho rỗng).
+- [ ] Thay stub bằng `GatherSim`/`QuanSim`/`ShopSim` thật khi lát A/B/Q/S đã gộp (bàn giao kho trong bộ nhớ; ngất vẫn mở quán với kho rỗng).
 - [ ] Snapshot mọi pha có `day`, `day_plan`, `upgrades`, `active_upgrades`; Shop có `stock` dư và `time_left_ticks`.
-- [ ] Test `tests/test_p2_day.py`: thứ tự event đổi pha, mua oxygen Ngày 1 thì Ngày 2 có oxy 2.700, `buy_failed`, `days_complete`.
+- [ ] Test `tests/test_p2_day.py`: thứ tự event đổi pha, mua oxygen Ngày 1 thì Ngày 2 có oxy 2.700, `days_complete`.
 - [ ] Mở PR, nhờ minhphuong150505 review.
 
 ### RachalHys — Lát U
@@ -321,8 +333,10 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 ## 2.3 Kiểm chứng & bàn giao (phút 35–55)
 
 ### HoangHongNgo
-- [ ] Gộp nốt Q → D → U, xử lý xung đột ở `gather.py`/`quan.py`/`headless.py`.
+- [ ] Gộp nốt Q → S → D → U, xử lý xung đột ở `gather.py`/`quan.py`/`headless.py`.
 - [ ] Trên `main` sạch: toàn bộ test xanh; chạy `--mode day --days 1` và `--days 3` (cấp nâng cấp có hiệu lực từ Ngày kế, M2 xuất hiện ở Ngày 3); chạy 2 lần cùng seed, `cmp` giống từng byte; đo headless 1 Ngày ≤ 20 s.
+- [ ] Lưu bằng chứng vào `docs/proof/phase-2/` (log test, `day.jsonl`, `integration.*`, kết quả `cmp`, thời gian headless 1 Ngày).
+- [ ] Điền `docs/verification/phase-2.md`: AC → cách kiểm → bằng chứng → đạt/chưa đạt (ghi trung thực), khớp commit gắn tag.
 - [ ] Cập nhật `docs/clarify.md`, `docs/standup.md`; dẫn retro (phút 45–50) vào `docs/retro.md` (điều tốt / điều vướng / 1 hành động có người nhận).
 - [ ] Gắn tag trên commit bàn giao ở `main` **trước 1:55**:
 
@@ -332,16 +346,15 @@ git tag phase-2 && git push origin phase-2
 
 ### RachalHys
 - [ ] Chạy regression P1 với số chuẩn; test nào đổi phải có lý do trong commit.
-- [ ] Lưu bằng chứng vào `docs/proof/phase-2/` (log test, `day.jsonl`, `integration.*`, ảnh HUD/menu/pause, số FPS).
-- [ ] Điền `docs/verification/phase-2.md`: AC → cách kiểm → bằng chứng → đạt/chưa đạt (ghi trung thực), khớp commit gắn tag.
+- [ ] Chụp ảnh HUD/menu/pause và đo FPS ở 1280×720, gửi cho HoangHongNgo để đưa vào `docs/proof/phase-2/`.
 
 ### haiquanng + ChuTungDuongg
 - [ ] Chơi thử `gather` số chuẩn: cá bơi/sinh, bị Cá Sấu đuổi và chạm, ngất, cập bến; sửa nhanh lỗi thấy được.
-- [ ] (Mở rộng, chỉ khi lõi đã xanh) **snake** hoặc **net**, dùng lại luật chạm/recoil và catch sẵn có; khai `extensions` và ghi README.
+- [ ] (Mở rộng, chỉ khi lõi đã xanh) ChuTungDuongg làm **snake** (dùng lại luật chạm/recoil); haiquanng làm **net** (mở rộng catch, mua trong Shop). Khai `extensions` và ghi README.
 
 ### minhphuong150505 + phuthaitran
 - [ ] Chơi thử `day` trọn 1 Ngày: DayIntro → gather → EveningIntro → quan → DayResult → Shop (mua oxygen) → Ngày 2.
-- [ ] (Mở rộng, chỉ khi lõi đã xanh) **burn** hoặc **vendor**; khai `extensions` và ghi README.
+- [ ] (Mở rộng, chỉ khi lõi đã xanh) minhphuong150505 làm **burn**; khai `extensions` và ghi README.
 
 > Nhóm 6 người cần **≥ 2 mục mở rộng** trong cả buổi lab. Chỉ làm sau khi lõi Phase 2 đã gộp và xanh.
 
@@ -354,9 +367,9 @@ git tag phase-2 && git push origin phase-2
 
 | Handle | 2.1 | 2.2 | 2.3 |
 |---|---|---|---|
-| HoangHongNgo | contract v1.1 | pause + test | ghi chép, retro, tag |
-| haiquanng | cá bơi, đàn ban đầu | sinh cá + test | sửa lỗi chơi thử / mở rộng |
-| ChuTungDuongg | oxy/ngạt số chuẩn, Cá Sấu patrol/chase | hit/recoil/ngất + test | sửa lỗi chơi thử / mở rộng |
-| minhphuong150505 | 2 bếp 4 bàn, 6 món | scenario day + test | sửa lỗi chơi thử / mở rộng |
-| phuthaitran | máy pha day + `--mode day` | Shop + nối sim thật + test | sửa lỗi chơi thử / mở rộng |
-| RachalHys | menu, intro, khung verification | HUD v1.1, pause UI, Shop UI | regression, proof, verification |
+| HoangHongNgo | contract v1.1 · khung verification | pause + test | proof, verification, ghi chép, retro, tag |
+| haiquanng | cá bơi, đàn ban đầu · khung Shop | sinh cá + test · luật Shop + test | sửa lỗi chơi thử · mở rộng net |
+| ChuTungDuongg | oxy/ngạt số chuẩn, Cá Sấu patrol/chase | hit/recoil/ngất + test | sửa lỗi chơi thử · mở rộng snake |
+| minhphuong150505 | 2 bếp 4 bàn, 6 món | scenario day + test | sửa lỗi chơi thử · mở rộng burn |
+| phuthaitran | máy pha day + `--mode day` | nối sim thật + test day | sửa lỗi chơi thử day |
+| RachalHys | menu, intro | HUD v1.1, pause UI, Shop UI | regression P1, ảnh HUD/FPS |
