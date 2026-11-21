@@ -102,6 +102,7 @@ function showRecentAction(state) {
     flashAction("");
   } else if (state.tick > lastFeedbackTick) {
     const fresh = (state.events || []).filter(e => e.tick > lastFeedbackTick && e.phase === state.phase);
+    if (window.ChoNoiSfx) window.ChoNoiSfx.handle(fresh);
     const message = fresh.map(actionReceipt).filter(Boolean).at(-1);
     if (message) flashAction(message);
   }

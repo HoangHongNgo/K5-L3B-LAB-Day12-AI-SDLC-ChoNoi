@@ -5,12 +5,14 @@ Mã thoát: 0 bình thường; 2 tham số/đầu vào sai (kiểm TRƯỚC khi 
 """
 
 import argparse
+import json
 import os
 import sys
 
 from .contract import load_contract
 from .errors import BadInput
 from .inputs import BUTTONS_V11, load_frames
+from . import leaderboard as lb
 from .inventory import read_inventory
 from .runner import run
 from .scenario import load_scenario
@@ -32,6 +34,15 @@ def _int(name):
     return conv
 
 
+def _read_end(path):
+    with open(path, encoding="utf-8") as f:
+        last = None
+        for line in f:
+            if line.strip():
+                last = line
+    return json.loads(last)
+
+
 def main(argv=None) -> int:
     p = _Parser(prog="chonoi.headless")
     p.add_argument("--mode", required=True, choices=["gather", "quan", "day"])  # `day` có từ v1.1
@@ -44,8 +55,17 @@ def main(argv=None) -> int:
     p.add_argument("--inventory-out", dest="inventory_out")
     p.add_argument("--days", type=_int("days"))  # chỉ với day; mặc định 1
     p.add_argument("--snapshot-every", dest="snapshot_every", type=_int("snapshot-every"), default=10)
+    p.add_argument("--leaderboard")  # chỉ với day, đi cặp với --player-name
+    p.add_argument("--player-name", dest="player_name")
     a = p.parse_args(argv)
     try:
+        if (a.leaderboard is None) != (a.player_name is None):
+            raise BadInput("--leaderboard và --player-name phải đi cùng nhau")
+        if a.leaderboard is not None:
+            if a.mode != "day":
+                raise BadInput("--leaderboard chỉ dùng với --mode day")
+            lb.validate_name(a.player_name)
+            lb.load(a.leaderboard)  # store hỏng -> mã 2 trước khi ghi đầu ra
         if a.days is not None:
             if a.mode != "day":
                 raise BadInput("--days chỉ dùng với --mode day")
@@ -60,7 +80,7 @@ def main(argv=None) -> int:
         if a.inventory_out and a.mode != "gather":
             raise BadInput("--inventory-out chỉ dùng với gather")
         outs = [x for x in (a.out, a.inventory_out) if x]
-        ins = [x for x in (a.scenario, a.inputs, a.inventory) if x]
+        ins = [x for x in (a.scenario, a.inputs, a.inventory, a.leaderboard) if x]
         paths = [os.path.abspath(x) for x in outs + ins]
         if len(set(paths)) != len(paths):
             raise BadInput("các đường dẫn đầu vào/đầu ra phải khác nhau")
@@ -77,6 +97,9 @@ def main(argv=None) -> int:
     try:
         run(a.mode, tuning, scenario, a.seed, frames, a.ticks, a.out, a.snapshot_every,
             inventory=inventory, inventory_out=a.inventory_out, days=a.days or 1)
+        if a.leaderboard:
+            end = _read_end(a.out)
+            lb.record_if_standard(a.leaderboard, a.player_name, end, a.seed, a.days or 1, bool(a.scenario))
     except BadInput as e:  # lỗi mức luật phát hiện lúc dựng sim
         sys.stderr.write(f"đầu vào sai: {e}\n")
         return 2

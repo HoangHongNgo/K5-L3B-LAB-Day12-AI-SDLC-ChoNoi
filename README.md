@@ -77,6 +77,22 @@ Mua trong Shop (`buy: "net"`), có hiệu lực từ Ngày kế. Cấp 1 giá 25
 - Lõi không đổi: không có `net` trong `active_upgrades` hoặc contract chưa khai `shop.upgrades.net` thì dùng luật lõi; toàn bộ test Phase 1 vẫn xanh.
 - Cần thêm vào `game.contract.json` khi lên v1.1 (PO): `"extensions": ["net"]` ở gốc và `shop.upgrades.net` = `[{"level":1,"price":250,"catch_radius":4.0,"max_schools":2},{"level":2,"price":500,"catch_radius":6.0,"max_schools":3}]`.
 
+### `leaderboard` — Bảng xếp hạng cục bộ
+
+Top 10 lưu trong file JSON, điểm giảm dần, hòa thì mục ghi trước đứng trước. Chỉ lượt chuẩn đủ 5 Ngày (không scenario, `reason:"days_complete"`) mới ghi một mục.
+
+```bash
+python3 -m chonoi.headless --mode day --seed 42 --days 5 --ticks 400000 --out out.jsonl --leaderboard lb.json --player-name "Út Sen"
+python3 -m chonoi.live --mode gather --leaderboard lb.json --export-leaderboard out.json
+python3 -m chonoi.live --mode day --leaderboard lb.json --player-name "Út Sen"
+```
+
+Thiếu một cờ trong cặp `--leaderboard`/`--player-name` hoặc sai mode thì mã 2. Chạy live mà không có `--leaderboard` thì dùng `leaderboard.json` ở thư mục hiện tại. Mã: `chonoi/leaderboard.py`. Bằng chứng: [extensions.md](docs/proof/phase-4/extensions.md).
+
+### Phụ đề SFX
+
+Trình duyệt phát tiếng tổng hợp cho các hành động chính và hiện phụ đề dạng `[tiếng ...]` kể cả khi tắt âm thanh. Bật hoặc tắt ở Sổ tay → Điều khiển. Chỉ client đọc snapshot, headless không đổi. Mã: `chonoi/web/sfx.js`.
+
 ## Lịch 3 giờ
 
 | Mốc | Phase | Hạn tag |

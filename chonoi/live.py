@@ -27,6 +27,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from .contract import load_contract
 from .errors import BadInput
+from . import leaderboard as lb
 from .inputs import LiveInputs
 from .inventory import read_inventory
 from .runner import Session
@@ -43,7 +44,7 @@ WEB_ASSETS = {
     "/index.html": ("index.html", "text/html"),
     **{"/assets/" + name: (name, "text/css") for name in ("game.css", "forage.css", "flow.css", "navigation.css")},
     **{"/assets/" + name: (name, "text/javascript") for name in (
-        "scene.js", "river.js", "cafe.js", "forage.js", "service.js", "flow.js", "map.js", "field.js",
+        "sfx.js", "scene.js", "river.js", "cafe.js", "forage.js", "service.js", "flow.js", "map.js", "field.js",
         "vendor/three.module.min.js", "vendor/three.core.min.js",
     )},
 }
@@ -52,11 +53,15 @@ WEB_ASSETS = {
 class LiveGame:
     """Một lượt chơi + luồng nền bước 60 tick/s. Mọi truy cập trạng thái đi qua khóa."""
 
-    def __init__(self, mode, tuning, scenario, seed, inventory=None, inventory_out=None, *, start_in_menu=False):
+    def __init__(self, mode, tuning, scenario, seed, inventory=None, inventory_out=None, *, start_in_menu=False,
+                 leaderboard=None, player_name=None):
         self._args = (mode, tuning, scenario, seed, inventory)
         self.mode = mode
         self.tuning = tuning
         self.inventory_out = inventory_out
+        self.leaderboard = leaderboard
+        self.player_name = player_name
+        self.scenario_given = bool(scenario)
         self.start_in_menu = start_in_menu
         self._lock = threading.Lock()
         self._stop = threading.Event()
@@ -162,6 +167,12 @@ class LiveGame:
                     s.write_inventory_if_done(self.inventory_out)
                 except OSError as e:
                     sys.stderr.write(f"lỗi ghi kho: {e}\n")
+            if self.leaderboard and self.mode == "day" and s.sim.reason == "days_complete":
+                try:  # mỗi lượt chơi ghi đúng một mục: _saved được đặt lại ở _reset
+                    lb.record_if_standard(self.leaderboard, self.player_name, s.end_row(), self._args[3], 5,
+                                          self.scenario_given)
+                except (OSError, BadInput) as e:
+                    sys.stderr.write(f"lỗi ghi bảng xếp hạng: {e}\n")
 
     # --- API cho handler -----------------------------------------------------------
     def _restaurant(self):
@@ -421,8 +432,26 @@ def main(argv=None) -> int:
     p.add_argument("--scenario")
     p.add_argument("--inventory", help="chỉ với quan: nạp kho từ file")
     p.add_argument("--inventory-out", dest="inventory_out", help="chỉ với gather: ghi kho khi kết thúc buổi")
+    p.add_argument("--export-leaderboard", dest="export_leaderboard", metavar="OUT.json",
+                   help="xuất bảng xếp hạng đã sắp ra file rồi thoát")
+    p.add_argument("--leaderboard", help="file lưu bảng xếp hạng (mặc định leaderboard.json)")
+    p.add_argument("--player-name", dest="player_name", help="tên ghi bảng khi chơi đủ 5 Ngày (mode day)")
     a = p.parse_args(argv)
+    if a.export_leaderboard:
+        try:
+            lb.export(a.leaderboard or lb.DEFAULT_STORE, a.export_leaderboard)
+        except BadInput as e:
+            sys.stderr.write(f"đầu vào sai: {e}\n")
+            return 2
+        except OSError as e:
+            sys.stderr.write(f"lỗi ghi: {e}\n")
+            return 1
+        return 0
     try:
+        if a.player_name is not None:
+            lb.validate_name(a.player_name)
+        if a.mode != "day" and (a.leaderboard or a.player_name):
+            raise BadInput("--leaderboard/--player-name chỉ dùng với --mode day")
         if a.inventory and a.mode != "quan":
             raise BadInput("--inventory chỉ dùng với quan")
         if a.inventory_out and a.mode != "gather":
@@ -433,7 +462,9 @@ def main(argv=None) -> int:
         inventory = read_inventory(a.inventory, contract_version=contract["contract_version"]) if a.inventory else None
         if inventory is not None and "stock" in scenario:
             raise BadInput("vừa có quan.stock vừa có --inventory")
-        game = LiveGame(a.mode, tuning, scenario, a.seed, inventory, a.inventory_out, start_in_menu=True)
+        game = LiveGame(a.mode, tuning, scenario, a.seed, inventory, a.inventory_out, start_in_menu=True,
+                        leaderboard=(a.leaderboard or lb.DEFAULT_STORE) if a.mode == "day" else None,
+                        player_name=a.player_name or "Người chơi")
         server = LiveServer(game, a.host, a.port)
     except BadInput as e:
         sys.stderr.write(f"đầu vào sai: {e}\n")
