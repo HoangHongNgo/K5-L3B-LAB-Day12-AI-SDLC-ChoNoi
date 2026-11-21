@@ -188,8 +188,18 @@ class QuanSim:
     def _spawn_customer(self, table):
         events = []
         avail = self._available_stock()
+
+        allowed_menu = self.menu_ids
+        if allowed_menu is None and "plan_dishes" in self.ctx:
+            allowed_menu = self.ctx["plan_dishes"]
+
+        if allowed_menu is not None:
+            candidates = [did for did in sorted(self.menu.keys()) if did in allowed_menu]
+        else:
+            candidates = sorted(self.menu.keys())
+
         valid_dishes = []
-        for did in sorted(self.menu.keys()):
+        for did in candidates:
             recipe = self.menu[did]["recipe"]
             if all(avail.get(k, 0) >= req for k, req in recipe.items()):
                 valid_dishes.append(did)
