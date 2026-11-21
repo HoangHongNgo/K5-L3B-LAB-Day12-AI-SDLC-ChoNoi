@@ -5,11 +5,10 @@ TODO(nhóm): bổ sung kiểm mâu thuẫn mức luật mà nhóm cần (khách 
 phải có đúng một món, khách eating thiếu giá/tip...) — xem PRD-0 mục D và 'Mâu thuẫn -> mã 2'.
 """
 
-import json
 import math
 
 from .errors import BadInput
-from .inventory import KINDS_P1, validate_items
+from .inventory import KINDS_P1, load_item_json, validate_items
 from .sim.gather import gather_limits
 from .sim.monsters import INACTIVE_STATES, MONSTER_STATES, monster_bounds
 
@@ -128,7 +127,7 @@ def _check_ids(name, arr):
 def _read_scenario(path) -> dict:
     try:
         with open(path, encoding="utf-8") as f:
-            data = json.load(f)
+            data = load_item_json(f)
     except (OSError, ValueError) as e:
         raise BadInput(f"không đọc được scenario {path}: {e}")
     if not isinstance(data, dict):
@@ -347,6 +346,28 @@ def _dish_payload(where, obj, menu):
     return oid, did
 
 
+def _linked_dish(where, entity, menu):
+    """Check all supported aliases before normalizing an order reference."""
+    dish = entity.get("dish")
+    order = entity.get("order_id", entity.get("customer_id"))
+    if "customer_id" in entity and entity["customer_id"] != order:
+        raise BadInput(f"{where}: order_id và customer_id mâu thuẫn")
+    if isinstance(dish, dict):
+        nested_order, nested_dish = _dish_payload(where, dish, menu)
+        if order is not None and nested_order != order:
+            raise BadInput(f"{where}: order_id mâu thuẫn với món")
+        order, dish = nested_order, nested_dish
+    if "dish_id" in entity:
+        if dish is not None and dish != entity["dish_id"]:
+            raise BadInput(f"{where}: dish_id mâu thuẫn với món")
+        dish = entity["dish_id"]
+    if dish is not None and (not isinstance(dish, str) or dish not in menu):
+        raise BadInput(f"{where}: món không có trong menu: {dish}")
+    if dish is not None and (not isinstance(order, str) or not order):
+        raise BadInput(f"{where}: món cần order_id")
+    return order, dish
+
+
 def _validate_quan(b, tuning):
     for arr in ("stoves", "tables", "customers"):
         if arr in b:
@@ -409,12 +430,7 @@ def _validate_quan(b, tuning):
         state = s.get("state", "idle")
         if state not in STOVE_STATES:
             raise BadInput(f"stoves.{s['id']}: state không hợp lệ: {state}")
-        dish = s.get("dish") or s.get("dish_id")
-        oid = s.get("order_id") or s.get("customer_id")
-        if isinstance(dish, dict):
-            oid, dish = _dish_payload(f"stoves.{s['id']}.dish", dish, menu)
-        elif dish is not None and dish not in menu:
-            raise BadInput(f"stoves.{s['id']}: dish không có trong menu: {dish}")
+        oid, dish = _linked_dish(f"stoves.{s['id']}", s, menu)
         for key in ("cook_ticks_left", "ready_ticks"):
             if key in s:
                 _nonneg_int(f"stoves.{s['id']}.{key}", s[key])
@@ -442,19 +458,17 @@ def _validate_quan(b, tuning):
             extra = set(hand) - HAND_KEYS
             if extra:
                 raise BadInput(f"hand có trường lạ: {sorted(extra)}")
-            dish = hand.get("dish") or hand.get("dish_id")
-            if dish is not None and dish not in menu:
-                raise BadInput(f"hand: món không có trong menu: {dish}")
+            hand_oid, hand_dish = _linked_dish("hand", hand, menu)
+            if hand_dish is None:
+                raise BadInput("hand cần món và order_id")
             if "base_price" in hand:
-                _dish_payload("hand", hand, menu)
-            hand_oid = hand.get("order_id") or hand.get("customer_id")
-            hand_dish = dish
+                _nonneg_int("hand.base_price", hand["base_price"])
+                if hand["base_price"] == 0:
+                    raise BadInput("hand.base_price phải dương")
             if hand_oid is not None and (not isinstance(hand_oid, str) or not hand_oid):
                 raise BadInput("hand: order_id phải là chuỗi khác rỗng")
-        elif isinstance(hand, str):
-            pass
         else:
-            raise BadInput("hand phải là dict hoặc chuỗi")
+            raise BadInput("hand phải là payload món chứa order_id")
 
     if hand_oid is not None and hand_oid in stove_orders:
         raise BadInput(f"bếp và tay cùng giữ một đơn: {hand_oid}")
@@ -581,6 +595,10 @@ def _validate_quan(b, tuning):
     if len(table_ids) != len(set(table_ids)):
         raise BadInput("hai khách cùng bàn")
 
+    occupying = {c["table_id"]: c["id"] for c in customers}
+    for table in b.get("tables", []):
+        if "customer_id" in table and table["customer_id"] != occupying.get(table["id"]):
+            raise BadInput(f"tables.{table['id']}.customer_id không khớp với khách tại bàn")
     for oid in stove_orders:
         if oid not in cust_ids:
             raise BadInput(f"bếp tham chiếu order/customer không tồn tại: {oid}")

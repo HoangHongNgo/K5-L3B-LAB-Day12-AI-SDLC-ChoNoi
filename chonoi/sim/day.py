@@ -206,8 +206,13 @@ class DaySim:
         `gather.hold`; các Ngày kế cấp id mới theo thứ tự mảng, giữ kind/fresh ban đầu của mẫu."""
         block = copy.deepcopy(self.scenario.get("gather", {}))
         hold = block.get("hold")
+        self.template_item_ids = {}
         if self.days_completed > 0 and isinstance(hold, list):
-            block["hold"] = [dict(it, id=self.ids.new("I")) if isinstance(it, dict) else it for it in hold]
+            for item in hold:
+                if isinstance(item, dict):
+                    new_id = self.ids.new("I")
+                    self.template_item_ids[item["id"]] = new_id
+                    item["id"] = new_id
         return block
 
     def _start_day(self):
@@ -232,6 +237,8 @@ class DaySim:
         if "reservations" in q:
             res_mod.validate(q["reservations"], self.tuning)
             entries = copy.deepcopy(q["reservations"])
+            if any(r["dish_id"] not in self.plan["dishes"] for r in entries):
+                raise BadInput("món đặt trước không thuộc kế hoạch ngày")
         elif q.get("random_reservations", True):
             entries = res_mod.generate(self.tuning, self.streams, list(self.plan["dishes"]))
         else:
@@ -253,6 +260,10 @@ class DaySim:
         res = self._result()
         if phase == "gather":
             block = copy.deepcopy(self.scenario.get("quan", {}))
+            for customer in block.get("customers", []):
+                if isinstance(customer.get("reserved"), list):
+                    customer["reserved"] = [self.template_item_ids.get(item_id, item_id)
+                                            for item_id in customer["reserved"]]
             # Bàn giao trong CÙNG tick đổi pha, nguyên id/kind/fresh (kho đếm v1.1 hoặc cá thể v1.2),
             # không hao thêm; quán chạy từ bước sau.
             items, menu_ids = copy.deepcopy(res["inventory"]["items"]), list(self.plan["dishes"])

@@ -17,7 +17,7 @@ import math
 
 from ..errors import BadInput
 from ..ids import IdAllocator, sort_by_id
-from ..inventory import decay_items, exact_fresh, hold_to_items, public_items
+from ..inventory import decay_items, hold_to_items, public_items
 from .fish import FishSchools
 from .monsters import MonsterSim
 from .ramp import ramp_velocity
@@ -85,7 +85,7 @@ class GatherSim:
         if self.freshness:
             self.decay = Fraction(str(self.freshness["gather_decay_per_s"])) / tuning["tick_hz"]
             self.spoiled_below = Fraction(str(self.freshness["spoiled_below"]))
-            self.hold = [dict(it, fresh=exact_fresh(it["fresh"], self.decay)) for it in self.hold]
+            self.hold = [dict(it, fresh=Fraction(str(it["fresh"]))) for it in self.hold]
             for item in self.hold:
                 self.ids.reserve(item["id"])
         self.time_left_ticks = scenario.get("time_left_ticks", int(round(t["duration_s"] * TICK)))
@@ -110,7 +110,7 @@ class GatherSim:
     # --- giao diện cho runner -------------------------------------------------
     def inventory_items(self):
         if self.freshness:
-            return public_items(sort_by_id(self.hold), self.spoiled_below)
+            return public_items(sort_by_id(self.hold), self.spoiled_below, for_handoff=True)
         return hold_to_items(self.hold)
 
     @property
@@ -125,7 +125,7 @@ class GatherSim:
                        "hp": self.hp, "hp_max": self.hp_max, "zero_oxy_ticks": self.zero_oxy_ticks,
                        "invuln_ticks": self.invuln_ticks, "catch_cd_ticks": self.catch_cd_ticks,
                        "at_surface": self._at_surface()},
-            "hold": public_items(self.hold, self.spoiled_below) if self.freshness else list(self.hold),
+            "hold": public_items(self.hold, self.spoiled_below, for_handoff=self.done) if self.freshness else list(self.hold),
             "hold_count": len(self.hold),
             "hold_capacity": self.t["hold_capacity"],
             "nodes": [{"id": n["id"], "pos": n["pos"], "kind": n["kind"],

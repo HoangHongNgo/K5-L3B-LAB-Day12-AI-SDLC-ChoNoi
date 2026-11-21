@@ -10,7 +10,7 @@ import math
 from fractions import Fraction
 
 from ..errors import BadInput
-from ..inventory import decay_items, exact_fresh, public_items, validate_items
+from ..inventory import decay_items, public_items, validate_items
 from ..ids import id_key, sort_by_id
 from . import reservations as res_mod
 from .ramp import ramp_velocity
@@ -27,9 +27,9 @@ def _order_ref(obj):
         return None
     if isinstance(obj, str):
         return {"order_id": None, "dish_id": obj, "base_price": None}
+    if isinstance(obj.get("dish"), dict):
+        return _order_ref(obj["dish"])
     dish = obj.get("dish_id") or obj.get("dish")
-    if isinstance(dish, dict):
-        return _order_ref(dish)
     if dish is None:
         return None
     return {"order_id": obj.get("order_id") or obj.get("customer_id"), "dish_id": dish,
@@ -80,7 +80,7 @@ class QuanSim:
                 raw_inv = [{"id": self.ids.new("I"), "kind": kind, "fresh": initial}
                            for kind, count in sorted(counts.items()) for _ in range(count)]
             raw_items = validate_items(raw_inv, contract_version="1.2")
-            self.items = [dict(it, fresh=exact_fresh(it["fresh"], self.decay)) for it in raw_items]
+            self.items = [dict(it, fresh=Fraction(str(it["fresh"]))) for it in raw_items]
             for it in self.items:
                 self.ids.reserve(it["id"])
         else:
