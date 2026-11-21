@@ -83,7 +83,9 @@ class TestAnnounceAndGenerate(unittest.TestCase):
     def test_random_reservations_false_and_disabled_extension(self):
         sim = QuanSim(T, {"random_reservations": False}, Streams(1), IdAllocator())
         self.assertEqual((sim.initial_events, sim.snapshot()["reservations"]), ([], []))
-        plain = QuanSim(load_contract()["tuning"], {}, Streams(1), IdAllocator())
+        disabled = tuning_res()
+        disabled["extensions"].remove("reservations")
+        plain = QuanSim(disabled, {}, Streams(1), IdAllocator())
         self.assertNotIn("reservations", plain.snapshot())
 
     def test_validate_scenario_entries(self):

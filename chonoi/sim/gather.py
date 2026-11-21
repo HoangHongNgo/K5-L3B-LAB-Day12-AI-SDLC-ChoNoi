@@ -9,14 +9,15 @@ hái nút ở mặt nước (gather, hold_full, mọc lại sau regrow_s), bắt
 hold_full, hồi chiêu catch_cd_ticks), giỏ dùng chung `_add_to_hold`, xuất kho (ghi đúng một lần do runner lo),
 snapshot đầy đủ trường gather.
 
-Các tính năng của phase sau chưa nằm trong khung này.
+Kho v1.2 giữ id và độ tươi riêng của từng cá thể qua các pha.
 """
 
+from fractions import Fraction
 import math
 
 from ..errors import BadInput
 from ..ids import IdAllocator, sort_by_id
-from ..inventory import hold_to_items
+from ..inventory import decay_items, exact_fresh, hold_to_items, public_items
 from .fish import FishSchools
 from .monsters import MonsterSim
 from .ramp import ramp_velocity
@@ -80,6 +81,13 @@ class GatherSim:
         self.invuln_ticks = p.get("invuln_ticks", 0)
         self.catch_cd_ticks = p.get("catch_cd_ticks", 0)
         self.hold = list(scenario.get("hold", []))  # thứ tự nhặt, cuối mảng là mới nhất
+        self.freshness = tuning.get("freshness")
+        if self.freshness:
+            self.decay = Fraction(str(self.freshness["gather_decay_per_s"])) / tuning["tick_hz"]
+            self.spoiled_below = Fraction(str(self.freshness["spoiled_below"]))
+            self.hold = [dict(it, fresh=exact_fresh(it["fresh"], self.decay)) for it in self.hold]
+            for item in self.hold:
+                self.ids.reserve(item["id"])
         self.time_left_ticks = scenario.get("time_left_ticks", int(round(t["duration_s"] * TICK)))
         # nút và đàn cá: scenario THAY THẾ danh sách mặc định; random_fish=false tắt cá mặc định
         src_nodes = scenario["nodes"] if "nodes" in scenario else t["nodes"]
@@ -100,7 +108,9 @@ class GatherSim:
         self.reason = None
 
     # --- giao diện cho runner -------------------------------------------------
-    def inventory_items(self) -> dict:
+    def inventory_items(self):
+        if self.freshness:
+            return public_items(sort_by_id(self.hold), self.spoiled_below)
         return hold_to_items(self.hold)
 
     @property
@@ -115,7 +125,8 @@ class GatherSim:
                        "hp": self.hp, "hp_max": self.hp_max, "zero_oxy_ticks": self.zero_oxy_ticks,
                        "invuln_ticks": self.invuln_ticks, "catch_cd_ticks": self.catch_cd_ticks,
                        "at_surface": self._at_surface()},
-            "hold": self.hold, "hold_count": len(self.hold),
+            "hold": public_items(self.hold, self.spoiled_below) if self.freshness else list(self.hold),
+            "hold_count": len(self.hold),
             "hold_capacity": self.t["hold_capacity"],
             "nodes": [{"id": n["id"], "pos": n["pos"], "kind": n["kind"],
                        "ready": n["regrow_ticks"] == 0, "regrow_ticks": n["regrow_ticks"]}
@@ -141,6 +152,8 @@ class GatherSim:
                 n["regrow_ticks"] -= 1
                 if n["regrow_ticks"] == 0:
                     events.append(("node_regrown", {"node_id": n["id"]}))
+        if self.freshness:
+            events.extend(decay_items(self.hold, self.decay, self.spoiled_below, "hold"))
         # 2. bơi, chặn mép, tính oxy và ngạt theo độ sâu cuối bước
         was_surface = self._at_surface()
         self._move(inp)
@@ -173,7 +186,11 @@ class GatherSim:
         Dùng chung cho lát 1 và lát 2 (hợp đồng mục 5)."""
         if len(self.hold) + len(kinds) > self.t["hold_capacity"]:
             return False
-        self.hold.extend(kinds)
+        if self.freshness:
+            initial = Fraction(str(self.freshness["initial"]))
+            self.hold.extend({"id": self.ids.new("I"), "kind": kind, "fresh": initial} for kind in kinds)
+        else:
+            self.hold.extend(kinds)
         return True
 
     def _hold_free(self) -> int:
@@ -287,10 +304,8 @@ class GatherSim:
         if count == 0:
             return []
         lost = self.hold[-count:][::-1]
-        if isinstance(lost[0], dict):
-            # Chọn theo thứ tự trong giỏ, rồi lấy id/kind/fresh từ adapter bàn giao.
-            items_by_id = {item["id"]: item for item in self.inventory_items()}
-            lost = [items_by_id[item["id"]].copy() for item in lost]
+        if self.freshness:
+            lost = public_items(lost, self.spoiled_below)
         del self.hold[-count:]
         return lost
 

@@ -224,7 +224,9 @@ def _validate_gather(b, tuning, *, active_upgrades=None):
     hold_kinds = set(KINDS_P1) | recipe_kinds | node_kinds | fish_kinds
     if "hold" in b:
         h = b["hold"]
-        if not isinstance(h, list) or any(k not in hold_kinds for k in h):
+        if "freshness" in tuning:
+            validate_items(h, kinds=hold_kinds, contract_version="1.2")
+        elif not isinstance(h, list) or any(not isinstance(k, str) or k not in hold_kinds for k in h):
             raise BadInput("hold phải là mảng id nguyên liệu hợp lệ")
         if len(h) > g["hold_capacity"]:
             raise BadInput("hold vượt sức chứa")
@@ -355,7 +357,7 @@ def _validate_quan(b, tuning):
     all_kinds = set(KINDS_P1) | {k for dish in menu.values() for k in dish.get("recipe", {})}
 
     if "stock" in b:
-        validate_items(b["stock"], kinds=all_kinds)
+        validate_items(b["stock"], kinds=all_kinds, contract_version="1.2" if "freshness" in tuning else None)
     # mở rộng `reservations` (lát D): đơn tường minh thay toàn bộ danh sách; random_reservations:false tắt tự sinh
     if "random_reservations" in b and not isinstance(b["random_reservations"], bool):
         raise BadInput("random_reservations phải là boolean")
@@ -526,6 +528,8 @@ def _validate_quan(b, tuning):
 
         recipe = menu[did]["recipe"]
 
+        if "freshness" in tuning and "reserved" in c and not isinstance(c["reserved"], list):
+            raise BadInput(f"customers.{cid}.reserved phải là mảng id")
         if "reserved" in c and c["reserved"] is not None:
             res = c["reserved"]
             if isinstance(res, list):
@@ -541,7 +545,7 @@ def _validate_quan(b, tuning):
                         if iid in seen_reserved_item_ids:
                             raise BadInput(f"customers.{cid}.reserved: cá thể {iid} bị dùng chung giữa nhiều đơn")
                         seen_reserved_item_ids.add(iid)
-                        if stock_is_items and stock_item_map[iid]["fresh"] < 30:
+                        if stock_is_items and stock_item_map[iid]["fresh"] < tuning.get("freshness", {}).get("spoiled_below", 30):
                             raise BadInput(f"customers.{cid}.reserved: cá thể {iid} bị ươn (fresh < 30)")
                     res_counts = {}
                     if stock_is_items:
@@ -605,12 +609,14 @@ def validate_quan_against_inventory(scenario_quan: dict, inventory, tuning: dict
 
     menu = tuning.get("menu", {})
     all_kinds = set(KINDS_P1) | {k for dish in menu.values() for k in dish.get("recipe", {})}
-    cleaned_inv = validate_items(inv_data, kinds=all_kinds)
+    cleaned_inv = validate_items(inv_data, kinds=all_kinds, contract_version="1.2" if "freshness" in tuning else None)
 
     if isinstance(cleaned_inv, list):
+        # Resolve explicit item references against the actual file or morning handoff.
+        _validate_quan(dict(scenario_quan, stock=cleaned_inv), tuning)
         inv_stock = {}
         for it in cleaned_inv:
-            if it["fresh"] >= 30:
+            if it["fresh"] >= tuning.get("freshness", {}).get("spoiled_below", 30):
                 inv_stock[it["kind"]] = inv_stock.get(it["kind"], 0) + 1
     else:
         inv_stock = cleaned_inv
@@ -637,7 +643,7 @@ def validate_quan_against_inventory(scenario_quan: dict, inventory, tuning: dict
         status = c.get("order_status", "reserved" if c.get("state", "waiting") == "waiting" else "served")
         if status == "reserved":
             recipe = menu[did]["recipe"]
-            res = c.get("reserved", recipe)
+            res = recipe if isinstance(cleaned_inv, list) else c.get("reserved", recipe)
             for rk, rv in res.items():
                 total_reserved[rk] = total_reserved.get(rk, 0) + rv
 

@@ -55,6 +55,7 @@ class Session:
         # pause xử lý ở lớp bọc chung (chonoi/sim/pause.py), không nằm trong từng sim
         self.sim = sim if isinstance(sim, PauseSim) else PauseSim(sim)
         self.tick = 0
+        self._inventory_written = False
 
     def _ticks(self):
         """(sim_tick, phase_tick): đếm theo sim (đứng yên khi pause; day đặt lại phase_tick mỗi pha)."""
@@ -105,8 +106,9 @@ class Session:
 
     def write_inventory_if_done(self, inventory_out):
         """File kho: ghi MỘT lần khi có gather_end; chưa kết thúc thì giữ nguyên file đích."""
-        if self.mode == "gather" and self.sim.done and inventory_out:
+        if self.mode == "gather" and self.sim.done and inventory_out and not self._inventory_written:
             write_inventory(inventory_out, self.sim.inventory_items())
+            self._inventory_written = True
 
 
 def run(mode, tuning, scenario, seed, frames, ticks, out_path, snapshot_every, inventory=None, inventory_out=None,

@@ -1,14 +1,13 @@
-"""File kho (schema v1.0, Contract G; từ v1.1 có 6 nguyên liệu): {"items": {id: số nguyên >= 0}}.
-
-Đọc: từ chối sai schema / id lạ / số âm (BadInput -> mã 2).
-Ghi: bỏ mục bằng 0, qua file tạm cùng thư mục rồi thay thế, byte-ổn-định.
-"""
+"""Versioned inventory validation, freshness and atomic handoff between shifts."""
 
 import json
+from fractions import Fraction
+import math
 import os
 import tempfile
 
 from .errors import BadInput
+from .ids import sort_by_id
 
 KINDS = ("ca_keo", "ca_linh", "ca_loc", "bong_dien_dien", "bong_sung", "keo_neo")  # v1.1: thêm ca_keo, keo_neo
 KINDS_P1 = KINDS  # tên cũ, giữ để mã Phase 1 không vỡ
@@ -19,6 +18,8 @@ ITEM_KEYS = {"id", "kind", "fresh"}
 
 def validate_items(items, kinds=KINDS_P1, contract_version=None):
     if isinstance(items, list):
+        if contract_version in ("1.0", "1.1"):
+            raise BadInput("contract trước v1.2 dùng kho đếm theo loại")
         seen_ids = set()
         out = []
         for it in items:
@@ -44,8 +45,8 @@ def validate_items(items, kinds=KINDS_P1, contract_version=None):
 
     if not isinstance(items, dict):
         raise BadInput("items phải là object hoặc mảng")
-    if contract_version == "1.2":
-        raise BadInput("contract v1.2 không chấp nhận kho đếm")
+    if contract_version in ("1.2", "1.3"):
+        raise BadInput(f"contract v{contract_version} không chấp nhận kho đếm")
     out = {}
     for k, v in items.items():
         if k not in kinds:
@@ -55,6 +56,38 @@ def validate_items(items, kinds=KINDS_P1, contract_version=None):
         if v > 0:
             out[k] = v
     return out
+
+
+def exact_fresh(value, step):
+    """Restore an exported tick-grid value without quantizing off-grid fixture input."""
+    exact = Fraction(str(value))
+    if step and isinstance(value, float):
+        on_grid = round(exact / step) * step
+        if float(on_grid) == value:
+            return on_grid
+    return exact
+
+
+def public_items(items, threshold):
+    result = []
+    for item in items:
+        fresh = item["fresh"]
+        value = int(fresh) if fresh.denominator == 1 else float(fresh)
+        if value == threshold and fresh < threshold:
+            value = math.nextafter(float(value), -math.inf)
+        result.append(dict(item, fresh=value))
+    return result
+
+
+def decay_items(items, amount, threshold, location):
+    spoiled = []
+    for item in items:
+        before = item["fresh"]
+        item["fresh"] = max(0, before - amount)
+        if item["fresh"] < threshold <= before:
+            spoiled.append(item)
+    return [("spoiled", {"item_id": item["id"], "kind": item["kind"], "location": location})
+            for item in sort_by_id(spoiled)]
 
 
 def read_inventory(path: str, kinds=KINDS_P1, contract_version=None):
@@ -80,9 +113,9 @@ def write_inventory(path: str, items):
     if isinstance(items, dict):
         out_items = {k: items[k] for k in sorted(items) if items[k] > 0}
     elif isinstance(items, list):
-        out_items = items
+        out_items = sort_by_id(items)
     else:
-        out_items = items
+        raise BadInput("items phải là object hoặc mảng")
     d = os.path.dirname(os.path.abspath(path))
     fd, tmp = tempfile.mkstemp(prefix=".inv-", suffix=".tmp", dir=d)
     try:
