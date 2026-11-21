@@ -23,10 +23,10 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 
 ### HoangHongNgo — PO + Integrator + Scrum/Release
 - [x] Chốt `docs/contracts/README.md`: schema kho (mục G), danh sách event (tên, `data`, ai phát), giao diện sim↔UI (trường snapshot UI đọc, lệnh `move`/`interact`/`catch`).
-- [ ] Kiểm `docs/contracts/inventory.sample.json` hợp lệ (chạy `quan --inventory` với file này, mã 0).
-- [ ] Chốt ranh giới file: lát 1 sửa phần bơi/oxy trong `GatherSim.step`, lát 2 sửa phần interact/catch; lát 3 khách/lịch, lát 4 bếp/bàn trong `QuanSim`.
-- [ ] Mở `docs/clarify.md`, ghi 2–3 câu hỏi đầu tiên cho Anh Năm (ví dụ: chọn món "đều theo seed" dùng stream nào).
-- [ ] Commit: `contracts: chốt schema kho, event và giao diện sim-UI`.
+- [x] Kiểm `docs/contracts/inventory.sample.json` hợp lệ (chạy `quan --inventory` với file này, mã 0).
+- [x] Chốt ranh giới file: lát 1 sửa phần bơi/oxy trong `GatherSim.step`, lát 2 sửa phần interact/catch; lát 3 khách/lịch, lát 4 bếp/bàn trong `QuanSim`.
+- [x] Mở `docs/clarify.md`, ghi 2–3 câu hỏi đầu tiên cho Anh Năm (ví dụ: chọn món "đều theo seed" dùng stream nào).
+- [x] Commit: `contracts: chốt schema kho, event và giao diện sim-UI`.
 
 ### ChuTungDuongg — Lát 1
 - [ ] Đọc PRD-0 mục F "Gather" (đoạn 2) và `chonoi/sim/gather.py`.
