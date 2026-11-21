@@ -149,15 +149,15 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Chơi thử `gather` trên `main`: lặn tới ngạt, hái, bắt cá, cập bến; ghi lỗi thấy được vào kênh nhóm, sửa nhanh nếu kịp.
 
 ### minhphuong150505 + phuthaitran
-- [ ] Chơi thử `quan` với kho vừa ghi (`--inventory kho.json`): đủ vòng nấu → bưng → phục vụ → trả tiền; để một khách hết kiên nhẫn; sửa nhanh nếu kịp.
+- [x] Chơi thử `quan` với kho vừa ghi (`--inventory kho.json`): đủ vòng nấu → bưng → phục vụ → trả tiền; để một khách hết kiên nhẫn; sửa nhanh nếu kịp. — bằng chứng: `docs/proof/phase-1/quan-playtest/`
 
 ---
 
 ## 1.5 Bàn giao (phút 55–60)
 
 ### Mọi người
-- [ ] Ghi phần của mình vào `docs/ai-usage-log.md` (công cụ, việc dùng AI, token/chi phí nếu đo được). — xong: ChuTungDuongg, haiquanng
-- [ ] Tạo `docs/members/<handle>.md` theo `docs/members/TEMPLATE.md` (có thể hoàn thiện ở phase sau). — xong: ChuTungDuongg, haiquanng
+- [ ] Ghi phần của mình vào `docs/ai-usage-log.md` (công cụ, việc dùng AI, token/chi phí nếu đo được). — xong: ChuTungDuongg, haiquanng, phuthaitran
+- [ ] Tạo `docs/members/<handle>.md` theo `docs/members/TEMPLATE.md` (có thể hoàn thiện ở phase sau). — xong: ChuTungDuongg, haiquanng, phuthaitran
 
 ### HoangHongNgo
 - [x] Cập nhật `docs/clarify.md`, `docs/standup.md`, ghi nhanh vào `docs/retro.md`.
