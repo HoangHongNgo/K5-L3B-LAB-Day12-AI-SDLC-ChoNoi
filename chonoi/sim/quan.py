@@ -118,23 +118,30 @@ class QuanSim:
         self.phase_tick += 1
         # 1. Đồng hồ & timer
         self._tick_timers()
-        events.extend(self._update_customer_patience())
+        self._update_customer_patience()
         # 2. Bếp chín -> ready
         events.extend(self._update_stoves())
         # 3. Di chuyển người chơi & interact
         self._move(inp)
         if inp.pressed("interact"):
             events.extend(self._interact())
-        # 4. Khách mới theo lịch (first_customer_tick, customer_interval_s)
-        if self._should_spawn_customer():
-            table = self._find_available_table()
-            if table is not None:
-                events.extend(self._spawn_customer(table))
-        if self.time_left_ticks <= 0:
+        # 4. Khách ăn xong trả tiền, hết kiên nhẫn rời, hoặc dọn cuối ca
+        closing = self.time_left_ticks <= 0
+        events.extend(self._settle_customers(closing))
+        if closing:
+            for s in self.stoves:
+                s.update(state="idle", dish=None, cook_ticks_left=0, ready_ticks=0)
+            self.hand = None
             self.done = True
             self.reason = "time"
             events.append(("quan_end", {"reason": "time", "money": self.money, "earned": self.earned,
                                         "shift_earned": self.shift_earned, "reputation": self.reputation}))
+            return events
+        # 5. Khách mới theo lịch (first_customer_tick, customer_interval_s)
+        if self._should_spawn_customer():
+            table = self._find_available_table()
+            if table is not None:
+                events.extend(self._spawn_customer(table))
         return events
 
     def _tick_timers(self):
@@ -205,10 +212,81 @@ class QuanSim:
         return [("cook_started", dict(self._stove_data(stove), items=items, base_price=c["base_price"]))]
 
     def _pick_dish(self, stove) -> list:
-        return []
+        """Bếp ready giao món cho tay trống (carry_limit 1) rồi về idle; tay đầy thì bỏ lượt."""
+        if self.hand is not None or self.t.get("carry_limit", 1) < 1:
+            return []
+        data = self._stove_data(stove)
+        self.hand = dict(stove["dish"])
+        c = self._customer(self.hand["order_id"])
+        if c is not None:
+            c["order_status"] = "carried"
+        stove.update(state="idle", dish=None, cook_ticks_left=0, ready_ticks=0)
+        return [("dish_picked", data)]
 
     def _serve(self, table) -> list:
-        return []
+        """Bàn nhận đúng order_id trên tay: khách ăn với timer đầy, chốt boa theo kiên nhẫn sau bước 1."""
+        c = next((x for x in self.customers if x["table_id"] == table["id"]), None)
+        if c is None or self.hand is None or c["state"] != "waiting" or self.hand["order_id"] != c["id"]:
+            return []
+        price = c["base_price"] if c["base_price"] is not None else self.menu[c["dish_id"]]["price"]
+        patience_max = int(round(self.t["patience_s"] * self.tick_hz))
+        ratio = Fraction(c["patience_ticks_left"], patience_max)
+        tip = 0
+        if ratio >= Fraction(str(self.t.get("tip_min_patience_ratio", 0.5))):
+            tip = math.floor(price * Fraction(str(self.t.get("tip_rate", 0.2))))
+        self.hand = None
+        c.update(state="eating", order_status="served", base_price=price, tip=tip,
+                 eat_ticks_left=int(round(self.t.get("eat_s", 10.0) * self.tick_hz)))
+        return [("served", {"order_id": c["id"], "customer_id": c["id"], "table_id": c["table_id"],
+                            "dish_id": c["dish_id"], "patience_ticks_left": c["patience_ticks_left"],
+                            "base_price": price, "tip": tip})]
+
+    def _settle_customers(self, closing) -> list:
+        """Theo id bàn: ăn xong -> paid; còn giờ mà hết kiên nhẫn -> rời patience;
+        hết ca: đang ăn -> paid closing, đang chờ -> rời closing (không trừ uy tín)."""
+        events = []
+        for c in sorted(self.customers, key=lambda x: id_key(x["table_id"])):
+            if c["state"] == "eating":
+                if c["eat_ticks_left"] <= 0:
+                    events.extend(self._pay(c, "finished_eating"))
+                elif closing:
+                    events.extend(self._pay(c, "closing"))
+            elif closing:
+                events.extend(self._expire_customer(c, reason="closing"))
+            elif c["patience_ticks_left"] <= 0:
+                events.extend(self._expire_customer(c, reason="patience"))
+        return events
+
+    def _pay(self, c, reason) -> list:
+        tip = c["tip"] or 0
+        if c["base_price"] is None:
+            c["base_price"] = self.menu[c["dish_id"]]["price"]
+        amount = c["base_price"] + tip
+        self.money += amount
+        self.earned += amount
+        self.shift_earned += amount
+        self.tips += tip
+        self.stats_served += 1
+        self.dish_served_counts[c["dish_id"]] = self.dish_served_counts.get(c["dish_id"], 0) + 1
+        if tip > 0:
+            self._add_reputation(self.t.get("tip_reputation", 0.2))
+        self._remove_customer(c)
+        return [("paid", {"order_id": c["id"], "customer_id": c["id"], "table_id": c["table_id"],
+                          "base_price": c["base_price"], "tip": tip, "amount": amount, "reason": reason})]
+
+    def _add_reputation(self, delta):
+        rmin, rmax = self.t.get("reputation_min", 0), self.t.get("reputation_max", 5)
+        self.reputation = max(rmin, min(rmax, round(self.reputation + delta, 6)))
+
+    def _remove_customer(self, c):
+        """Khách rời bàn: nhả giữ thô, bỏ món của đơn đang nấu/ready/trên tay (nguyên liệu đã dùng không hoàn)."""
+        self._release_reserved(c)
+        for s in self.stoves:
+            if s["dish"] is not None and s["dish"]["order_id"] == c["id"]:
+                s.update(state="idle", dish=None, cook_ticks_left=0, ready_ticks=0)
+        if self.hand is not None and self.hand["order_id"] == c["id"]:
+            self.hand = None
+        self.customers = [x for x in self.customers if x is not c]
 
     def _customer(self, cid):
         return next((c for c in self.customers if c["id"] == cid), None)
@@ -217,41 +295,20 @@ class QuanSim:
     def _stove_data(stove):
         return {"stove_id": stove["id"], "order_id": stove["dish"]["order_id"], "dish_id": stove["dish"]["dish_id"]}
 
-    def _update_customer_patience(self) -> list:
-        events = []
-        remaining = []
+    def _update_customer_patience(self):
+        """Bước 1: khách chờ giảm kiên nhẫn (không âm) từ bước sau khi đến; việc rời quán xét ở bước 4."""
         for c in self.customers:
-            if c.get("state") == "waiting":
-                if c.get("order_tick") == self.phase_tick:
-                    remaining.append(c)
-                    continue
-                c["patience_ticks_left"] -= 1
-                if c["patience_ticks_left"] <= 0:
-                    events.extend(self._expire_customer(c, reason="patience"))
-                    continue
-            remaining.append(c)
-        self.customers = remaining
-        return events
+            if c.get("state") == "waiting" and c.get("order_tick") != self.phase_tick:
+                c["patience_ticks_left"] = max(0, c["patience_ticks_left"] - 1)
 
     def _expire_customer(self, customer, reason="patience") -> list:
-        events = []
-        cid = customer["id"]
-        tid = customer["table_id"]
-        self._release_reserved(customer)
         if reason == "patience":
-            delta = self.t.get("left_reputation_delta", -0.5)
-            rmin = self.t.get("reputation_min", 0)
-            rmax = self.t.get("reputation_max", 5)
-            self.reputation = max(rmin, min(rmax, round(self.reputation + delta, 3)))
-        events.append((
-            "customer_left",
-            {
-                "customer_id": cid,
-                "table_id": tid,
-                "reason": reason,
-            }
-        ))
-        return events
+            self.stats_left += 1
+            self._add_reputation(self.t.get("left_reputation_delta", -0.5))
+        self._remove_customer(customer)
+        return [("customer_left", {"order_id": customer["id"], "customer_id": customer["id"],
+                                   "table_id": customer["table_id"], "reason": reason,
+                                   "reputation": self.reputation})]
 
     def _release_reserved(self, customer):
         customer["reserved"] = {}
