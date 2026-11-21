@@ -147,7 +147,7 @@ def load_scenario(path, mode: str, tuning: dict, *, active_upgrades=None) -> dic
             if isinstance(t, bool) or not isinstance(t, int) or not (1 <= t <= dur):
                 raise BadInput(f"time_left_ticks phải là số nguyên trong [1, {dur}]")
         if mode == "gather":
-            _validate_gather(block, tuning)
+            _validate_gather(block, tuning, active_upgrades=active_upgrades)
         else:
             _validate_quan(block, tuning)
         return block
