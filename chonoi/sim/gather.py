@@ -17,6 +17,7 @@ import math
 from ..errors import BadInput
 from ..ids import IdAllocator, sort_by_id
 from ..inventory import hold_to_items
+from .fish import FishSchools
 from .monsters import MonsterSim
 from .ramp import ramp_velocity
 
@@ -71,18 +72,12 @@ class GatherSim:
         src_nodes = scenario["nodes"] if "nodes" in scenario else t["nodes"]
         self.nodes = [{"id": n["id"], "kind": n["kind"], "pos": [float(c) for c in n["pos"]],
                        "regrow_ticks": n.get("regrow_ticks", 0)} for n in src_nodes]
-        if "fish" in scenario:
-            src_fish = scenario["fish"]
-        elif scenario.get("random_fish", True):
-            src_fish = t["fish_initial"]
-        else:
-            src_fish = []
-        # Đàn cá đứng yên ở phase này. Cá bơi / sinh thêm là việc của phase sau.
-        self.fish = [{"id": f["id"], "kind": f["kind"], "pos": [float(c) for c in f["pos"]],
-                      "heading_deg": f.get("heading_deg", 0)} for f in src_fish]
-        for coll in (self.nodes, self.fish):
-            for e in coll:
-                self.ids.reserve(e["id"])
+        # đàn cá: chonoi/sim/fish.py (v1.1 bơi/sinh; contract v1.0 giữ đàn đứng yên)
+        self.schools = FishSchools(t, scenario, streams, self.ids, tuning["tick_hz"])
+        self.fish = self.schools.fish
+        self.phase_tick = 0
+        for e in self.nodes:
+            self.ids.reserve(e["id"])
         self.monsters = (MonsterSim(t["monsters"], t["bounds"], scenario.get("monsters"),
                                     day, tuning["tick_hz"]) if "monsters" in t else None)
         self.money = 0
@@ -112,7 +107,8 @@ class GatherSim:
             "nodes": [{"id": n["id"], "pos": n["pos"], "kind": n["kind"],
                        "ready": n["regrow_ticks"] == 0, "regrow_ticks": n["regrow_ticks"]}
                       for n in sort_by_id(self.nodes)],
-            "fish": [{"id": f["id"], "pos": f["pos"], "kind": f["kind"], "heading_deg": f["heading_deg"]}
+            "fish": [dict({"id": f["id"], "pos": f["pos"], "kind": f["kind"], "heading_deg": f["heading_deg"]},
+                          **({"age_ticks": f["age_ticks"]} if "age_ticks" in f else {}))
                      for f in sort_by_id(self.fish)],
         }
         if self.monsters is not None:
@@ -123,6 +119,7 @@ class GatherSim:
     def step(self, inp):
         events = []
         # 1. đồng hồ và hàng có sẵn: giảm bộ đếm, nút mọc lại
+        self.phase_tick += 1
         self.time_left_ticks = max(0, self.time_left_ticks - 1)
         self.invuln_ticks = max(0, self.invuln_ticks - 1)
         self.catch_cd_ticks = max(0, self.catch_cd_ticks - 1)
@@ -152,6 +149,9 @@ class GatherSim:
         # 5. hết giờ
         if self.time_left_ticks <= 0:
             self._finish("time", events)
+            return events
+        # 6. còn giờ: cá bơi rồi sinh theo lịch (bắt cá ở bước 4 dùng vị trí trước khi bơi)
+        events.extend(self.schools.step(self.phase_tick))
         return events
 
     # --- lát 2: giỏ, hái, bắt cá --------------------------------------------------
