@@ -43,9 +43,9 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Tạo nhánh `p1/lat2-haiquanng`.
 
 ### minhphuong150505 — Lát 3
-- [ ] Đọc PRD-0 mục D (khối `quan`), mục F "Quán" (đoạn 4–5).
-- [ ] Chốt với phuthaitran cấu trúc khách/đơn: các trường `id, table_id, dish_id, order_tick, state, patience_ticks_left, eat_ticks_left, order_status, reserved, base_price, tip`.
-- [ ] Tạo nhánh `p1/lat3-minhphuong150505`.
+- [x] Đối chiếu PRD-0 mục D (khối `quan`) và mục F "Quán" (đoạn 4–5).
+- [x] Cấu trúc khách/đơn đã ghi trong [hợp đồng tích hợp, mục 3](docs/contracts/README.md#3-cấu-trúc-khách--đơn-chốt-giữa-lát-3--lát-4).
+- [x] Nhánh `p1/lat3-minhphuong150505` đã gộp qua [PR #3](https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi/pull/3).
 
 ### phuthaitran — Lát 4
 - [x] Đọc PRD-0 mục F "Quán" (đoạn 1–3), event `cook_started`/`dish_ready`/`dish_picked`/`served`/`paid`/`quan_end`.
@@ -111,10 +111,10 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Mở PR, nhờ ChuTungDuongg review.
 
 ### minhphuong150505 — Lát 3
-- [ ] Kiên nhẫn giảm từ bước sau khi đến; còn giờ mà về 0 → `customer_left` `patience`, uy tín + `left_reputation_delta` (kẹp), nhả giữ chỗ, bỏ món của đơn.
-- [ ] Khách fixture: suy `reserved` khi thiếu (theo order_tick rồi id bàn); kiểm mâu thuẫn trong `chonoi/scenario.py` (khách trùng bàn, giữ quá tồn/khác công thức, bếp và tay giữ cùng đơn...) → mã 2.
-- [ ] Test `tests/test_p1_lat3.py`: AC-P1-07, AC-P1-08.
-- [ ] Mở PR, nhờ phuthaitran review.
+- [x] Kiên nhẫn giảm từ bước sau khi đến; còn giờ mà về 0 → `customer_left` `patience`, uy tín + `left_reputation_delta` (kẹp), nhả giữ chỗ, bỏ món của đơn.
+- [x] Khách fixture: suy `reserved` khi thiếu (theo order_tick rồi id bàn); kiểm mâu thuẫn trong `chonoi/scenario.py` (khách trùng bàn, giữ quá tồn/khác công thức, bếp và tay giữ cùng đơn...) → mã 2.
+- [x] Test `tests/test_p1_lat3.py`: AC-P1-07, AC-P1-08.
+- [x] Đã mở và gộp [PR #3](https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi/pull/3).
 
 ### phuthaitran — Lát 4
 - [x] Bếp ready → tay trống (`carry_limit` 1) → `dish_picked`, bếp về idle; `ready_ticks` chỉ tăng cho món đã ready đầu bước.
@@ -318,7 +318,7 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Hàm `validate_quan_against_inventory` để lát D gọi lúc mở quán: kiểm kho/khách/bếp/món thuộc kế hoạch trên kho thực.
 - [x] Đóng ca số chuẩn: khách đang ăn trả ngay, khách chờ rời không trừ uy tín, dọn món và phần giữ.
 - [x] Test `tests/test_p2_quan.py`: 2 bếp nấu song song, lọc kế hoạch, `no_dish`, khách vẫn gọi tiếp món đủ hàng khi đã bán đủ suất.
-- [ ] Mở PR, nhờ phuthaitran review.
+- [x] Đã mở và gộp [PR #14](https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi/pull/14).
 
 ### phuthaitran — Lát D
 - [x] Day: giỏ mới, kho dư bỏ sau Shop; Ngày hoàn tất khi Shop đóng (kể cả Ngày cuối). Trạng thái xuyên Ngày lấy từ `DayState` của haiquanng.
@@ -481,12 +481,12 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Khi xong sớm: vào pair với haiquanng ở lát X (test hướng/biên dòng lũ).
 
 ### minhphuong150505 — Lát Q (quán tươi)
-- [ ] `quan.py`: `stock` là danh sách cá thể (nhận nguyên số lượng, id, độ tươi, kể cả hàng ươn); hao 0.25/s (1 đơn vị/tick) kể cả hàng đang giữ chỗ; `spoiled` (`location:"stock"`) theo id trước khi xử lý giữ chỗ.
-- [ ] Giữ theo id: mỗi loại lấy cá thể khả dụng tươi nhất, hòa theo id; phần giữ có cá thể vừa ươn → nhả toàn bộ và thử giữ lại **đúng một lần**, xử lý theo `order_tick` rồi id bàn; không đủ → `unfulfillable`, khách chờ tới hạn.
-- [ ] Nấu: tiêu đúng các id đang giữ, `base_price = floor(giá niêm yết × trung bình fresh / 100)`; boa `floor(tiền món × 0.2)` trên giá đã chốt; `cook_started.data.items` là mảng cá thể sắp theo kind rồi id; điểm vẫn `earned + 100 × floor(reputation)`.
-- [ ] Thứ tự tick quán theo ticket (hao tươi → `spoiled` → giữ chỗ → món chín → di chuyển/tương tác → thanh toán/kiên nhẫn/đóng ca → khách).
-- [ ] Test `tests/test_p3_quan.py`: qua ngưỡng 30 trong lúc giữ chỗ, giữ lại thành công/thất bại, giá theo tươi (floor), boa trên giá đã chốt, hàng ươn không dùng nấu nhưng chiếm kho.
-- [ ] Mở PR sau lát B, nhờ phuthaitran review. Commit: `quan: kho cá thể, giữ theo id, giá theo tươi`.
+- [x] `quan.py`: `stock` trong snapshot là danh sách cá thể (nhận nguyên số lượng, id, độ tươi, kể cả hàng ươn); hao 0.25/s (1 đơn vị/tick) kể cả hàng đang giữ chỗ; `spoiled` (`location:"stock"`) theo id trước khi xử lý giữ chỗ.
+- [x] Giữ theo id: mỗi loại lấy cá thể khả dụng tươi nhất, hòa theo id; phần giữ có cá thể vừa ươn → nhả toàn bộ và thử giữ lại **đúng một lần**, xử lý theo `order_tick` rồi id bàn; không đủ → `unfulfillable`, khách chờ tới hạn.
+- [x] Nấu: tiêu đúng các id đang giữ, `base_price = floor(giá niêm yết × trung bình fresh / 100)`; boa `floor(tiền món × 0.2)` trên giá đã chốt; `cook_started.data.items` là mảng cá thể sắp theo kind rồi id; điểm vẫn `earned + 100 × floor(reputation)`.
+- [x] Thứ tự tick quán theo ticket (hao tươi → `spoiled` → giữ chỗ → món chín → di chuyển/tương tác → thanh toán/kiên nhẫn/đóng ca → khách).
+- [x] Test `tests/test_p3_quan.py`: qua ngưỡng 30 trong lúc giữ chỗ, giữ lại thành công/thất bại, giá theo tươi (floor), boa trên giá đã chốt, hàng ươn không dùng nấu nhưng chiếm kho.
+- [x] Đã gộp [PR #23](https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi/pull/23) cho Phase 3 và [PR #31](https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi/pull/31) cho lượt rà soát Phase 4.
 
 ### phuthaitran — Lát D (day + đặt trước, mở rộng 2)
 - [ ] `day.py`: bàn giao kho cá thể **trong cùng tick chuyển pha**, hàng không hao thêm, ca quán chạy từ bước sau; id tiếp tục tăng xuyên pha và Ngày; Ngày kế cấp id mới theo thứ tự mảng với kind/fresh ban đầu của mẫu `gather.hold`.
@@ -526,7 +526,7 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Chơi thử `gather`: để hàng ươn trong giỏ, bị Cá Sấu làm rơi (xem `lost`), ngất, cập bến, mở quán với file vừa ghi.
 
 ### minhphuong150505 + phuthaitran
-- [ ] Chơi thử `day` trọn 1 Ngày: hàng ươn trong kho quán, giữ lại một lần, món giá theo tươi, một khách đặt trước thành công và một fail.
+- [x] Chạy thử tự động `day` trọn 1 Ngày trên bản ghép tạm với [PR #32](https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi/pull/32). I1 ươn ở kho Quán, đơn giữ lại I3 và nấu với giá 56, R2 thất bại do thiếu hàng, R1 được phục vụ với giá 72, Shop đóng và hoàn tất Ngày.
 
 ### RachalHys
 - [ ] Chạy lại regression P1–P2 và kiểm HUD trên `main`; ảnh HUD bàn giao cho haiquanng.
