@@ -1,0 +1,40 @@
+Phase 4 · Kiểm chứng review PR #32
+Commit mã chạy 219647cb85ac5dfa0b51734784339bad227dae3c
+Môi trường Linux x86-64, Python 3.12.3, Node 24.15.0, Chrome 148.0.7778.215
+Các lệnh chạy từ clone sạch của commit trên.
+
+$ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
+Ran 432 tests in 8.835s
+OK (skipped=1)
+431 ca đạt. Ca test_v10_contract_keeps_static_preset chỉ áp dụng cho v1.0.
+Test v1.3 kiểm loader, hai lệnh trong manifest và hành vi CLI với kho cá thể.
+Test kế hoạch Ngày kiểm chuỗi, null, boolean, số thực, số âm và số 0 hợp lệ.
+
+$ python3 docs/proof/phase-3/smoke.py
+Đạt. I1 ươn tại tick 1 khi độ tươi bắt đầu ở ngưỡng 30.
+Gather ghi I1 ca_linh ở độ tươi 99.99166666666667 khi cập bến.
+File kho, snapshot tick 0 của Quán độc lập và snapshot Quán trong Day
+cùng ID, loại và độ tươi. Day chuyển pha ở tick 1 với phase_tick=0.
+Ca bị cắt giữa chừng giữ file đích. CLI trả mã 2 với kho đếm.
+
+$ python3 -m chonoi.headless --mode day --seed 42 --ticks 0 --scenario /tmp/bad-ingredients.json --out /tmp/invalid.jsonl
+Fixture đặt day.day_plan[0].ingredients.ca_loc thành chuỗi "1".
+exit=2
+đầu vào sai: day_plan[0].ingredients.ca_loc phải là số nguyên không âm
+CLI dừng trước khi tạo invalid.jsonl và không in traceback.
+
+$ python3 -m tools.soak --seed 7 --days 10 --out /tmp/soak-a.json
+$ python3 -m tools.soak --seed 7 --days 10 --out /tmp/soak-b.json
+Gọi bằng soak_cmd. Cả hai lượt đạt days_completed=10, crashes=0.
+Kết quả gameplay của cả 10 ngày khớp nhau và khớp soak.json khi bỏ duration_s.
+Ngày cuối có earned=704, reputation=0, score=704.
+
+$ node tools/bench.mjs --seed 42 --duration 30 --out /tmp/bench.json
+Gọi bằng bench_cmd. Chrome chọn WebGL 2 qua bộ dựng phần mềm SwiftShader.
+{"avg_fps":21.388949042994454,"p1_low_fps":9.12884715701618,"frames":642,"measured_s":30.0155,"load_ms":578}
+Lệnh đo hoàn tất và JSON có đủ năm trường. Tải cảnh đạt mốc 10 giây.
+FPS trung bình và 1% low trên SwiftShader thấp hơn mốc báo cáo 60 và 30 FPS.
+Phép đo với GPU Apple M4 được lưu riêng trong bench.json và bench.md.
+
+Smoke Chrome trên clone sạch và ZIP giải nén đều hoàn tất Ngày 1.
+Xem package.md để đối chiếu các thao tác, trạng thái Ngày 2 và SHA-256.
