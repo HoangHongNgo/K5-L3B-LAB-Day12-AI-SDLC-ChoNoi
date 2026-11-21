@@ -144,7 +144,7 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 
 ### RachalHys
 - [x] Lưu log test, `gather.jsonl`, `catch.json`, `quan.jsonl` và ảnh HUD trong `docs/proof/phase-1/`.
-- [x] Điền ma trận 12 AC theo lần chạy trên `main` tại `a1c94cb`. Chạy lại khi có commit bàn giao chính thức.
+- [x] Cập nhật ma trận 12 AC sau khi gộp lát 4 tại `1f0946a`. Giữ kết quả làm mốc regression cho Phase 2.
 
 ### ChuTungDuongg + haiquanng
 - [ ] Chơi thử `gather` trên `main`: lặn tới ngạt, hái, bắt cá, cập bến; ghi lỗi thấy được vào kênh nhóm, sửa nhanh nếu kịp.

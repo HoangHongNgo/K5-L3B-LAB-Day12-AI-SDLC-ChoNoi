@@ -1,4 +1,4 @@
-Revision main: a1c94cb2a78532dccbacd1c8b5d7f1db5adfe361
+Revision main: 1f0946aa9cd7f9c1013e0e45f67ef763384d8f81
 AC-P1-01: v1.0, team_size=6, tick_hz=60, kho mẫu exit=0 stock={'bong_sung': 2, 'ca_loc': 1}
 AC-P1-02 oxygen_empty/choke: [(1, {'oxygen_ticks': 0})] [(60, {'hp': 2})]
 AC-P1-02 nổi đúng bước ngạt: [(1, {'pos': [20.0, 0.443]})] [] 6
@@ -10,10 +10,13 @@ gather.jsonl 6bc3a907bb1c941be656463f91009d0644398b32057bef98ba04103b2eaed8f9
 catch.json b6bb9d2da81ecee69d01fd0860cef1b54edfcb140409c250b4ec3ba1e4410b65
 quan.jsonl e4d852552c5414a2aa58686488a8790b96728f50c251863ade23520a01fc71d3
 AC-P1-06 tick_limit: giữ nguyên file kho có sẵn.
-AC-P1-07 no_dish, kỳ vọng data {}: [(120, {'table_id': 'T1'}), (1020, {'table_id': 'T1'})]
-AC-P1-07 customer_arrived, kỳ vọng order_id / table_id / dish_id: [(120, {'customer_id': 'C1', 'table_id': 'T1', 'dish_id': 'ca_loc_nuong_trui', 'reserved': {'ca_loc': 1}})] [{'id': 'C1', 'table_id': 'T1', 'dish_id': 'ca_loc_nuong_trui', 'order_tick': 120, 'state': 'waiting', 'patience_ticks_left': 3600, 'eat_ticks_left': 0, 'order_status': 'reserved', 'reserved': {'ca_loc': 1}, 'base_price': None, 'tip': 0}]
-AC-P1-08 hết kiên nhẫn, kỳ vọng order_id và reputation trong event: [(1, {'customer_id': 'C1', 'table_id': 'T1', 'reason': 'patience'})] uy tín cuối = 2.5
-AC-P1-09 bấm E tại bếp có khách giữ chỗ, kỳ vọng cook_started: []
-AC-P1-10 hết kiên nhẫn đúng tick đóng ca, kỳ vọng closing và giữ uy tín: [(1, {'customer_id': 'C1', 'table_id': 'T1', 'reason': 'patience'})] [(1, {'reason': 'time', 'money': 0, 'earned': 0, 'shift_earned': 0, 'reputation': 2.5})]
+AC-P1-07 no_dish, kỳ vọng data {}: [(120, {}), (1020, {})]
+AC-P1-07 customer_arrived, kỳ vọng order_id / table_id / dish_id: [(120, {'order_id': 'C1', 'customer_id': 'C1', 'table_id': 'T1', 'dish_id': 'ca_loc_nuong_trui', 'reserved': {'ca_loc': 1}})] [{'id': 'C1', 'table_id': 'T1', 'dish_id': 'ca_loc_nuong_trui', 'order_tick': 120, 'state': 'waiting', 'patience_ticks_left': 3600, 'eat_ticks_left': 0, 'order_status': 'reserved', 'reserved': {'ca_loc': 1}, 'base_price': None, 'tip': 0}]
+AC-P1-08 hết kiên nhẫn, kỳ vọng order_id và reputation trong event: [(1, {'order_id': 'C1', 'customer_id': 'C1', 'table_id': 'T1', 'reason': 'patience', 'reputation': 2.5})] uy tín cuối = 2.5
+AC-P1-09 bấm E tại bếp có khách giữ chỗ, kỳ vọng cook_started: [(1, {'stove_id': 'B1', 'order_id': 'C1', 'dish_id': 'goi_bong_sung', 'items': ['bong_sung', 'bong_sung'], 'base_price': 40})]
+AC-P1-10 hết kiên nhẫn đúng tick đóng ca, kỳ vọng closing và giữ uy tín: [(1, {'order_id': 'C1', 'customer_id': 'C1', 'table_id': 'T1', 'reason': 'closing', 'reputation': 3.0})] [(1, {'reason': 'time', 'money': 0, 'earned': 0, 'shift_earned': 0, 'reputation': 3.0})]
 AC-P1-10 fixture assigned mục D, giao đúng bước cuối, kỳ vọng served → paid → quan_end: 2 đầu vào sai: hand có trường lạ: ['base_price']
 AC-P1-12 README có công thức điểm: True
+AC-P1-09 vòng cá lóc nướng trui: [(1, 'cook_started'), (361, 'dish_ready'), (362, 'dish_picked'), (561, 'served'), (1161, 'paid')]
+AC-P1-09 thu tiền: {'order_id': 'C1', 'table_id': 'T1', 'base_price': 60, 'tip': 12, 'amount': 72, 'reason': 'finished_eating'} uy tín: 3.2 điểm: 372
+AC-P1-11 Chromium, gather 320 px và quan 320/1024 px: kho bông súng khả dụng 1 khi giữ 2, thấy chờ/nấu/chín/bưng/ăn. Sau trả tiền: 48k, uy tín 3.2, điểm 348.

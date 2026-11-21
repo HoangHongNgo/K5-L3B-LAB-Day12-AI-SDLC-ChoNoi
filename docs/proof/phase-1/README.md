@@ -1,6 +1,6 @@
 # Bằng chứng kiểm chứng Phase 1
 
-Chạy trên checkout sạch của `main` tại `a1c94cb`. [Revision đầy đủ](revision.txt) · [Log 110 test](tests.log) · [Đối chiếu Test Contract](contract.log)
+Chạy trên checkout sạch của `main` tại `1f0946a`. [Revision đầy đủ](revision.txt) · [Log 136 test](tests.log) · [Đối chiếu Test Contract](contract.log)
 
 ## Kho qua hai tiến trình
 
@@ -16,4 +16,4 @@ Kho xuất và snapshot quán đều có 2 bông súng, 1 cá lóc. Lặp hai ti
 
 ## HUD
 
-Ảnh chụp Chromium ở 320 px, nguồn dữ liệu từ `chonoi.live --scenario`. Fixture quán có 3 bông súng trong kho và khách giữ 2 để đối chiếu lượng khả dụng. [Fixture sáng](hud-gather-fixture.json) · [Ảnh HUD sáng](hud-gather.png) · [Fixture tối](hud-quan-fixture.json) · [Ảnh HUD tối](hud-quan.png)
+Ảnh chụp Chromium ở 320 px và 1024 px, nguồn dữ liệu từ `chonoi.live --scenario`. Fixture quán có 3 bông súng trong kho và khách giữ 2 để đối chiếu lượng khả dụng. [Fixture sáng](hud-gather-fixture.json) · [Ảnh HUD sáng](hud-gather.png) · [Fixture tối](hud-quan-fixture.json) · [Ảnh HUD tối](hud-quan.png) · [Ảnh sau thanh toán](hud-quan-paid.png)
