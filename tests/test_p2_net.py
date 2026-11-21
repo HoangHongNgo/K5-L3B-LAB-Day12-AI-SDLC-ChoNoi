@@ -11,6 +11,7 @@ import json
 import os
 import unittest
 
+from fixtures.fresh import fresh_items
 from helpers import ROOT
 from test_p2_fish import CATCH, school, tuning
 from test_p2_shop import inp
@@ -32,7 +33,7 @@ P = [50, 10]
 
 
 def sim(fish, level, hold=()):
-    s = {"player": {"pos": list(P)}, "fish": fish, "hold": list(hold)}
+    s = {"player": {"pos": list(P)}, "fish": fish, "hold": fresh_items(hold)}
     return GatherSim(T, s, Streams(1), IdAllocator(), active_upgrades={"net": level} if level else {})
 
 

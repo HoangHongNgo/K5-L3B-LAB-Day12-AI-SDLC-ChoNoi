@@ -6,6 +6,7 @@ import unittest
 from chonoi.contract import load_contract
 from chonoi.errors import BadInput
 from chonoi.scenario import load_scenario
+from fixtures.fresh import fresh_items, stocked, kinds
 from helpers import Workdir, write_json
 
 TUNING = load_contract()["tuning"]
@@ -24,9 +25,9 @@ class TestShape(unittest.TestCase):
 
     def test_ticket_example_is_valid(self):
         r = load({"day": {"money": 200, "earned": 200},
-                  "gather": {"hold": ["ca_loc", "bong_sung", "bong_sung"], "random_fish": False}})
+                  "gather": {"hold": fresh_items(["ca_loc", "bong_sung", "bong_sung"]), "random_fish": False}})
         self.assertEqual((r["day"]["money"], r["day"]["earned"]), (200, 200))
-        self.assertEqual(r["gather"]["hold"], ["ca_loc", "bong_sung", "bong_sung"])
+        self.assertEqual(kinds(r["gather"]["hold"]), ["ca_loc", "bong_sung", "bong_sung"])
 
     def test_single_blocks_are_valid(self):
         load({"gather": {"random_fish": False}})
@@ -109,12 +110,12 @@ class TestDayPlanOverride(unittest.TestCase):
 
 class TestForbiddenAndShape(unittest.TestCase):
     def test_quan_stock_and_reputation_forbidden_in_day(self):
-        for key, val in (("stock", {"ca_loc": 1}), ("reputation", 3.0)):
+        for key, val in (("stock", stocked(ca_loc=1)), ("reputation", 3.0)):
             with self.subTest(key=key), self.assertRaises(BadInput):
                 load({"quan": {key: val}})
 
     def test_quan_stock_and_reputation_still_valid_in_quan_mode(self):
-        load({"quan": {"stock": {"ca_loc": 1}, "reputation": 2.0}}, mode="quan")
+        load({"quan": {"stock": stocked(ca_loc=1), "reputation": 2.0}}, mode="quan")
 
     def test_unknown_keys_and_blocks(self):
         for doc in ({"day": {"hello": 1}}, {"shop": {}}, {"day": []}, {"gather": {"zzz": 1}}, {"quan": {"zzz": 1}},
@@ -129,17 +130,17 @@ class TestForbiddenAndShape(unittest.TestCase):
 
     def test_templates_are_validated_like_single_modes(self):
         with self.assertRaises(BadInput):
-            load({"gather": {"hold": ["rau"]}})
+            load({"gather": {"hold": fresh_items(["rau"])}})
         with self.assertRaises(BadInput):
             load({"quan": {"customers": [{"id": "C1", "table_id": "T9", "dish_id": "lau_mam"}]}})
         with self.assertRaises(BadInput):
             load({"gather": {"time_left_ticks": 0}})
 
     def test_new_kinds_accepted_in_gather_template(self):
-        r = load({"gather": {"hold": ["ca_keo", "keo_neo"],
+        r = load({"gather": {"hold": fresh_items(["ca_keo", "keo_neo"]),
                              "nodes": [{"id": "N5", "kind": "keo_neo", "pos": [76, 0]}],
                              "fish": [{"id": "F1", "kind": "ca_keo", "pos": [30, 25]}]}})
-        self.assertEqual(r["gather"]["hold"], ["ca_keo", "keo_neo"])
+        self.assertEqual(kinds(r["gather"]["hold"]), ["ca_keo", "keo_neo"])
 
 
 if __name__ == "__main__":

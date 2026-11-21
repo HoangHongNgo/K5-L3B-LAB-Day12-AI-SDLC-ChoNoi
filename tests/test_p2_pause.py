@@ -7,11 +7,12 @@ from chonoi.contract import load_contract
 from chonoi.inputs import BUTTONS_V11, InputPlayer, InputState, load_frames
 from chonoi.runner import Session
 from chonoi.sim.pause import PauseSim
+from fixtures.fresh import stocked
 from helpers import Workdir, events, frames, read_jsonl, run_headless, snapshots, write_json
 
 TUNING = load_contract()["tuning"]
 GATHER = {"random_fish": False, "monsters": []}
-KHO = {"bong_sung": 2, "ca_loc": 1}
+KHO = stocked(bong_sung=2, ca_loc=1)
 
 
 def play(session, frame_list, ticks):

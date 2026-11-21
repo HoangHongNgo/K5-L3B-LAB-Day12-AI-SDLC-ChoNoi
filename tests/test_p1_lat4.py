@@ -8,6 +8,7 @@ import math
 import os
 import unittest
 
+from fixtures.fresh import after_tick, opening_price, stocked, kinds, counts
 from helpers import ROOT, Workdir, events, frames, read_jsonl, run_headless, snapshots, write_json
 
 from chonoi.contract import load_contract
@@ -37,7 +38,7 @@ def near(pos, dz=1.0):
 
 def waiting(cid="C1", dish="goi_bong_sung", **kw):
     c = {"id": cid, "table_id": TABLE["id"], "dish_id": dish, "order_tick": 0, "state": "waiting",
-         "order_status": "reserved", "reserved": dict(MENU[dish]["recipe"])}
+         "order_status": "reserved"}
     c.update(kw)
     return c
 
@@ -54,7 +55,7 @@ def eating(cid="C1", dish="goi_bong_sung", eat=EAT_TICKS, tip=0):
 
 def run_quan(block, frame_list=(), ticks=5):
     with Workdir() as w:
-        sc = write_json(w.path("sc.json"), {"quan": dict({"random_customers": False}, **block)})
+        sc = write_json(w.path("sc.json"), {"quan": dict({"random_customers": False, "random_reservations": False}, **block)})
         inp = write_json(w.path("in.json"), frames(*frame_list))
         out = w.path("o.jsonl")
         code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", str(ticks), "--snapshot-every", "1",
@@ -72,13 +73,13 @@ def snap_at(rows, tick):
 
 
 def make_sim(block, tuning=TUNING):
-    return QuanSim(tuning, dict({"random_customers": False}, **block), Streams(1), IdAllocator())
+    return QuanSim(tuning, dict({"random_customers": False, "random_reservations": False}, **block), Streams(1), IdAllocator())
 
 
 class TestInteractSelection(unittest.TestCase):
     def test_stove_before_table_at_equal_distance(self):
         """Hòa khoảng cách: bếp trước bàn."""
-        block = {"player": {"pos": [5, 5]}, "stock": {"bong_sung": 2},
+        block = {"player": {"pos": [5, 5]}, "stock": stocked(bong_sung=2),
                  "stoves": [{"id": STOVE["id"], "pos": [5, 6]}], "tables": [{"id": TABLE["id"], "pos": [5, 4]}],
                  "customers": [waiting()]}
         rows = run_quan(block, [{"tick": 0, "interact": True}], ticks=2)
@@ -89,8 +90,8 @@ class TestInteractSelection(unittest.TestCase):
         tuning = copy.deepcopy(TUNING)
         tuning["quan"]["stoves"] = [{"id": "B1", "pos": [5, 6]}]
         tuning["quan"]["tables"] = [{"id": "T1", "pos": [5, 4]}, {"id": "T2", "pos": [14, 2]}]
-        cooking = dict(waiting("C2"), table_id="T2", order_status="cooking", reserved={}, base_price=40)
-        sim = make_sim({"player": {"pos": [5, 5]}, "stock": {},
+        cooking = dict(waiting("C2"), table_id="T2", order_status="cooking", reserved=[], base_price=40)
+        sim = make_sim({"player": {"pos": [5, 5]}, "stock": [],
                         "stoves": [{"id": "B1", "state": "cooking", "cook_ticks_left": 100,
                                     "dish": {"order_id": "C2", "dish_id": "goi_bong_sung"}}],
                         "hand": {"order_id": "C1", "dish_id": "goi_bong_sung"},
@@ -102,21 +103,21 @@ class TestInteractSelection(unittest.TestCase):
     def test_radius_edge_inclusive(self):
         """Đúng mép interact_radius vẫn tương tác được."""
         r = Q["interact_radius"]
-        block = {"player": {"pos": [STOVE["pos"][0], STOVE["pos"][1] - r]}, "stock": {"bong_sung": 2},
+        block = {"player": {"pos": [STOVE["pos"][0], STOVE["pos"][1] - r]}, "stock": stocked(bong_sung=2),
                  "customers": [waiting()]}
         rows = run_quan(block, [{"tick": 0, "interact": True}], ticks=1)
         self.assertEqual(names(rows), ["cook_started"])
 
     def test_out_of_radius_nothing(self):
         r = Q["interact_radius"]
-        block = {"player": {"pos": [STOVE["pos"][0], STOVE["pos"][1] - r - 0.01]}, "stock": {"bong_sung": 2},
+        block = {"player": {"pos": [STOVE["pos"][0], STOVE["pos"][1] - r - 0.01]}, "stock": stocked(bong_sung=2),
                  "customers": [waiting()]}
         rows = run_quan(block, [{"tick": 0, "interact": True}], ticks=1)
         self.assertEqual(names(rows), [])
 
     def test_only_rising_edge(self):
         """Giữ E không lặp tương tác: chỉ cạnh lên."""
-        block = {"player": {"pos": near(STOVE["pos"])}, "stock": {"bong_sung": 4},
+        block = {"player": {"pos": near(STOVE["pos"])}, "stock": stocked(bong_sung=4),
                  "customers": [waiting()]}
         rows = run_quan(block, [{"tick": 0, "interact": True}], ticks=5)
         self.assertEqual(names(rows), ["cook_started"])
@@ -126,17 +127,18 @@ class TestCooking(unittest.TestCase):
     def test_cook_started_and_dish_ready(self):
         dish = "goi_bong_sung"
         cook = int(round(MENU[dish]["cook_s"] * HZ))
-        block = {"player": {"pos": near(STOVE["pos"])}, "stock": {"bong_sung": 3, "ca_loc": 1},
+        block = {"player": {"pos": near(STOVE["pos"])}, "stock": stocked(bong_sung=3, ca_loc=1),
                  "customers": [waiting(dish=dish)]}
         rows = run_quan(block, [{"tick": 0, "interact": True}], ticks=cook + 2)
         ev = events(rows, "cook_started")[0]
         self.assertEqual(ev["tick"], 1)
         self.assertEqual(ev["data"], {"stove_id": STOVE["id"], "order_id": "C1", "dish_id": dish,
-                                      "items": ["bong_sung", "bong_sung"], "base_price": MENU[dish]["price"]})
+                                      "items": after_tick(stocked(bong_sung=2), TUNING, "quan"),
+                                      "base_price": opening_price(dish, TUNING)})
         s1 = snap_at(rows, 1)
-        self.assertEqual(s1["stock"], {"bong_sung": 1, "ca_loc": 1})  # tiêu đúng phần giữ
+        self.assertEqual(counts(s1["stock"]), {"bong_sung": 1, "ca_loc": 1})  # tiêu đúng phần giữ
         c = s1["customers"][0]
-        self.assertEqual((c["order_status"], c["reserved"], c["base_price"]), ("assigned", {}, MENU[dish]["price"]))
+        self.assertEqual((c["order_status"], c["reserved"], c["base_price"]), ("assigned", [], opening_price(dish, TUNING)))
         self.assertEqual(s1["stoves"][0]["state"], "cooking")
         self.assertEqual(s1["stoves"][0]["cook_ticks_left"], cook)
         ready = events(rows, "dish_ready")
@@ -149,14 +151,14 @@ class TestCooking(unittest.TestCase):
 
     def test_items_sorted_by_kind(self):
         dish = "lau_ca_linh_dien_dien"
-        block = {"player": {"pos": near(STOVE["pos"])}, "stock": {"ca_linh": 3, "bong_dien_dien": 1},
+        block = {"player": {"pos": near(STOVE["pos"])}, "stock": stocked(ca_linh=3, bong_dien_dien=1),
                  "customers": [waiting(dish=dish)]}
         rows = run_quan(block, [{"tick": 0, "interact": True}], ticks=1)
-        self.assertEqual(events(rows, "cook_started")[0]["data"]["items"],
+        self.assertEqual(kinds(events(rows, "cook_started")[0]["data"]["items"]),
                          ["bong_dien_dien", "ca_linh", "ca_linh", "ca_linh"])
 
     def test_idle_stove_no_reserved_order_skips(self):
-        block = {"player": {"pos": near(STOVE["pos"])}, "stock": {"bong_sung": 2}}
+        block = {"player": {"pos": near(STOVE["pos"])}, "stock": stocked(bong_sung=2)}
         rows = run_quan(block, [{"tick": 0, "interact": True}], ticks=1)
         self.assertEqual(names(rows), [])
 
@@ -164,7 +166,7 @@ class TestCooking(unittest.TestCase):
         tuning = copy.deepcopy(TUNING)
         tuning["quan"]["tables"] = [{"id": "T1", "pos": [9, 2]}, {"id": "T2", "pos": [12, 2]},
                                     {"id": "T3", "pos": [14, 2]}]
-        sim = make_sim({"player": {"pos": near(STOVE["pos"])}, "stock": {"bong_sung": 2, "ca_loc": 2},
+        sim = make_sim({"player": {"pos": near(STOVE["pos"])}, "stock": stocked(bong_sung=2, ca_loc=2),
                         "customers": [
                             dict(waiting("C1", "ca_loc_nuong_trui", order_tick=5), table_id="T1"),
                             dict(waiting("C2", "ca_loc_nuong_trui", order_tick=3), table_id="T3"),
@@ -175,7 +177,7 @@ class TestCooking(unittest.TestCase):
         self.assertEqual(evs[0][1]["order_id"], "C3")  # order_tick 3, bàn T2 < T3
 
     def test_ready_ticks_only_for_dish_ready_at_step_start(self):
-        sim = make_sim({"stock": {}, "customers": [dict(waiting(), order_status="ready", reserved={})],
+        sim = make_sim({"stock": [], "customers": [dict(waiting(), order_status="ready", reserved=[])],
                         "stoves": [{"id": STOVE["id"], "state": "ready", "ready_ticks": 5,
                                     "dish": {"order_id": "C1", "dish_id": "goi_bong_sung"}}]})
         sim.step(IDLE)
@@ -185,8 +187,8 @@ class TestCooking(unittest.TestCase):
 class TestPickAndServe(unittest.TestCase):
     def ready_block(self, **kw):
         # Scenario ghi món trên bếp dạng dish (chuỗi) + order_id; sim chuẩn hóa về {"order_id","dish_id"}.
-        b = {"player": {"pos": near(STOVE["pos"])}, "stock": {},
-             "customers": [dict(waiting(), order_status="ready", reserved={}, base_price=40)],
+        b = {"player": {"pos": near(STOVE["pos"])}, "stock": [],
+             "customers": [dict(waiting(), order_status="ready", reserved=[], base_price=40)],
              "stoves": [{"id": STOVE["id"], "state": "ready", "dish": "goi_bong_sung", "order_id": "C1"}]}
         b.update(kw)
         return b
@@ -207,7 +209,7 @@ class TestPickAndServe(unittest.TestCase):
         self.assertEqual(sim.stoves[0]["state"], "ready")
 
     def serve(self, patience):
-        block = {"player": {"pos": near(TABLE["pos"])}, "stock": {},
+        block = {"player": {"pos": near(TABLE["pos"])}, "stock": [],
                  "hand": {"order_id": "C1", "dish_id": "goi_bong_sung"},
                  "customers": [carried(patience=patience)]}
         return run_quan(block, [{"tick": 0, "interact": True}], ticks=EAT_TICKS + 2)
@@ -253,7 +255,7 @@ class TestPickAndServe(unittest.TestCase):
         self.assertEqual(events(rows, "served")[0]["data"]["patience_ticks_left"], 0)
 
     def test_wrong_order_on_table_skips(self):
-        block = {"player": {"pos": near(TABLE["pos"])}, "stock": {},
+        block = {"player": {"pos": near(TABLE["pos"])}, "stock": [],
                  "customers": [carried()]}
         sim = make_sim(block)
         sim.hand = {"order_id": "C7", "dish_id": "goi_bong_sung"}
@@ -261,7 +263,7 @@ class TestPickAndServe(unittest.TestCase):
         self.assertEqual(sim.hand["order_id"], "C7")
 
     def test_tip_reputation_clamped_to_max(self):
-        block = {"reputation": Q["reputation_max"] - 0.1, "stock": {},
+        block = {"reputation": Q["reputation_max"] - 0.1, "stock": [],
                  "customers": [eating(eat=1, tip=8)]}
         rows = run_quan(block, ticks=1)
         self.assertEqual(events(rows, "paid")[0]["data"]["amount"], MENU["goi_bong_sung"]["price"] + 8)
@@ -270,8 +272,8 @@ class TestPickAndServe(unittest.TestCase):
 
 class TestLeavingDropsDish(unittest.TestCase):
     def test_patience_leave_drops_cooking_dish_no_refund(self):
-        block = {"stock": {"bong_sung": 1}, "customers": [dict(waiting(), patience_ticks_left=1,
-                                                                order_status="cooking", reserved={},
+        block = {"stock": stocked(bong_sung=1), "customers": [dict(waiting(), patience_ticks_left=1,
+                                                                order_status="cooking", reserved=[],
                                                                 base_price=40)],
                  "stoves": [{"id": STOVE["id"], "state": "cooking", "cook_ticks_left": 100,
                              "dish": "goi_bong_sung", "order_id": "C1"}]}
@@ -281,10 +283,10 @@ class TestLeavingDropsDish(unittest.TestCase):
         self.assertAlmostEqual(left["reputation"], Q["reputation_initial"] + Q["left_reputation_delta"], delta=0.01)
         s = snap_at(rows, 1)
         self.assertEqual((s["stoves"][0]["state"], s["stoves"][0]["dish"]), ("idle", None))
-        self.assertEqual(s["stock"], {"bong_sung": 1})
+        self.assertEqual(counts(s["stock"]), {"bong_sung": 1})
 
     def test_leave_drops_dish_in_hand(self):
-        sim = make_sim({"stock": {}, "customers": [carried(patience=1)]})
+        sim = make_sim({"stock": [], "customers": [carried(patience=1)]})
         sim.hand = {"order_id": "C1", "dish_id": "goi_bong_sung"}
         evs = sim.step(IDLE)
         self.assertEqual([e[0] for e in evs], ["customer_left"])
@@ -296,7 +298,7 @@ class TestClosing(unittest.TestCase):
 
     def test_eating_customer_pays_closing_then_quan_end(self):
         price = MENU["goi_bong_sung"]["price"]
-        rows = run_quan({"time_left_ticks": 3, "stock": {}, "customers": [eating(tip=8)]}, ticks=10)
+        rows = run_quan({"time_left_ticks": 3, "stock": [], "customers": [eating(tip=8)]}, ticks=10)
         evs = events(rows)
         self.assertEqual([e["name"] for e in evs], ["paid", "quan_end"])
         self.assertTrue(all(e["tick"] == 3 for e in evs))
@@ -312,7 +314,7 @@ class TestClosing(unittest.TestCase):
         self.assertEqual(snap_at(rows, 3)["customers"], [])
 
     def test_waiting_customer_leaves_closing_without_penalty(self):
-        rows = run_quan({"time_left_ticks": 2, "stock": {"bong_sung": 2}, "customers": [waiting()]}, ticks=5)
+        rows = run_quan({"time_left_ticks": 2, "stock": stocked(bong_sung=2), "customers": [waiting()]}, ticks=5)
         self.assertEqual(names(rows), ["customer_left", "quan_end"])
         left = events(rows, "customer_left")[0]["data"]
         self.assertEqual((left["reason"], left["reputation"]), ("closing", Q["reputation_initial"]))
@@ -320,7 +322,7 @@ class TestClosing(unittest.TestCase):
 
     def test_patience_zero_on_closing_tick_is_closing(self):
         """PRD-0 F4: chỉ 'nếu ca còn giờ' mới rời patience; đúng tick hết ca -> closing, không trừ uy tín."""
-        rows = run_quan({"time_left_ticks": 1, "stock": {"bong_sung": 2},
+        rows = run_quan({"time_left_ticks": 1, "stock": stocked(bong_sung=2),
                          "customers": [waiting(patience_ticks_left=1)]}, ticks=2)
         left = events(rows, "customer_left")[0]["data"]
         self.assertEqual(left["reason"], "closing")
@@ -328,7 +330,7 @@ class TestClosing(unittest.TestCase):
 
     def test_served_on_last_tick_pays_closing(self):
         """Phục vụ đúng tick hết ca vẫn hợp lệ, rồi khách trả ngay với closing."""
-        rows = run_quan({"time_left_ticks": 1, "player": {"pos": near(TABLE["pos"])}, "stock": {},
+        rows = run_quan({"time_left_ticks": 1, "player": {"pos": near(TABLE["pos"])}, "stock": [],
                          "hand": {"order_id": "C1", "dish_id": "goi_bong_sung"}, "customers": [carried()]},
                         [{"tick": 0, "interact": True}], ticks=3)
         self.assertEqual(names(rows), ["served", "paid", "quan_end"])
@@ -337,7 +339,7 @@ class TestClosing(unittest.TestCase):
     def test_no_new_customer_after_closing(self):
         """Hết ca thì không xét lượt khách (bước 5 chỉ khi còn giờ)."""
         first = Q["first_customer_tick"]
-        sim = QuanSim(TUNING, {"time_left_ticks": first, "stock": {"bong_sung": 2}}, Streams(1), IdAllocator())
+        sim = QuanSim(TUNING, {"time_left_ticks": first, "random_reservations": False, "stock": stocked(bong_sung=2)}, Streams(1), IdAllocator())
         evs = []
         while not sim.done:
             evs += sim.step(IDLE)
@@ -350,7 +352,7 @@ class TestFullLoopFixture(unittest.TestCase):
     def test_cook_carry_serve_pay(self):
         dish = "goi_bong_sung"
         cook = int(round(MENU[dish]["cook_s"] * HZ))
-        price = MENU[dish]["price"]
+        price = opening_price(dish, TUNING)
         pick = cook + 1
         fr = [{"tick": 0, "interact": True}, {"tick": 1, "interact": False},
               {"tick": pick, "interact": True}, {"tick": pick + 1, "interact": False},

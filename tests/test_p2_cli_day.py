@@ -3,6 +3,7 @@
 import os
 import unittest
 
+from fixtures.fresh import fresh_items, stocked
 from helpers import ROOT, Workdir, frames, read_jsonl, run_headless, write_json
 
 HAS_DAY = os.path.exists(os.path.join(ROOT, "chonoi", "sim", "day.py"))
@@ -57,7 +58,7 @@ class TestDaysFlag(unittest.TestCase):
     def test_day_scenario_errors_are_exit_2(self):
         cases = {
             "money_gt_earned": {"day": {"money": 10, "earned": 5}},
-            "quan_stock": {"quan": {"stock": {"ca_loc": 1}}},
+            "quan_stock": {"quan": {"stock": stocked(ca_loc=1)}},
             "quan_reputation": {"quan": {"reputation": 3}},
             "bad_plan": {"day": {"day_plan": [{"day": 1, "dishes": {"mon_la": 1}}]}},
             "plan_ingredients_mismatch": {"day": {"day_plan": [{"day": 1, "dishes": {"lau_mam": 1},
@@ -74,7 +75,7 @@ class TestDaysFlag(unittest.TestCase):
     def test_ticket_example_scenario_passes_validation(self):
         with Workdir() as w:
             sc = write_json(w.path("sc.json"), {"day": {"money": 200, "earned": 200},
-                                                "gather": {"hold": ["ca_loc", "bong_sung", "bong_sung"],
+                                                "gather": {"hold": fresh_items(["ca_loc", "bong_sung", "bong_sung"]),
                                                            "random_fish": False}})
             code, err = run_headless(*day("--scenario", sc), "--out", w.path("o.jsonl"))
             self.assertIn(code, (0, 1), err)

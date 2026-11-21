@@ -14,6 +14,7 @@ from chonoi.rng import Streams
 from chonoi.runner import Session
 from chonoi.scenario import load_scenario
 from chonoi.sim.gather import GatherSim
+from fixtures.fresh import after_tick, fresh_items, stocked, kinds
 from helpers import Workdir, events, read_jsonl, snapshots, write_json
 
 FIXTURES = Path(__file__).with_name("fixtures")
@@ -115,10 +116,10 @@ class MonsterDamage(unittest.TestCase):
         scenario = read_fixture(FIXTURES / "p2_monster_hit.json")["gather"]
         session = gather_session(scenario)
         self.assertEqual(one_step(session), [("monster_hit", {
-            "monster_id": "M2", "hp": 2, "lost": ["bong_dien_dien", "ca_loc"], "pos": [20, 10],
+            "monster_id": "M2", "hp": 2, "lost": after_tick(scenario["hold"], monster_tuning())[-1:-3:-1], "pos": [20, 10],
         })])
         snapshot = session.snapshot()
-        self.assertEqual(snapshot["hold"], ["ca_loc", "bong_sung", "ca_linh"])
+        self.assertEqual(kinds(snapshot["hold"]), ["ca_loc", "bong_sung", "ca_linh"])
         self.assertEqual(snapshot["player"]["invuln_ticks"], 90)
         self.assertEqual([(m["id"], m["state"]) for m in snapshot["monsters"]],
                          [("M1", "chase"), ("M2", "recoil"), ("M10", "chase")])
@@ -204,42 +205,42 @@ class MonsterDamage(unittest.TestCase):
         hold = ["ca_loc", "ca_linh", "bong_sung"]
         session = gather_session({
             "player": {"pos": [20, 10], "oxygen_ticks": 0, "zero_oxy_ticks": 59, "invuln_ticks": 2},
-            "hold": hold,
+            "hold": fresh_items(hold),
             "monsters": [monster([20, 10])],
         })
         self.assertEqual(one_step(session), [("choke", {"hp": 2})])
-        self.assertEqual(session.snapshot()["hold"], hold)
+        self.assertEqual(kinds(session.snapshot()["hold"]), hold)
         self.assertEqual(session.snapshot()["player"]["invuln_ticks"], 1)
 
     def test_lethal_choke_finishes_before_monster_moves(self):
         session = gather_session({
             "player": {"pos": [20, 10], "oxygen_ticks": 0, "zero_oxy_ticks": 59, "hp": 1},
-            "hold": ["ca_loc"],
+            "hold": fresh_items(["ca_loc"]),
             "monsters": [monster([21, 10])],
         })
         self.assertEqual(one_step(session), [
             ("choke", {"hp": 0}),
-            ("faint", {"cause": "choke", "lost": ["ca_loc"], "hp": 0}),
-            ("gather_end", {"reason": "fainted", "inventory": {"items": {}}}),
+            ("faint", {"cause": "choke", "lost": after_tick(fresh_items(["ca_loc"]), monster_tuning()), "hp": 0}),
+            ("gather_end", {"reason": "fainted", "inventory": {"items": []}}),
         ])
         self.assertEqual(session.snapshot()["monsters"][0]["pos"], [21, 10])
-        self.assertEqual(session.sim.result["inventory"], {"items": {}})
+        self.assertEqual(session.sim.result["inventory"], {"items": []})
 
     def test_nonlethal_hit_precedes_timeout_and_keeps_remaining_stock(self):
         session = gather_session({
-            "player": {"pos": [20, 10]}, "hold": ["ca_loc", "bong_sung"], "time_left_ticks": 1,
+            "player": {"pos": [20, 10]}, "hold": fresh_items(["ca_loc", "bong_sung"]), "time_left_ticks": 1,
             "monsters": [monster([20, 10])],
         })
         rows = one_step(session)
         self.assertEqual([name for name, _ in rows], ["monster_hit", "gather_end"])
-        self.assertEqual(rows[-1][1], {"reason": "time", "inventory": {"items": {"ca_loc": 1}}})
+        self.assertEqual(rows[-1][1], {"reason": "time", "inventory": {"items": session.snapshot()["hold"]}})
 
 
 class MonsterHeadless(unittest.TestCase):
     def run_cli(self, workdir, fixture, *args):
         scenario = write_json(workdir.path("scenario.json"), {"gather": fixture})
         contract = read_fixture(ROOT / "game.contract.json")
-        contract.update(contract_version="1.1", tuning=monster_tuning())
+        contract["tuning"] = monster_tuning()
         with patch("chonoi.headless.load_contract", return_value=contract):
             return headless_main([
                 "--mode", "gather", "--seed", "42", "--ticks", "10", "--scenario", scenario,
@@ -253,18 +254,18 @@ class MonsterHeadless(unittest.TestCase):
         scenario["fish"] = [{"id": "F1", "kind": "ca_loc", "pos": [20, 10]}]
         with Workdir() as w:
             inventory = Path(w.path("catch.json"))
-            write_json(inventory, {"items": {"ca_loc": 2}})
+            write_json(inventory, {"items": stocked(ca_loc=2)})
             inputs = write_json(w.path("inputs.json"), {"frames": [{"tick": 0, "catch": True}]})
             self.assertEqual(self.run_cli(w, scenario, "--inventory-out", str(inventory), "--inputs", inputs), 0)
             rows = read_jsonl(w.path("out.jsonl"))
-            self.assertEqual(read_fixture(inventory), {"items": {}})
+            self.assertEqual(read_fixture(inventory), {"items": []})
 
         self.assertEqual([(e["name"], e["data"], e["tick"]) for e in events(rows)], [
             ("choke", {"hp": 1}, 1),
             ("monster_hit", {"monster_id": "M2", "hp": 0,
-                             "lost": ["bong_dien_dien", "ca_loc"], "pos": [20, 10]}, 1),
-            ("faint", {"cause": "monster", "lost": ["ca_linh", "bong_sung", "ca_loc"], "hp": 0}, 1),
-            ("gather_end", {"reason": "fainted", "inventory": {"items": {}}}, 1),
+                             "lost": after_tick(scenario["hold"], monster_tuning())[-1:-3:-1], "pos": [20, 10]}, 1),
+            ("faint", {"cause": "monster", "lost": after_tick(scenario["hold"], monster_tuning())[2::-1], "hp": 0}, 1),
+            ("gather_end", {"reason": "fainted", "inventory": {"items": []}}, 1),
         ])
         final = snapshots(rows)[-1]
         self.assertEqual((final["player"]["hp"], final["hold"], [f["id"] for f in final["fish"]]), (0, [], ["F1"]))

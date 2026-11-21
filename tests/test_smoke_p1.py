@@ -8,6 +8,7 @@ import json
 import os
 import unittest
 
+from fixtures.fresh import fresh_items, stocked, kinds, counts
 from helpers import (Workdir, close, events, frames, read_jsonl, run_headless, snapshots, write_json)
 
 
@@ -31,8 +32,8 @@ class Contract(unittest.TestCase):
                 code, err = run_headless("--mode", mode, "--seed", "1", "--ticks", "0", "--out", w.path(f"{mode}.jsonl"))
                 self.assertEqual(code, 0, err)
                 rows = read_jsonl(w.path(f"{mode}.jsonl"))
-                self.assertEqual(rows[0]["type"], "snapshot")
-                self.assertEqual(rows[0]["tick"], 0)
+                self.assertEqual(snapshots(rows)[0]["type"], "snapshot")
+                self.assertEqual(snapshots(rows)[0]["tick"], 0)
                 self.assertEqual(rows[-1]["type"], "end")
                 self.assertEqual(sum(r["type"] == "end" for r in rows), 1)
 
@@ -84,7 +85,7 @@ class Contract(unittest.TestCase):
             for mode in unknown_modes:
                 self.assertEqual(run_headless("--mode", mode, "--seed", "1", "--ticks", "0", "--out", out)[0], 2, mode)
             self.assertFalse(os.path.exists(out))
-            old = write_json(w.path("old.json"), {"river": {"hold": []}})
+            old = write_json(w.path("old.json"), {"river": {"hold": fresh_items([])}})
             self.assertEqual(run_headless("--mode", "gather", "--seed", "1", "--ticks", "0", "--scenario", old, "--out", out)[0], 2)
 
     def test_scenario_out_of_domain_exit_2(self):
@@ -93,7 +94,7 @@ class Contract(unittest.TestCase):
             for block in ({"player": {"pos": [101, 0]}}, {"player": {"pos": [5, -1]}},
                           {"nodes": [{"id": "N1", "kind": "bong_sung", "pos": [5, 3]}]},
                           {"nodes": [{"id": "N1", "kind": "bong_sung", "pos": [5, 0]}, {"id": "N1", "kind": "bong_sung", "pos": [9, 0]}]},
-                          {"hold": ["ca_loc"] * (tuning_gather()["hold_capacity"] + 1)}, {"vortices": []}):
+                          {"hold": fresh_items(["ca_loc"] * (tuning_gather()["hold_capacity"] + 1))}, {"vortices": []}):
                 sc = write_json(w.path("sc.json"), {"gather": block})
                 self.assertEqual(run_headless("--mode", "gather", "--seed", "1", "--ticks", "0", "--scenario", sc, "--out", out)[0], 2, block)
 
@@ -101,10 +102,10 @@ class Contract(unittest.TestCase):
 class ScenarioModes(unittest.TestCase):
     def test_khoi_sai_mode_exit_2(self):
         with Workdir() as w:
-            sc = write_json(w.path("sc.json"), {"quan": {"stock": {}}})
+            sc = write_json(w.path("sc.json"), {"quan": {"stock": []}})
             self.assertEqual(run_headless("--mode", "gather", "--seed", "1", "--ticks", "0", "--scenario", sc,
                                           "--out", w.path("o.jsonl"))[0], 2)
-            sc = write_json(w.path("sc2.json"), {"gather": {"hold": []}})
+            sc = write_json(w.path("sc2.json"), {"gather": {"hold": fresh_items([])}})
             self.assertEqual(run_headless("--mode", "quan", "--seed", "1", "--ticks", "0", "--scenario", sc,
                                           "--out", w.path("o.jsonl"))[0], 2)
 
@@ -192,7 +193,7 @@ class Movement(unittest.TestCase):
 
     def test_time_ends_gather_and_keeps_hold(self):
         with Workdir() as w:
-            sc = write_json(w.path("sc.json"), {"gather": {"hold": ["ca_loc"], "time_left_ticks": 3,
+            sc = write_json(w.path("sc.json"), {"gather": {"hold": fresh_items(["ca_loc"]), "time_left_ticks": 3,
                                                            "player": {"pos": [50, 10]}}})
             inv = w.path("inv.json")
             code, err = run_headless("--mode", "gather", "--seed", "1", "--ticks", "100", "--scenario", sc,
@@ -205,14 +206,14 @@ class Movement(unittest.TestCase):
             self.assertEqual(end_ev[0]["data"]["reason"], "time")
             self.assertEqual(rows[-1]["reason"], "time")
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {"ca_loc": 1}})
+                self.assertEqual(counts(json.load(f)["items"]), {"ca_loc": 1})
 
 
 class Integration(unittest.TestCase):
     def test_inv_01_gather_writes_inventory_quan_reads_it(self):
         """Ví dụ smoke test trong PRD-0 mục G: cập bến ở tick 0, quán đọc kho đúng nội dung."""
         with Workdir() as w:
-            sc = write_json(w.path("sc.json"), {"gather": {"hold": ["ca_loc", "bong_sung", "bong_sung"]}})
+            sc = write_json(w.path("sc.json"), {"gather": {"hold": fresh_items(["ca_loc", "bong_sung", "bong_sung"])}})
             inp = write_json(w.path("in.json"), frames({"tick": 0, "interact": True}))
             inv = w.path("inv.json")
             code, err = run_headless("--mode", "gather", "--seed", "42", "--ticks", "1", "--scenario", sc,
@@ -220,14 +221,14 @@ class Integration(unittest.TestCase):
             self.assertEqual(code, 0, err)
             with open(inv, encoding="utf-8") as f:
                 saved = json.load(f)
-            self.assertEqual(saved, {"items": {"bong_sung": 2, "ca_loc": 1}})
+            self.assertEqual(kinds(saved["items"]), ["ca_loc", "bong_sung", "bong_sung"])
             end = events(read_jsonl(w.path("r.jsonl")), "gather_end")[0]["data"]
             self.assertEqual(end["reason"], "docked")
             self.assertEqual(end["inventory"], saved)
             code, err = run_headless("--mode", "quan", "--seed", "42", "--ticks", "0", "--inventory", inv,
                                      "--out", w.path("q.jsonl"))
             self.assertEqual(code, 0, err)
-            self.assertEqual(snapshots(read_jsonl(w.path("q.jsonl")))[0]["stock"], {"bong_sung": 2, "ca_loc": 1})
+            self.assertEqual(snapshots(read_jsonl(w.path("q.jsonl")))[0]["stock"], saved["items"])
 
     def test_inv_01_not_written_when_tick_limit_first(self):
         with Workdir() as w:
@@ -245,7 +246,7 @@ class Integration(unittest.TestCase):
             scenario = write_json(w.path("dock.json"), {"gather": {
                 "player": {"pos": [dock_x + g["dock_radius"], dock_depth]},
                 "time_left_ticks": 1,
-                "hold": ["bong_sung"],
+                "hold": fresh_items(["bong_sung"]),
             }})
             inputs = write_json(w.path("inputs.json"), frames({"tick": 0, "interact": True}))
             inventory, output = w.path("inventory.json"), w.path("out.jsonl")
@@ -259,12 +260,12 @@ class Integration(unittest.TestCase):
             self.assertEqual((end_events[0]["tick"], end_events[0]["data"]["reason"]), (1, "docked"))
             self.assertEqual((rows[-1]["ticks"], rows[-1]["reason"]), (1, "docked"))
             with open(inventory, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {"bong_sung": 1}})
+                self.assertEqual(counts(json.load(f)["items"]), {"bong_sung": 1})
 
     def test_tick_limit_preserves_existing_inventory_bytes(self):
         with Workdir() as w:
             inv = w.path("inventory.json")
-            original = b'{ "items": {"ca_loc": 1} }\n'
+            original = b'{ "items": [{"id":"I9","kind":"ca_loc","fresh":80}] }\n'
             with open(inv, "wb") as f:
                 f.write(original)
             output = w.path("out.jsonl")
@@ -277,21 +278,22 @@ class Integration(unittest.TestCase):
 
     def test_inv_bad_schema_exit_2(self):
         with Workdir() as w:
-            for bad in ({"items": {"ca_la_lung": 1}}, {"items": {"ca_loc": -1}}, {"items": {}, "x": 1}):
+            for bad in ({"items": stocked(ca_la_lung=1)}, {"items": [dict(stocked(ca_loc=1)[0], fresh=-1)]},
+                        {"items": [], "x": 1}, {"items": {"ca_loc": 1}}):
                 p = write_json(w.path("inv.json"), bad)
                 self.assertEqual(run_headless("--mode", "quan", "--seed", "1", "--ticks", "0", "--inventory", p,
                                               "--out", w.path("q.jsonl"))[0], 2, bad)
 
     def test_inventory_and_scenario_stock_conflict(self):
         with Workdir() as w:
-            inv = write_json(w.path("inv.json"), {"items": {}})
-            sc = write_json(w.path("sc.json"), {"quan": {"stock": {"ca_loc": 1}}})
+            inv = write_json(w.path("inv.json"), {"items": []})
+            sc = write_json(w.path("sc.json"), {"quan": {"stock": stocked(ca_loc=1)}})
             self.assertEqual(run_headless("--mode", "quan", "--seed", "1", "--ticks", "0", "--inventory", inv,
                                           "--scenario", sc, "--out", w.path("q.jsonl"))[0], 2)
 
     def test_inventory_flags_mode_mismatch_exit_2(self):
         with Workdir() as w:
-            inv = write_json(w.path("inv.json"), {"items": {}})
+            inv = write_json(w.path("inv.json"), {"items": []})
             self.assertEqual(run_headless("--mode", "gather", "--seed", "1", "--ticks", "0", "--inventory", inv,
                                           "--out", w.path("g.jsonl"))[0], 2)
             self.assertEqual(run_headless("--mode", "quan", "--seed", "1", "--ticks", "0", "--inventory-out", w.path("x.json"),

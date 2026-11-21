@@ -6,6 +6,7 @@ import json
 import os
 import unittest
 
+from fixtures.fresh import stocked
 from helpers import (Workdir, close, events, frames, read_jsonl, run_headless, snapshots, write_json)
 
 
@@ -14,13 +15,13 @@ class ScenarioValidation(unittest.TestCase):
         with Workdir() as w:
             sc = write_json(w.path("sc.json"), {
                 "quan": {
-                    "stock": {"ca_loc": 2},
+                    "stock": stocked(ca_loc=2),
                     "customers": [{
                         "id": "C1",
                         "table_id": "T1",
                         "dish_id": "ca_loc_nuong_trui",
                         "order_tick": 0,
-                        "reserved": {"ca_loc": 1}
+                        "reserved": ["I1"]
                     }]
                 }
             })
@@ -33,7 +34,7 @@ class ScenarioValidation(unittest.TestCase):
         with Workdir() as w:
             sc = write_json(w.path("sc.json"), {
                 "quan": {
-                    "stock": {"ca_loc": 2},
+                    "stock": stocked(ca_loc=2),
                     "customers": [{
                         "id": "C1",
                         "table_id": "T1",
@@ -51,7 +52,7 @@ class ScenarioValidation(unittest.TestCase):
             out = w.path("o.jsonl")
             sc = write_json(w.path("sc.json"), {
                 "quan": {
-                    "stock": {"ca_loc": 2},
+                    "stock": stocked(ca_loc=2),
                     "customers": [
                         {"id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui"},
                         {"id": "C2", "table_id": "T1", "dish_id": "ca_loc_nuong_trui"}
@@ -69,7 +70,7 @@ class ScenarioValidation(unittest.TestCase):
             out = w.path("o.jsonl")
             sc = write_json(w.path("sc.json"), {
                 "quan": {
-                    "stock": {"ca_loc": 1},
+                    "stock": stocked(ca_loc=1),
                     "customers": [
                         {"id": "C1", "table_id": "T99", "dish_id": "ca_loc_nuong_trui"}
                     ]
@@ -86,7 +87,7 @@ class ScenarioValidation(unittest.TestCase):
             out = w.path("o.jsonl")
             sc = write_json(w.path("sc.json"), {
                 "quan": {
-                    "stock": {"ca_loc": 1},
+                    "stock": stocked(ca_loc=1),
                     "customers": [
                         {"id": "C1", "table_id": "T1", "dish_id": "mon_khong_ton_tai"}
                     ]
@@ -130,20 +131,20 @@ class ScenarioValidation(unittest.TestCase):
             # Số lượng âm
             sc1 = write_json(w.path("sc1.json"), {
                 "quan": {
-                    "stock": {"ca_loc": 1},
+                    "stock": stocked(ca_loc=1),
                     "customers": [{"id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
-                                   "reserved": {"ca_loc": -1}}]
+                                   "reserved": [-1]}]
                 }
             })
             self.assertEqual(run_headless("--mode", "quan", "--seed", "1", "--ticks", "0",
                                           "--scenario", sc1, "--out", out)[0], 2)
 
-            # Nguyên liệu lạ
+            # Id cá thể không có trong kho
             sc2 = write_json(w.path("sc2.json"), {
                 "quan": {
-                    "stock": {"ca_loc": 1},
+                    "stock": stocked(ca_loc=1),
                     "customers": [{"id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
-                                   "reserved": {"nguyen_lieu_la": 1}}]
+                                   "reserved": ["I404"]}]
                 }
             })
             self.assertEqual(run_headless("--mode", "quan", "--seed", "1", "--ticks", "0",
@@ -152,9 +153,9 @@ class ScenarioValidation(unittest.TestCase):
             # Kiểu sai (boolean)
             sc3 = write_json(w.path("sc3.json"), {
                 "quan": {
-                    "stock": {"ca_loc": 1},
+                    "stock": stocked(ca_loc=1),
                     "customers": [{"id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
-                                   "reserved": {"ca_loc": True}}]
+                                   "reserved": True}]
                 }
             })
             self.assertEqual(run_headless("--mode", "quan", "--seed", "1", "--ticks", "0",
@@ -168,9 +169,9 @@ class ScenarioValidation(unittest.TestCase):
             # ca_loc_nuong_trui cần {"ca_loc": 1}, nhưng giữ bong_sung
             sc = write_json(w.path("sc.json"), {
                 "quan": {
-                    "stock": {"bong_sung": 2, "ca_loc": 1},
+                    "stock": stocked(bong_sung=2, ca_loc=1),
                     "customers": [{"id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
-                                   "reserved": {"bong_sung": 1}}]
+                                   "reserved": ["I2"]}]
                 }
             })
             self.assertEqual(run_headless("--mode", "quan", "--seed", "1", "--ticks", "0",
@@ -184,9 +185,9 @@ class ScenarioValidation(unittest.TestCase):
             # Cần 1 ca_loc nhưng kho chỉ có 0
             sc = write_json(w.path("sc.json"), {
                 "quan": {
-                    "stock": {"ca_loc": 0},
+                    "stock": stocked(ca_loc=0),
                     "customers": [{"id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
-                                   "reserved": {"ca_loc": 1}}]
+                                   "reserved": ["I1"]}]
                 }
             })
             self.assertEqual(run_headless("--mode", "quan", "--seed", "1", "--ticks", "0",
@@ -200,9 +201,9 @@ class ScenarioValidation(unittest.TestCase):
             # order_status là cooking mà vẫn có reserved
             sc = write_json(w.path("sc.json"), {
                 "quan": {
-                    "stock": {"ca_loc": 1},
+                    "stock": stocked(ca_loc=1),
                     "customers": [{"id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
-                                   "order_status": "cooking", "reserved": {"ca_loc": 1}}]
+                                   "order_status": "cooking", "reserved": ["I1"]}]
                 }
             })
             self.assertEqual(run_headless("--mode", "quan", "--seed", "1", "--ticks", "0",
@@ -215,7 +216,7 @@ class ScenarioValidation(unittest.TestCase):
             out = w.path("o.jsonl")
             sc = write_json(w.path("sc.json"), {
                 "quan": {
-                    "stock": {},
+                    "stock": [],
                     "stoves": [{"id": "B1", "state": "cooking", "dish": "ca_loc_nuong_trui", "order_id": "C1"}],
                     "hand": {"dish": "ca_loc_nuong_trui", "order_id": "C1"},
                     "customers": [{"id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
@@ -249,7 +250,7 @@ class CustomerInitializationAndReservations(unittest.TestCase):
             out = w.path("o.jsonl")
             sc = write_json(w.path("sc.json"), {
                 "quan": {
-                    "stock": {"ca_loc": 2},
+                    "stock": stocked(ca_loc=2),
                     "customers": [{
                         "id": "C1",
                         "table_id": "T1",
@@ -259,7 +260,7 @@ class CustomerInitializationAndReservations(unittest.TestCase):
                         "patience_ticks_left": 3600,
                         "eat_ticks_left": 0,
                         "order_status": "reserved",
-                        "reserved": {"ca_loc": 1},
+                        "reserved": ["I1"],
                         "base_price": None,
                         "tip": 0
                     }]
@@ -277,7 +278,7 @@ class CustomerInitializationAndReservations(unittest.TestCase):
             self.assertEqual(c["dish_id"], "ca_loc_nuong_trui")
             self.assertEqual(c["state"], "waiting")
             self.assertEqual(c["order_status"], "reserved")
-            self.assertEqual(c["reserved"], {"ca_loc": 1})
+            self.assertEqual(c["reserved"], ["I1"])
             self.assertEqual(c["patience_ticks_left"], 3600)
             self.assertEqual(c["eat_ticks_left"], 0)
             self.assertIsNone(c["base_price"])
@@ -289,7 +290,7 @@ class CustomerInitializationAndReservations(unittest.TestCase):
             out = w.path("o.jsonl")
             sc = write_json(w.path("sc.json"), {
                 "quan": {
-                    "stock": {"ca_loc": 2},
+                    "stock": stocked(ca_loc=2),
                     "customers": [{
                         "id": "C1",
                         "table_id": "T1",
@@ -303,12 +304,12 @@ class CustomerInitializationAndReservations(unittest.TestCase):
             rows = read_jsonl(out)
             snap = snapshots(rows)[0]
             c = snap["customers"][0]
-            self.assertEqual(c["reserved"], {"ca_loc": 1})
+            self.assertEqual(c["reserved"], ["I1"])
 
     def test_customer_fixture_with_inventory_flag(self):
         """Khởi tạo khách với kho nạp qua --inventory."""
         with Workdir() as w:
-            inv = write_json(w.path("inv.json"), {"items": {"ca_loc": 2}})
+            inv = write_json(w.path("inv.json"), {"items": stocked(ca_loc=2)})
             sc = write_json(w.path("sc.json"), {
                 "quan": {
                     "customers": [{
@@ -324,12 +325,12 @@ class CustomerInitializationAndReservations(unittest.TestCase):
             self.assertEqual(code, 0, err)
             rows = read_jsonl(out)
             snap = snapshots(rows)[0]
-            self.assertEqual(snap["customers"][0]["reserved"], {"ca_loc": 1})
+            self.assertEqual(snap["customers"][0]["reserved"], ["I1"])
 
     def test_customer_fixture_with_insufficient_inventory_flag_exit_2(self):
         """Kho nạp qua --inventory không đủ nguyên liệu cho khách fixture -> mã 2."""
         with Workdir() as w:
-            inv = write_json(w.path("inv.json"), {"items": {"ca_loc": 0}})
+            inv = write_json(w.path("inv.json"), {"items": []})
             sc = write_json(w.path("sc.json"), {
                 "quan": {
                     "customers": [{
@@ -395,7 +396,7 @@ class CustomerArrivalSchedule(unittest.TestCase):
         for i, table in enumerate(self.sim.tables, 1):
             self.sim.customers.append({
                 "id": f"C{i}", "table_id": table["id"], "dish_id": "ca_loc_nuong_trui",
-                "order_status": "reserved", "reserved": {"ca_loc": 1},
+                "order_status": "reserved", "reserved": ["I1"],
             })
         self.assertIsNone(self.sim._find_available_table())
 
@@ -414,7 +415,7 @@ class DishSelectionAndReservation(unittest.TestCase):
         """T06: Khách đến chọn món hợp lệ theo kho và phát customer_arrived."""
         with Workdir() as w:
             sc = write_json(w.path("sc.json"), {
-                "quan": {"stock": {"ca_loc": 1}}
+                "quan": {"stock": stocked(ca_loc=1)}
             })
             out = w.path("o.jsonl")
             code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "125",
@@ -428,13 +429,13 @@ class DishSelectionAndReservation(unittest.TestCase):
             self.assertEqual(ev["data"]["customer_id"], "C1")
             self.assertEqual(ev["data"]["table_id"], "T1")
             self.assertEqual(ev["data"]["dish_id"], "ca_loc_nuong_trui")
-            self.assertEqual(ev["data"]["reserved"], {"ca_loc": 1})
+            self.assertEqual(ev["data"]["reserved"], ["I1"])
 
     def test_t07_no_dish_when_empty_stock(self):
         """T07: Không có món nào đủ nguyên liệu -> no_dish."""
         with Workdir() as w:
             sc = write_json(w.path("sc.json"), {
-                "quan": {"stock": {}}
+                "quan": {"stock": []}
             })
             out = w.path("o.jsonl")
             code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "125",
@@ -457,7 +458,7 @@ class DishSelectionAndReservation(unittest.TestCase):
         from chonoi.rng import Streams
         from chonoi.sim.quan import QuanSim
         tuning = load_contract()["tuning"]
-        sim = QuanSim(tuning, {"stock": {"ca_loc": 1, "bong_sung": 2}}, Streams(1), IdAllocator())
+        sim = QuanSim(tuning, {"stock": stocked(ca_loc=1, bong_sung=2)}, Streams(1), IdAllocator())
         self.assertEqual(sim._available_stock(), {"ca_loc": 1, "bong_sung": 2})
 
         # C1 đến và giữ ca_loc: 1
@@ -469,17 +470,17 @@ class DishSelectionAndReservation(unittest.TestCase):
         chosen_dish = sim.customers[0]["dish_id"]
         avail = sim._available_stock()
         if chosen_dish == "ca_loc_nuong_trui":
-            self.assertEqual(avail["ca_loc"], 0)
-            self.assertEqual(avail["bong_sung"], 2)
+            self.assertEqual(avail.get("ca_loc", 0), 0)
+            self.assertEqual(avail.get("bong_sung", 0), 2)
         else:
-            self.assertEqual(avail["ca_loc"], 1)
-            self.assertEqual(avail["bong_sung"], 0)
+            self.assertEqual(avail.get("ca_loc", 0), 1)
+            self.assertEqual(avail.get("bong_sung", 0), 0)
 
     def test_customer_dish_selection_deterministic(self):
         """Cùng seed tạo ra cùng món được chọn."""
         with Workdir() as w:
             sc = write_json(w.path("sc.json"), {
-                "quan": {"stock": {"ca_loc": 5, "ca_linh": 5, "bong_sung": 5, "bong_dien_dien": 5}}
+                "quan": {"stock": stocked(ca_loc=5, ca_linh=5, bong_sung=5, bong_dien_dien=5)}
             })
             for i in (1, 2):
                 code, err = run_headless("--mode", "quan", "--seed", "42", "--ticks", "125",
@@ -494,7 +495,7 @@ class CustomerPatienceAndLeft(unittest.TestCase):
         """T14: Kiên nhẫn không giảm ngay tại tick đến (120: 3600, 121: 3599)."""
         with Workdir() as w:
             sc = write_json(w.path("sc.json"), {
-                "quan": {"stock": {"ca_loc": 1}}
+                "quan": {"stock": stocked(ca_loc=1)}
             })
             out = w.path("o.jsonl")
             code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "122",
@@ -513,10 +514,10 @@ class CustomerPatienceAndLeft(unittest.TestCase):
         with Workdir() as w:
             sc = write_json(w.path("sc.json"), {
                 "quan": {
-                    "stock": {"ca_loc": 1},
+                    "stock": stocked(ca_loc=1),
                     "customers": [{
                         "id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
-                        "patience_ticks_left": 3, "reserved": {"ca_loc": 1}
+                        "patience_ticks_left": 3, "reserved": ["I1"]
                     }]
                 }
             })
@@ -545,19 +546,19 @@ class CustomerPatienceAndLeft(unittest.TestCase):
         from chonoi.sim.quan import QuanSim
         tuning = load_contract()["tuning"]
         sim = QuanSim(tuning, {
-            "stock": {"ca_loc": 1},
+            "stock": stocked(ca_loc=1),
             "customers": [{
                 "id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
-                "patience_ticks_left": 1, "reserved": {"ca_loc": 1}
+                "patience_ticks_left": 1, "reserved": ["I1"]
             }]
         }, Streams(1), IdAllocator())
 
-        self.assertEqual(sim._available_stock()["ca_loc"], 0)
+        self.assertEqual(sim._available_stock().get("ca_loc", 0), 0)
         from chonoi.inputs import InputState
         dummy_input = InputState((0.0, 0.0), {}, set())
         evs = sim.step(dummy_input)
         self.assertEqual(len(sim.customers), 0)
-        self.assertEqual(sim._available_stock()["ca_loc"], 1)
+        self.assertEqual(sim._available_stock().get("ca_loc", 0), 1)
 
     def test_t17_customer_left_decreases_reputation(self):
         """T17: Khách rời quán do hết kiên nhẫn làm giảm đúng 0.5 uy tín."""
@@ -565,10 +566,10 @@ class CustomerPatienceAndLeft(unittest.TestCase):
             sc = write_json(w.path("sc.json"), {
                 "quan": {
                     "reputation": 3.0,
-                    "stock": {"ca_loc": 1},
+                    "stock": stocked(ca_loc=1),
                     "customers": [{
                         "id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
-                        "patience_ticks_left": 2, "reserved": {"ca_loc": 1}
+                        "patience_ticks_left": 2, "reserved": ["I1"]
                     }]
                 }
             })
@@ -586,10 +587,10 @@ class CustomerPatienceAndLeft(unittest.TestCase):
             sc = write_json(w.path("sc.json"), {
                 "quan": {
                     "reputation": 0.2,
-                    "stock": {"ca_loc": 1},
+                    "stock": stocked(ca_loc=1),
                     "customers": [{
                         "id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
-                        "patience_ticks_left": 1, "reserved": {"ca_loc": 1}
+                        "patience_ticks_left": 1, "reserved": ["I1"]
                     }]
                 }
             })
@@ -609,7 +610,7 @@ class CustomerPatienceAndLeft(unittest.TestCase):
         from chonoi.inputs import InputState
         tuning = load_contract()["tuning"]
         sim = QuanSim(tuning, {
-            "stock": {},
+            "stock": [],
             "customers": [{
                 "id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
                 "state": "eating", "order_status": "served", "eat_ticks_left": 600,
@@ -647,7 +648,7 @@ class EdgeCasesAndDeterminism(unittest.TestCase):
         with Workdir() as w:
             # goi_bong_sung cần 2 bông súng, kho chỉ có 1
             sc = write_json(w.path("sc.json"), {
-                "quan": {"stock": {"bong_sung": 1}}
+                "quan": {"stock": stocked(bong_sung=1)}
             })
             out = w.path("o.jsonl")
             code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "125",
@@ -666,15 +667,15 @@ class EdgeCasesAndDeterminism(unittest.TestCase):
         from chonoi.sim.quan import QuanSim
         tuning = load_contract()["tuning"]
         sim = QuanSim(tuning, {
-            "stock": {"ca_loc": 1},
+            "stock": stocked(ca_loc=1),
             "customers": [{
                 "id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
-                "order_status": "cooking", "reserved": {}
+                "order_status": "cooking", "reserved": []
             }]
         }, Streams(1), IdAllocator())
 
         # Kho khả dụng vẫn còn 1 ca_loc vì C1 không ở trạng thái reserved
-        self.assertEqual(sim._available_stock()["ca_loc"], 1)
+        self.assertEqual(sim._available_stock().get("ca_loc", 0), 1)
 
     def test_ticks_zero_lat3(self):
         """Chạy --ticks 0 trong chế độ quan tạo snapshot tick 0 hợp lệ và end line."""
@@ -683,8 +684,8 @@ class EdgeCasesAndDeterminism(unittest.TestCase):
             code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "0", "--out", out)
             self.assertEqual(code, 0, err)
             rows = read_jsonl(out)
-            self.assertEqual(rows[0]["type"], "snapshot")
-            self.assertEqual(rows[0]["tick"], 0)
+            self.assertEqual(snapshots(rows)[0]["type"], "snapshot")
+            self.assertEqual(snapshots(rows)[0]["tick"], 0)
             self.assertEqual(rows[-1]["type"], "end")
 
 

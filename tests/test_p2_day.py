@@ -7,6 +7,7 @@ không phụ thuộc lát A/B/Q/S; một ca dùng GatherSim/QuanSim thật.
 import copy
 import unittest
 
+from fixtures.fresh import fresh_items, counts
 from helpers import Workdir, read_jsonl, snapshots
 
 from chonoi.contract import load_contract
@@ -43,6 +44,7 @@ NEW_DISHES = {
 
 def tuning_v11():
     t = copy.deepcopy(load_contract()["tuning"])
+    t.pop("reservations", None)  # Isolate the core phase/event ordering.
     for did, dish in NEW_DISHES.items():
         t["menu"].setdefault(did, dish)
     t.setdefault("day_plan", DAY_PLAN)
@@ -356,7 +358,7 @@ class TestRealGatherQuan(unittest.TestCase):
             made["shop"] = StubShop(2, **kw)
             return made["shop"]
 
-        scenario = {"gather": {"hold": ["ca_loc", "bong_sung", "bong_sung"], "time_left_ticks": 5},
+        scenario = {"gather": {"hold": fresh_items(["ca_loc", "bong_sung", "bong_sung"]), "time_left_ticks": 5},
                     "quan": {"time_left_ticks": 5}}
         return DaySim(tuning_v11(), scenario, Streams(42), IdAllocator(), days=1,
                       factories={"shop": shop, "state": StubState}), made
@@ -376,8 +378,8 @@ class TestRealGatherQuan(unittest.TestCase):
                          [(0, "day_start"), (0, "day_plan"), (0, "phase_start"), (5, "gather_end"),
                           (5, "phase_start"), (10, "quan_end"), (10, "phase_start"), (12, "shop_end")])
         snaps = {r["tick"]: r for r in snapshots(rows)}
-        self.assertEqual(snaps[5]["stock"], {"bong_sung": 2, "ca_loc": 1})  # kho bàn giao trong bộ nhớ
-        self.assertEqual(made["shop"].kw["stock"], {"bong_sung": 2, "ca_loc": 1})
+        self.assertEqual(counts(snaps[5]["stock"]), {"bong_sung": 2, "ca_loc": 1})  # kho bàn giao trong bộ nhớ
+        self.assertEqual(counts(made["shop"].kw["stock"]), {"bong_sung": 2, "ca_loc": 1})
         self.assertEqual((rows[-1]["reason"], rows[-1]["days_completed"]), ("days_complete", 1))
 
 
