@@ -286,10 +286,13 @@ class GatherSim:
     def _drop_hold(self, count):
         if count == 0:
             return []
-        # Snapshot giữ thứ tự vào giỏ và cung cấp độ tươi theo schema công khai.
-        lost = self.snapshot()["hold"][-count:][::-1]
+        lost = self.hold[-count:][::-1]
+        if isinstance(lost[0], dict):
+            # Chọn theo thứ tự trong giỏ, rồi lấy id/kind/fresh từ adapter bàn giao.
+            items_by_id = {item["id"]: item for item in self.inventory_items()}
+            lost = [items_by_id[item["id"]].copy() for item in lost]
         del self.hold[-count:]
-        return [item.copy() if isinstance(item, dict) else item for item in lost]
+        return lost
 
     def _faint(self, events, cause):
         lost = self._drop_hold(len(self.hold))

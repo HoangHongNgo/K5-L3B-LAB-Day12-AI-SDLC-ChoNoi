@@ -28,12 +28,15 @@ class ItemHoldFixture(GatherSim):
 
     def snapshot(self):
         snapshot = super().snapshot()
-        snapshot["hold"] = [{"id": item["id"], "kind": item["kind"], "fresh": item["units"] / 240}
-                            for item in self.hold]
+        snapshot["hold"] = self.item_payloads()
         return snapshot
 
     def inventory_items(self):
-        return sort_by_id(self.snapshot()["hold"])
+        return sort_by_id(self.item_payloads())
+
+    def item_payloads(self):
+        return [{"id": item["id"], "kind": item["kind"], "fresh": item["units"] / 240}
+                for item in self.hold]
 
 
 class ActiveCurrentFixture(ItemHoldFixture):
