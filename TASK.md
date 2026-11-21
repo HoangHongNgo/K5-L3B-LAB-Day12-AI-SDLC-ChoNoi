@@ -529,7 +529,8 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Chơi thử `day` trọn 1 Ngày: hàng ươn trong kho quán, giữ lại một lần, món giá theo tươi, một khách đặt trước thành công và một fail.
 
 ### RachalHys
-- [ ] Chạy lại regression P1–P2 và kiểm HUD trên `main`; ảnh HUD bàn giao cho haiquanng.
+- [x] Chạy toàn suite với manifest v1.1 trên nhánh U, 377 test đạt và 1 skip. Kiểm HUD v1.2 qua fixture. [Ảnh và kết quả của lát U](docs/proof/phase-3/ui/README.md) để haiquanng nối vào proof chung.
+- [ ] Chạy lại regression và chụp HUD trên `main` sau khi Contract v1.2, Gather/current và Day/reservations được tích hợp.
 
 ---
 
