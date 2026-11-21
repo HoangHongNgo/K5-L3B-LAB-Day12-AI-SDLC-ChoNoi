@@ -80,8 +80,9 @@ def _validate_day(b, tuning):
         dp = b["day_plan"]
         if not isinstance(dp, dict):
             raise BadInput("day.day_plan phải là object")
-        is_by_day = any(isinstance(v, dict) and ("menu" in v or any(k in tuning["menu"] for k in v)) for v in dp.values())
-        if is_by_day:
+        if "menu" in dp:
+            _validate_day_plan_entry(dp, tuning, label="day_plan")
+        elif all(isinstance(v, dict) for v in dp.values()) and not any(k in tuning["menu"] for k in dp):
             for day_key, day_entry in dp.items():
                 _validate_day_plan_entry(day_entry, tuning, label=f"day_plan.{day_key}")
         else:
