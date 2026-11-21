@@ -57,7 +57,8 @@ def out(name):
 def main():
     os.makedirs(TMP, exist_ok=True)
     rev = subprocess.check_output(["git", "-C", ROOT, "rev-parse", "HEAD"], text=True).strip()
-    dirty = subprocess.run(["git", "-C", ROOT, "diff", "--quiet", "--", "chonoi", "tests", "game.contract.json"]).returncode
+    dirty = subprocess.check_output(["git", "-C", ROOT, "status", "--porcelain", "--", "chonoi", "tests",
+                                     "game.contract.json"], text=True).strip()
     with open(os.path.join(ROOT, "game.contract.json"), encoding="utf-8") as f:
         version = json.load(f)["contract_version"]
     with open(out("revision.txt"), "w", encoding="utf-8") as f:
