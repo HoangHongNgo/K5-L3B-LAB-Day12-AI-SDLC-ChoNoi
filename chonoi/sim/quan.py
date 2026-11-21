@@ -16,7 +16,6 @@ TICK = 60.0
 
 
 def _order_ref(obj):
-    """Chuẩn hóa món trên bếp/tay về {"order_id","dish_id"} hoặc None."""
     """Chuẩn hóa món trên bếp/tay về payload PRD-0 mục D {"order_id","dish_id","base_price"} hoặc None.
     Nhận payload object, hoặc dạng cũ của nhóm: dish là chuỗi kèm order_id/customer_id.
     base_price thiếu sẽ được điền sau khi dựng khách (_fill_payload_prices).
