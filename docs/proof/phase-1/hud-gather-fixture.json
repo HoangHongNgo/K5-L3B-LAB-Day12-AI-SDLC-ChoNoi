@@ -1,0 +1,1 @@
+{"gather":{"player":{"pos":[20,0]},"hold":["ca_loc","ca_linh","bong_dien_dien","bong_sung"],"nodes":[{"id":"N1","kind":"bong_sung","pos":[20,0]}],"fish":[{"id":"F1","kind":"ca_linh","pos":[20,2]}]}}
