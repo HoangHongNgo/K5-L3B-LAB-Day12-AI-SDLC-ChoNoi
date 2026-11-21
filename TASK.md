@@ -1,6 +1,6 @@
 # TASK
 
-> **Phase 2 (TICKET-02, 1:00–1:55)** ở [cuối file](#phase-2--một-ngày-ở-chợ-nổi-ticket-02-100155). Phase 1 giữ nguyên bên dưới để tra lại.
+> **Phase 3 (TICKET-03, 1:55–2:30)** ở [cuối file](#phase-3--mùa-nước-nổi-ticket-03-155230). Phase 2 ở [giữa file](#phase-2--một-ngày-ở-chợ-nổi-ticket-02-100155). Phase 1 giữ nguyên bên dưới để tra lại.
 
 # Phase 1 (PRD-0, 0:00–1:00)
 
@@ -385,3 +385,177 @@ git tag phase-2 && git push origin phase-2
 | minhphuong150505 | 2 bếp 4 bàn, 6 món | kiểm kho lúc mở quán, đóng ca + test | sửa lỗi chơi thử · mở rộng burn |
 | phuthaitran | máy pha day + output day | nối sim thật + test day | sửa lỗi chơi thử day |
 | RachalHys | menu, intro | HUD v1.1, pause UI, Shop UI | regression P1, ảnh HUD/FPS |
+
+---
+---
+
+# Phase 3 — Mùa Nước Nổi (TICKET-03, 1:55–2:30)
+
+> Test Contract **v1.2**. Hạn đẩy tag `phase-3`: **2:30** (35 phút). Nguyên văn ticket: [`TICKET3.md`](TICKET3.md), nên chép sang `docs/plan/phase-3.md`.
+> Lõi: **kho đếm → kho cá thể `{id,kind,fresh}`** + độ tươi/ươn/giá theo tươi. Mở rộng: `current`, `reservations`.
+> Phase này ngắn, **haiquanng nhận nhiều việc nhất** (đổi schema kho + gather + dòng lũ + proof), người khác nhận lát gọn hơn và hỗ trợ haiquanng khi xong sớm.
+
+## Nguyên tắc: schema trước, làm song song sau
+
+1. **Chốt schema cá thể ở 0–7 phút** (haiquanng + HoangHongNgo): `items:[{id,kind,fresh}]`, id `I1,I2,…` cấp theo thứ tự vào giỏ và tăng xuyên pha/Ngày (dùng `IdAllocator`). Hàm đọc/ghi kho nằm ở `chonoi/inventory.py`; các lát khác chỉ gọi hàm, không tự parse file.
+2. **Chuyển đổi an toàn**: adapter hỗ trợ cả v1.1 (đếm) lẫn v1.2 (cá thể) trong lúc chuyển; chỉ bật v1.2 (kho đếm → mã 2) khi gather và quán đều sẵn sàng (bước 3.2).
+3. **Độ tươi dùng số nguyên**: 240 đơn vị/điểm tươi, gather −2/tick, quán −1/tick; so ngưỡng 30 trước khi làm tròn. Cả nhóm dùng chung hằng này qua `tuning["freshness"]`, không hard-code.
+4. **Fixture riêng** mỗi lát: `tests/fixtures/p3_<lát>_*.json`, kho dựng sẵn dạng cá thể.
+5. Thứ tự gộp: **C → A (adapter + gather) → B → Q → D → R → U**. Test P1/P2 nào đổi vì luật mới thì ghi lý do trong commit và `CHANGELOG.md`.
+
+### Bảng ảnh hưởng module
+
+| Module | File cần đổi | Test bị ảnh hưởng | Người phụ trách |
+|---|---|---|---|
+| Contract v1.2, scenario | `game.contract.json`, `chonoi/contract.py`, `chonoi/scenario.py` (`hold`/`stock` mảng, `reserved` là id, `reservations`, `current`), `docs/contracts/` | `test_p2_contract`, `test_p2_scenario_day`, `test_p1_lat3` (scenario) | HoangHongNgo |
+| Adapter kho, giỏ, độ tươi gather, dòng lũ | `chonoi/inventory.py`, `chonoi/sim/gather.py`, `chonoi/sim/fish.py` | `test_p1_lat1/2`, `test_p2_fish`, `test_p2_net`, `test_smoke_p1` | **haiquanng** |
+| Lặn: LIFO `lost`, ngất, thứ tự tick | `chonoi/sim/monsters.py`, phần oxy/faint trong `gather.py` | `test_p1_lat1`, `test_p2_monster` | ChuTungDuongg |
+| Quán: giữ theo id, ươn, giá theo tươi | `chonoi/sim/quan.py`, `chonoi/scenario.py` (phần quan) | `test_p1_lat3/4`, `test_p2_quan`, `test_p3_quan` | minhphuong150505 |
+| Day: bàn giao kho cá thể, đặt trước | `chonoi/sim/day.py`, `chonoi/sim/progress.py` | `test_p2_day`, `test_p2_progress` | phuthaitran |
+| HUD | `chonoi/web/`, `chonoi/live.py` | `test_live`, regression P1–P2 | RachalHys |
+
+| Lát | Người | File sở hữu | Người review |
+|---|---|---|---|
+| C — Contract v1.2, scenario, pause freeze, CHANGELOG, verification, tag | HoangHongNgo | `game.contract.json`, `chonoi/contract.py`, `chonoi/scenario.py` (khối `hold`/`stock`/`day`), `chonoi/sim/pause.py`, `docs/contracts/`, `CHANGELOG.md`, `docs/verification/phase-3.md` | RachalHys |
+| A — Adapter kho + giỏ + độ tươi gather | haiquanng | `chonoi/inventory.py`, `chonoi/sim/gather.py` (hold/decay/spoiled/xuất kho), `chonoi/runner.py` | ChuTungDuongg |
+| X — Dòng nước lũ `current` (mở rộng 1) | haiquanng | `chonoi/sim/gather.py` (hook dòng lũ), `tests/test_p3_current.py` | ChuTungDuongg |
+| P — Proof + smoke kho + chơi thử | haiquanng | `docs/proof/phase-3/`, `tests/test_p3_handoff.py` | HoangHongNgo |
+| B — Lặn: LIFO cá thể, ngất, thứ tự tick | ChuTungDuongg | `chonoi/sim/monsters.py`, phần oxy/faint trong `gather.py`, `tests/test_p3_gather_lifo.py` | haiquanng |
+| Q — Quán: giữ theo id, ươn, giá theo tươi | minhphuong150505 | `chonoi/sim/quan.py`, `tests/test_p3_quan.py` | phuthaitran |
+| D — Day: bàn giao + đặt trước (mở rộng 2) | phuthaitran | `chonoi/sim/day.py`, `chonoi/sim/progress.py`, `tests/test_p3_day.py`, `tests/test_p3_reservations.py` | minhphuong150505 |
+| U — HUD tươi/ươn, đặt trước, cảnh báo lũ | RachalHys | `chonoi/web/`, `chonoi/live.py`, regression P1–P2 | HoangHongNgo |
+
+Quy ước: nhánh `p3/<lát>-<handle>`, test xanh trước khi mở PR, `Co-authored-by:` khi cùng làm một commit.
+
+```bash
+PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
+```
+
+| Phase nhỏ | Phút | Mục tiêu | Điểm chốt |
+|---|---|---|---|
+| **3.1** Phân tích & lõi lát | 0–25 (1:55–2:20) | Ghi tác động, chốt schema; schema/adapter, gather, quán, HUD chạy trên fixture riêng | **Phút 20: smoke bàn giao kho** `gather --inventory-out → quan --inventory`, đối chiếu id/kind/fresh |
+| **3.2** Bật v1.2 & kiểm chứng | 25–32 (2:20–2:27) | Bật v1.2, smoke hai tiến trình + `day`, regression P1–P2, CHANGELOG, proof | `main` xanh, `verification/phase-3.md` đủ |
+| **3.3** Dự phòng & tag | 32–35 (2:27–2:30) | Retro nhanh, sửa lỗi cuối, gắn tag | Tag `phase-3` trước **2:30** |
+
+---
+
+## 3.1 Phân tích & lõi lát (phút 0–25)
+
+### Phút 0–7 — Phân tích tác động (cả nhóm, HoangHongNgo dẫn)
+- [ ] Lưu ticket vào `docs/plan/phase-3.md`; điền bảng ảnh hưởng module ở trên vào `docs/clarify.md` (hoặc ADR), kèm quyết định đổi schema kho, cách chuyển (adapter hai phiên bản) và thứ tự gộp.
+- [ ] Ghi câu hỏi mơ hồ cho PO vào `docs/clarify.md` (ví dụ: `reserved` của fixture cũ đổi sang id thế nào; tick `spoiled` khi nhiều cá thể cùng vượt ngưỡng).
+
+### HoangHongNgo — Lát C
+- [ ] `game.contract.json`: `contract_version:"1.2"`, khối `freshness {initial:100, gather_decay_per_s:0.5, quan_decay_per_s:0.25, spoiled_below:30}`; mở rộng: `gather.current {interval_ticks:1800, duration_ticks:480, warning_ticks:120, min_depth:10, speed:1.5}`, `reservations {count:2, table_hold_s:30, price_multiplier:1.5, failed_reputation_delta:-1}`, khai `extensions`.
+- [ ] `chonoi/contract.py`: kiểm khóa và dải hợp lệ `freshness`/`current`/`reservations`, sai → mã 2.
+- [ ] `chonoi/scenario.py`: `gather.hold`, `quan.stock` là mảng cá thể; `customers[].reserved` là mảng id; id vật lý duy nhất, kind thuộc danh mục, `fresh ∈ [0,100]`; giữ chỗ trỏ tới cá thể chưa ươn, đủ công thức, không dùng chung; bỏ `reserved` thì cấp theo `order_tick`, id bàn, tươi nhất rồi id nhỏ; trong `day`, Ngày kế cấp id mới theo thứ tự mảng. Nhận `random_current`, `current_direction`, `quan.reservations[]`, `random_reservations`. Mâu thuẫn → mã 2.
+- [ ] `chonoi/sim/pause.py`: pause dừng hao tươi (kiểm bằng test với hold có `fresh`).
+- [ ] Cập nhật `docs/contracts/README.md`: schema kho v1.2, event `spoiled`, `current_*`, `reservation_*`, trường snapshot mới, `lost`/`cook_started.items` là mảng cá thể.
+- [ ] Commit: `contract: v1.2 độ tươi, kho cá thể, current, reservations`.
+
+### haiquanng — Lát A (adapter kho + gather tươi) · việc nặng nhất
+- [ ] `chonoi/inventory.py`: đọc/ghi kho **cá thể** `{"items":[{id,kind,fresh}]}`; chọn schema theo `contract_version` (v1.2 trả mã 2 cho kho đếm, thiếu `items`, kind lạ, id trùng/rỗng, `fresh` ngoài [0,100]/không hữu hạn); giữ đường đọc v1.1 để chuyển dần.
+- [ ] Ghi kho: file tạm cùng thư mục rồi thay thế nguyên tử; xuất theo id, đủ chính xác để giữ giá trị và nhánh ở ngưỡng 30; ngất ghi `{"items":[]}`; chạm `--ticks` trước `gather_end` thì không đụng file đích; `gather_end.data.inventory` theo cùng schema.
+- [ ] `gather.py`: giỏ là danh sách cá thể (`IdAllocator` cấp `I1,I2,…` theo thứ tự vào giỏ, tăng xuyên pha/Ngày); hái/bắt cấp cá thể `fresh=100`, hao từ bước sau; `_add_to_hold` giữ kiểm trần `hold_capacity`.
+- [ ] Hao tươi gather 0.5/s (2 đơn vị/tick trên thang 240), kẹp 0, ở **đầu bước** theo thứ tự tick của ticket; `spoiled` (`item_id,kind,location:"hold"`) đúng một lần khi đi từ ≥ 30 xuống < 30, nhiều cá thể thì theo id; ươn vẫn chiếm ô.
+- [ ] Test `tests/test_p3_gather_fresh.py`: kịch bản ngưỡng của ticket (`fresh:30` → `spoiled` tick 1), hao 60 tick = −0.5, kẹp đáy 0, cấp id xuyên pha, file kho ghi/đọc lại giữ nhánh ngưỡng, kho đếm → mã 2.
+- [ ] Mở PR (đầu tiên trong thứ tự gộp sau C), nhờ ChuTungDuongg review. Commit: `inventory: kho cá thể v1.2`, `gather: độ tươi, spoiled, giỏ cá thể`.
+
+### haiquanng — Lát X (Dòng nước lũ `current`, mở rộng 1)
+- [ ] Lịch `t = 1800·k` (k ≥ 1): `current_warning` (`starts_at_phase_tick`) ở `t−120`, bắt đầu trước di chuyển ở `t`, kéo dài 480 tick (`t…t+479`); hướng +x/−x chọn đều theo seed qua `Streams` khi bắt đầu.
+- [ ] Cộng 1.5 m/s vào người chơi nếu d đầu bước ≥ 10, rồi chặn mép; không tích lũy vào `player.vel`; cá và thủy quái giữ chuyển động riêng.
+- [ ] `current_end(elapsed)` ở `t+480` trước di chuyển; ca hết trước thì `current_end(phase_end)` trước `faint` và `gather_end`; bước bắt đầu trùng bước cuối ca vẫn có lực.
+- [ ] `gather.random_current:false` tắt lịch, `current_direction:-1/1` khóa hướng; snapshot `current:null` hoặc `{direction,ticks_left}` (đếm cả tick vừa chụp).
+- [ ] Test `tests/test_p3_current.py`: cảnh báo ở t−120, lực chỉ khi d ≥ 10, kết thúc `elapsed` và `phase_end`, hướng khóa, tắt lịch → kết quả lõi không đổi.
+- [ ] Commit: `gather: dòng nước lũ current`.
+
+### haiquanng — Lát P (smoke + proof, gộp ở 3.2) 
+- [ ] Phút 20 dẫn smoke bàn giao: dùng scenario `{"gather":{"hold":[{"id":"I1","kind":"ca_linh","fresh":100}],"random_fish":false,"monsters":[]}}` với `interact:true` ở frame 0 để cập bến, rồi `quan --inventory kho.json --ticks 0`; so chính xác id, kind, fresh với file sau lần hao ở bước gather. Lưu `docs/proof/phase-3/integration.*`.
+
+### ChuTungDuongg — Lát B (Lặn trên kho cá thể)
+- [ ] `lost` trong `monster_hit`/`faint` là mảng cá thể `{id,kind,fresh}` theo thứ tự bỏ LIFO (thứ tự vào giỏ); `floor(n/2)` vẫn như cũ.
+- [ ] Ngất: bỏ toàn bộ phần còn lại theo LIFO, `faint` → `gather_end(fainted)`, kho `{"items":[]}`.
+- [ ] Đảm bảo thứ tự tick gather theo ticket: đồng hồ/cooldown/hồi nút/**tươi** → (dòng lũ, hook của lát X) → bơi/oxy/ngạt → thủy quái/hit → bến trước hái → bắt cá → hết giờ → cập nhật cá/sinh thêm.
+- [ ] Test `tests/test_p3_gather_lifo.py`: LIFO với id không liền nhau, faint ghi kho rỗng, ươn vẫn chiếm ô khi rơi hàng.
+- [ ] Mở PR sau lát A, nhờ haiquanng review. Commit: `gather: lost/faint theo cá thể LIFO`.
+- [ ] Khi xong sớm: vào pair với haiquanng ở lát X (test hướng/biên dòng lũ).
+
+### minhphuong150505 — Lát Q (quán tươi)
+- [ ] `quan.py`: `stock` là danh sách cá thể (nhận nguyên số lượng, id, độ tươi, kể cả hàng ươn); hao 0.25/s (1 đơn vị/tick) kể cả hàng đang giữ chỗ; `spoiled` (`location:"stock"`) theo id trước khi xử lý giữ chỗ.
+- [ ] Giữ theo id: mỗi loại lấy cá thể khả dụng tươi nhất, hòa theo id; phần giữ có cá thể vừa ươn → nhả toàn bộ và thử giữ lại **đúng một lần**, xử lý theo `order_tick` rồi id bàn; không đủ → `unfulfillable`, khách chờ tới hạn.
+- [ ] Nấu: tiêu đúng các id đang giữ, `base_price = floor(giá niêm yết × trung bình fresh / 100)`; boa `floor(tiền món × 0.2)` trên giá đã chốt; `cook_started.data.items` là mảng cá thể sắp theo kind rồi id; điểm vẫn `earned + 100 × floor(reputation)`.
+- [ ] Thứ tự tick quán theo ticket (hao tươi → `spoiled` → giữ chỗ → món chín → di chuyển/tương tác → thanh toán/kiên nhẫn/đóng ca → khách).
+- [ ] Test `tests/test_p3_quan.py`: qua ngưỡng 30 trong lúc giữ chỗ, giữ lại thành công/thất bại, giá theo tươi (floor), boa trên giá đã chốt, hàng ươn không dùng nấu nhưng chiếm kho.
+- [ ] Mở PR sau lát B, nhờ phuthaitran review. Commit: `quan: kho cá thể, giữ theo id, giá theo tươi`.
+
+### phuthaitran — Lát D (day + đặt trước, mở rộng 2)
+- [ ] `day.py`: bàn giao kho cá thể **trong cùng tick chuyển pha**, hàng không hao thêm, ca quán chạy từ bước sau; id tiếp tục tăng xuyên pha và Ngày; Ngày kế cấp id mới theo thứ tự mảng với kind/fresh ban đầu của mẫu `gather.hold`.
+- [ ] Hàng thô ở Shop/chờ nhập không hao tươi; (nếu nhóm làm Chợ Chú Sáu) hàng mua vào kho quán Ngày kế với `fresh:100`, id mới, tách khỏi `gather_end.inventory`.
+- [ ] Đặt trước: mỗi Ngày công bố 2 đơn R1,R2 sau `phase_start(gather)` (`reservation_announced`), bàn khác nhau, món trong kế hoạch, tick đến theo seed trong [1800,10799]; snapshot gather trong `day` và quán có `reservations[]` + `state`, `customers[].reservation_id`, `tables[].reservation_id`.
+- [ ] Trạng thái `scheduled → holding → waiting → served | failed`; giữ bàn từ `max(0, arrival_tick − 1800)`; đến giờ: `occupied` / `stock` → fail; thành công → giữ nguyên liệu, `reservation_arrived` rồi `customer_arrived`, kiên nhẫn 60 s, giá `floor(giá đã chốt × 1.5)` rồi mới boa; `served` rồi `reservation_served`.
+- [ ] Lỡ đơn (`stock`/`occupied`/`burnt`/`patience`/`closing`): nhả hàng/bàn, hủy món, uy tín −1 đúng một lần, `reservation_failed`; món cháy phát `dish_burnt` (`order_status:"failed"`) trước; đóng ca fail các đơn chưa xong theo id.
+- [ ] Test `tests/test_p3_day.py` (bàn giao cùng tick, id xuyên Ngày) và `tests/test_p3_reservations.py` (hai đơn, fail từng lý do, một lần phạt, `random_reservations:false`).
+- [ ] Mở PR sau lát Q (đặt trước chạm `quan.py` → phối hợp với minhphuong150505). Commit: `day: bàn giao kho cá thể`, `quan: đặt trước R1/R2`.
+
+### RachalHys — Lát U (HUD) + QA
+- [ ] HUD sáng/tối hiện độ tươi hoặc hàng ươn bằng số, thanh, nhãn hoặc biểu tượng, cho giỏ, kho quán và phần giữ; thanh/nhãn không phụ thuộc màu (đọc được ở 320 px và 1280×720).
+- [ ] HUD sáng hiện hai đơn đặt trước R1/R2; HUD quán hiện bàn giữ, trạng thái và đồng hồ đến; cảnh báo dòng lũ bằng chữ, biểu tượng, âm thanh.
+- [ ] Rà test P1–P2 sẽ vỡ vì kho cá thể, gửi danh sách cho các lát ngay phút 7 (cần cho haiquanng, minhphuong150505).
+- [ ] Commit: `ui: HUD độ tươi, đặt trước, cảnh báo lũ`.
+
+### Phút 20 — Smoke tích hợp + standup (haiquanng dẫn, HoangHongNgo hỗ trợ)
+- [ ] Chạy smoke bàn giao kho trên bản tích hợp, lưu `docs/proof/phase-3/integration.*`.
+- [ ] Standup 2–3 phút: lát nào trễ thì người xong sớm vào pair (ưu tiên giúp haiquanng, người ôm nhiều lát nhất).
+
+---
+
+## 3.2 Bật v1.2 & kiểm chứng (phút 25–32)
+
+### HoangHongNgo
+- [ ] Gộp C → A/X → B → Q → D → U; bật v1.2 khi gather và quán cùng sẵn sàng (kho đếm → mã 2); xử lý xung đột `gather.py`/`quan.py`/`scenario.py`.
+- [ ] Trên `main` sạch: toàn bộ test xanh, smoke `gather → quan` và `--mode day --days 1/3`, chạy hai lần cùng seed `cmp` giống từng byte.
+- [ ] `CHANGELOG.md`: breaking change (kho đếm → mã 2), schema mới, cách cập nhật fixture, test P1/P2 đổi và lý do.
+- [ ] `docs/verification/phase-3.md`: AC-P3-xx → cách kiểm → bằng chứng → kết quả (trung thực), khớp commit gắn tag.
+
+### haiquanng — Lát P (proof)
+- [ ] `docs/proof/phase-3/`: log test, `integration.*`, `day.jsonl` (`--days 1` và `--days 3`), kết quả `cmp`, ảnh HUD của RachalHys, bằng chứng `current`/`reservations`; mỗi file ghi commit đã chạy. Gửi danh sách file cho HoangHongNgo.
+- [ ] Chạy lại regression P1–P2 còn hiệu lực (script `docs/proof/phase-2/run_proof.py` làm mẫu).
+- [ ] Commit: `docs: proof Phase 3`.
+
+### ChuTungDuongg + haiquanng
+- [ ] Chơi thử `gather`: để hàng ươn trong giỏ, bị Cá Sấu làm rơi (xem `lost`), ngất, cập bến, mở quán với file vừa ghi.
+
+### minhphuong150505 + phuthaitran
+- [ ] Chơi thử `day` trọn 1 Ngày: hàng ươn trong kho quán, giữ lại một lần, món giá theo tươi, một khách đặt trước thành công và một fail.
+
+### RachalHys
+- [ ] Chạy lại regression P1–P2 và kiểm HUD trên `main`; ảnh HUD bàn giao cho haiquanng.
+
+---
+
+## 3.3 Dự phòng & bàn giao (phút 32–35)
+
+### HoangHongNgo
+- [ ] Retro nhanh vào `docs/retro.md`: điều rút ra từ lần đổi schema kho (điều tốt / điều vướng / 1 hành động có người nhận). Cập nhật `docs/clarify.md`, `docs/standup.md`.
+- [ ] Gắn và đẩy tag trên commit bàn giao ở `main` **trước 2:30**:
+
+```bash
+git tag phase-3 && git push origin phase-3
+```
+
+### Mọi người
+- [ ] Ghi phần của mình vào `docs/ai-usage-log.md`; cập nhật `docs/members/<handle>.md`; có ≥ 1 commit có nội dung ở Phase 3.
+- [ ] Mở rộng: khai `extensions` trong contract, test + bằng chứng trong README (nhóm 6 người cần **≥ 2 mục** cả buổi lab: `current` — haiquanng, `reservations` — phuthaitran; các mục Phase 2 `net`/`snake`/`burn` tính tiếp nếu đã gộp). Phần "Tự do sáng tạo" ghi ở README, phải tắt được ở headless.
+
+---
+
+## Theo dõi commit Phase 3 (mục tiêu ≥ 1 commit/người mỗi phase nhỏ)
+
+| Handle | 3.1 | 3.2 | 3.3 |
+|---|---|---|---|
+| HoangHongNgo | contract v1.2 · scenario · pause · ghi tác động | gộp · CHANGELOG · verification | retro · ghi chép · tag |
+| haiquanng | inventory cá thể · gather tươi/spoiled · `current` · smoke phút 20 | test `current`/tươi · proof · regression | sửa lỗi chơi thử |
+| ChuTungDuongg | lost/faint LIFO cá thể · test thứ tự tick | review lát A · chơi thử gather | sửa lỗi · ai-usage-log |
+| minhphuong150505 | quan kho cá thể · giữ theo id | giá theo tươi, boa + test | sửa lỗi chơi thử day |
+| phuthaitran | day bàn giao kho cá thể | đặt trước R1/R2 + test | sửa lỗi chơi thử day |
+| RachalHys | HUD tươi/ươn · danh sách test vỡ | HUD đặt trước/lũ · regression | ảnh HUD, hỗ trợ lát trễ |
