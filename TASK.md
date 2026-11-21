@@ -70,10 +70,10 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Commit: `gather: hái nút, hold_full, regrow`.
 
 ### minhphuong150505 — Lát 3
-- [ ] Lịch khách theo `phase_tick`: `first_customer_tick`, rồi mỗi `customer_interval_s × 60`; bàn trống id nhỏ nhất; không có bàn → bỏ lượt.
+- [x] Lịch khách theo `phase_tick`: `first_customer_tick`, rồi mỗi `customer_interval_s × 60`; bàn trống id nhỏ nhất; không có bàn → bỏ lượt.
 - [ ] Chọn món đều theo seed (qua `Streams`) trong món đủ kho khả dụng (tồn − giữ), duyệt id món theo Unicode; không đủ → `no_dish`.
 - [ ] Giữ đúng công thức vào `reserved`, `customer_arrived`.
-- [ ] Commit: `quan: lịch khách, chọn món, giữ chỗ`.
+- [x] Commit: `quan: lịch khách, chọn món, giữ chỗ`.
 
 ### phuthaitran — Lát 4
 - [ ] Chọn tối đa một interact theo (khoảng cách, bếp trước bàn, id) trong `interact_radius`; đối tượng không tương tác được → bỏ lượt.
