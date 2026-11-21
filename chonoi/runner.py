@@ -19,6 +19,7 @@ from .inventory import write_inventory
 from .jsonl import JsonlWriter
 from .rng import Streams
 from .sim.gather import GatherSim
+from .sim.pause import PauseSim
 from .sim.quan import QuanSim
 
 
@@ -34,6 +35,8 @@ def build_sim(mode, tuning, scenario, seed, inventory, days=1):
 
 def _common(sim, tick, sim_tick, phase_tick, tuning, state):
     mult = tuning["score"]["reputation_multiplier"]
+    if state == "playing" and getattr(sim, "paused", False):
+        state = "paused"
     return {
         "type": "snapshot", "tick": tick, "sim_tick": sim_tick, "mode": sim.mode, "phase": sim.phase,
         "phase_tick": phase_tick, "state": state, "time_left_ticks": sim.time_left_ticks,
@@ -48,14 +51,14 @@ class Session:
     def __init__(self, mode, tuning, scenario, seed, inventory=None, days=1, sim=None):
         self.mode = mode
         self.tuning = tuning
-        self.sim = sim if sim is not None else build_sim(mode, tuning, scenario, seed, inventory, days)
+        sim = sim if sim is not None else build_sim(mode, tuning, scenario, seed, inventory, days)
+        # pause xử lý ở lớp bọc chung (chonoi/sim/pause.py), không nằm trong từng sim
+        self.sim = sim if isinstance(sim, PauseSim) else PauseSim(sim)
         self.tick = 0
 
     def _ticks(self):
-        """(sim_tick, phase_tick): mode day đếm theo sim (pha đặt lại phase_tick); mode lẻ = tick."""
-        if self.mode == "day":
-            return self.sim.sim_tick, self.sim.phase_tick
-        return self.tick, self.tick
+        """(sim_tick, phase_tick): đếm theo sim (đứng yên khi pause; day đặt lại phase_tick mỗi pha)."""
+        return self.sim.sim_tick, self.sim.phase_tick
 
     def _row(self, tick, ev):
         name, data = ev[0], ev[1]
@@ -63,8 +66,10 @@ class Session:
         if len(ev) > 2:  # thứ tự khóa theo ví dụ TICKET-02 mục 4.4: type, tick, phase, day, name, data
             row["phase"] = ev[2]["phase"]
             row["day"] = ev[2]["day"]
-        else:
+        else:  # event không mang ngữ cảnh (kể cả paused/resumed của PauseSim): pha/Ngày hiện tại
             row["phase"] = self.sim.phase
+            if self.mode == "day":
+                row["day"] = self.sim.day
         row.update(name=name, data=data)
         return row
 
