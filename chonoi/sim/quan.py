@@ -7,7 +7,7 @@ Nhóm viết tiếp (PRD-0 mục F, Quán):
                      ăn xong trả tiền (paid), boa, uy tín, hết ca (quan_end).
 """
 
-from ..ids import sort_by_id
+from ..ids import id_key, sort_by_id
 from .ramp import ramp_velocity
 
 TICK = 60.0
@@ -37,10 +37,8 @@ class QuanSim:
                             cook_ticks_left=s.get("cook_ticks_left", 0), ready_ticks=s.get("ready_ticks", 0))
                        for s in self._merge(t["stoves"], scenario.get("stoves", []))]
         self.tables = self._merge(t["tables"], scenario.get("tables", []))
-        # TODO(nhóm): khách dựng sẵn từ scenario (customers[]) và suy ra giữ chỗ (reserved).
-        self.customers = [dict(c, reserved=c.get("reserved", {})) for c in scenario.get("customers", [])]
-        for e in self.customers:
-            ids.reserve(e["id"])
+        self.customers = []
+        self._init_customers(scenario.get("customers", []))
         self.money = 0
         self.earned = 0
         self.shift_earned = 0
@@ -95,3 +93,66 @@ class QuanSim:
                 self.pos[i], self.vel[i] = lo, max(0.0, self.vel[i])
             elif self.pos[i] >= hi:
                 self.pos[i], self.vel[i] = hi, min(0.0, self.vel[i])
+
+    def _init_customers(self, scenario_customers):
+        pat_ticks = int(round(self.t["patience_s"] * 60))
+        for c in scenario_customers:
+            cust = {
+                "id": c["id"],
+                "table_id": c["table_id"],
+                "dish_id": c["dish_id"],
+                "order_tick": c.get("order_tick", 0),
+                "state": c.get("state", "waiting"),
+                "patience_ticks_left": c.get("patience_ticks_left", pat_ticks),
+                "eat_ticks_left": c.get("eat_ticks_left", 0),
+                "order_status": c.get("order_status", "reserved" if c.get("state", "waiting") == "waiting" else "served"),
+                "reserved": dict(c["reserved"]) if "reserved" in c else None,
+                "base_price": c.get("base_price", None),
+                "tip": c.get("tip", 0),
+            }
+            self.customers.append(cust)
+            self.ids.reserve(cust["id"])
+        self._infer_customer_reservations()
+
+    def _available_stock(self) -> dict:
+        """Kho khả dụng = stock - tổng nguyên liệu đang được giữ (reserved)."""
+        reserved_totals = {}
+        for c in self.customers:
+            if c.get("order_status") == "reserved":
+                res = c.get("reserved") or {}
+                for k, v in res.items():
+                    if v > 0:
+                        reserved_totals[k] = reserved_totals.get(k, 0) + v
+        return {k: max(0, self.stock.get(k, 0) - reserved_totals.get(k, 0)) for k in self.stock}
+
+    def _infer_customer_reservations(self):
+        """Khách fixture thiếu reserved được suy ra theo công thức món ăn (order_tick tăng dần, rồi id bàn)."""
+        unreserved = [c for c in self.customers if not c.get("reserved") and c.get("order_status") == "reserved"]
+        unreserved.sort(key=lambda c: (c.get("order_tick", 0), id_key(c["table_id"])))
+        for c in unreserved:
+            recipe = self.menu[c["dish_id"]]["recipe"]
+            avail = self._available_stock()
+            for k, req in recipe.items():
+                if avail.get(k, 0) < req:
+                    from ..errors import BadInput
+                    raise BadInput(f"không đủ kho để giữ nguyên liệu cho khách {c['id']} (món {c['dish_id']})")
+            c["reserved"] = dict(recipe)
+
+        for c in self.customers:
+            if not c.get("reserved"):
+                c["reserved"] = {}
+
+        self._check_total_reservations()
+
+    def _check_total_reservations(self):
+        reserved_totals = {}
+        for c in self.customers:
+            if c.get("order_status") == "reserved":
+                res = c.get("reserved") or {}
+                for k, v in res.items():
+                    if v > 0:
+                        reserved_totals[k] = reserved_totals.get(k, 0) + v
+        for k, v in reserved_totals.items():
+            if v > self.stock.get(k, 0):
+                from ..errors import BadInput
+                raise BadInput(f"tổng nguyên liệu giữ vượt quá kho thực tế cho {k}: giữ {v}, kho có {self.stock.get(k, 0)}")

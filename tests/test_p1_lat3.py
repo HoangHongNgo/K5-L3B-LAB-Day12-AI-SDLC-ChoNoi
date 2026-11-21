@@ -242,5 +242,109 @@ class ScenarioValidation(unittest.TestCase):
             self.assertFalse(os.path.exists(out))
 
 
+class CustomerInitializationAndReservations(unittest.TestCase):
+    def test_customer_data_model_and_snapshot(self):
+        """Kiểm tra cấu trúc dữ liệu khách hàng theo hợp đồng trong snapshot."""
+        with Workdir() as w:
+            out = w.path("o.jsonl")
+            sc = write_json(w.path("sc.json"), {
+                "quan": {
+                    "stock": {"ca_loc": 2},
+                    "customers": [{
+                        "id": "C1",
+                        "table_id": "T1",
+                        "dish_id": "ca_loc_nuong_trui",
+                        "order_tick": 0,
+                        "state": "waiting",
+                        "patience_ticks_left": 3600,
+                        "eat_ticks_left": 0,
+                        "order_status": "reserved",
+                        "reserved": {"ca_loc": 1},
+                        "base_price": None,
+                        "tip": 0
+                    }]
+                }
+            })
+            code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "0",
+                                     "--scenario", sc, "--out", out)
+            self.assertEqual(code, 0, err)
+            rows = read_jsonl(out)
+            snap = snapshots(rows)[0]
+            self.assertEqual(len(snap["customers"]), 1)
+            c = snap["customers"][0]
+            self.assertEqual(c["id"], "C1")
+            self.assertEqual(c["table_id"], "T1")
+            self.assertEqual(c["dish_id"], "ca_loc_nuong_trui")
+            self.assertEqual(c["state"], "waiting")
+            self.assertEqual(c["order_status"], "reserved")
+            self.assertEqual(c["reserved"], {"ca_loc": 1})
+            self.assertEqual(c["patience_ticks_left"], 3600)
+            self.assertEqual(c["eat_ticks_left"], 0)
+            self.assertIsNone(c["base_price"])
+            self.assertEqual(c["tip"], 0)
+
+    def test_infer_customer_reserved_when_missing(self):
+        """Khách fixture thiếu reserved được suy ra đúng theo công thức món."""
+        with Workdir() as w:
+            out = w.path("o.jsonl")
+            sc = write_json(w.path("sc.json"), {
+                "quan": {
+                    "stock": {"ca_loc": 2},
+                    "customers": [{
+                        "id": "C1",
+                        "table_id": "T1",
+                        "dish_id": "ca_loc_nuong_trui",
+                    }]
+                }
+            })
+            code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "0",
+                                     "--scenario", sc, "--out", out)
+            self.assertEqual(code, 0, err)
+            rows = read_jsonl(out)
+            snap = snapshots(rows)[0]
+            c = snap["customers"][0]
+            self.assertEqual(c["reserved"], {"ca_loc": 1})
+
+    def test_customer_fixture_with_inventory_flag(self):
+        """Khởi tạo khách với kho nạp qua --inventory."""
+        with Workdir() as w:
+            inv = write_json(w.path("inv.json"), {"items": {"ca_loc": 2}})
+            sc = write_json(w.path("sc.json"), {
+                "quan": {
+                    "customers": [{
+                        "id": "C1",
+                        "table_id": "T1",
+                        "dish_id": "ca_loc_nuong_trui",
+                    }]
+                }
+            })
+            out = w.path("o.jsonl")
+            code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "0",
+                                     "--inventory", inv, "--scenario", sc, "--out", out)
+            self.assertEqual(code, 0, err)
+            rows = read_jsonl(out)
+            snap = snapshots(rows)[0]
+            self.assertEqual(snap["customers"][0]["reserved"], {"ca_loc": 1})
+
+    def test_customer_fixture_with_insufficient_inventory_flag_exit_2(self):
+        """Kho nạp qua --inventory không đủ nguyên liệu cho khách fixture -> mã 2."""
+        with Workdir() as w:
+            inv = write_json(w.path("inv.json"), {"items": {"ca_loc": 0}})
+            sc = write_json(w.path("sc.json"), {
+                "quan": {
+                    "customers": [{
+                        "id": "C1",
+                        "table_id": "T1",
+                        "dish_id": "ca_loc_nuong_trui",
+                    }]
+                }
+            })
+            out = w.path("o.jsonl")
+            code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "0",
+                                     "--inventory", inv, "--scenario", sc, "--out", out)
+            self.assertEqual(code, 2)
+            self.assertFalse(os.path.exists(out))
+
+
 if __name__ == "__main__":
     unittest.main()
