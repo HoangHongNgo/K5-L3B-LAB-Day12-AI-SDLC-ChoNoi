@@ -230,16 +230,16 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 ## 2.1 Số chuẩn & lõi lát (phút 0–20)
 
 ### HoangHongNgo — Lát C (contract v1.1)
-- [ ] Phút 0–5: lưu ticket vào `docs/plan/phase-2.md`, báo bảng giao diện chốt sẵn ở trên cho cả nhóm.
-- [ ] `game.contract.json`: `contract_version:"1.1"`, toàn bộ số chuẩn mục 1.1–1.3, 6 nguyên liệu, 6 món, `day_plan` D1–D5, `shop.upgrades.oxygen/hp`, `gather.monsters`, khóa cá mới (mục 4.1).
-- [ ] `chonoi/contract.py`: kiểm khóa mới và dải hợp lệ; `day_plan.ingredients` phải bằng tổng công thức × số suất, sai thì mã 2.
-- [ ] Cập nhật `docs/contracts/README.md`: event mới (`monster_hit`, `fish_spawned`, `day_start`, `phase_start`, `day_plan`, `paused`, `resumed`, `bought`, `buy_failed`, `shop_end`), trường snapshot mới, vỏ event có `day`.
-- [ ] Commit: `contract: v1.1 số chuẩn, day_plan, shop, monsters`.
-- [ ] Khung `docs/verification/phase-2.md`: liệt kê AC-P2-xx theo `docs/plan/phase-2.md`, cột cách kiểm chứng / bằng chứng / kết quả; ghi sẵn lệnh kiểm cho từng AC để các lát biết test nào cần viết.
-- [ ] Commit: `docs: khung verification Phase 2`.
-- [ ] Rà test P1 nào sẽ vỡ vì số chuẩn mới, gửi danh sách cho các lát (nhận từ RachalHys).
-- [ ] `headless.py`: thêm cờ `--mode day`, `--days 1..5` (mặc định 1, chỉ hợp lệ với `day`), sai thì mã 2; gọi `DaySim` của lát D (nhận từ phuthaitran).
-- [ ] Commit: `headless: cờ --mode day, --days`.
+- [x] Phút 0–5: lưu ticket vào `docs/plan/phase-2.md`, báo bảng giao diện chốt sẵn ở trên cho cả nhóm. — xong: `docs/plan/phase-2.md` (ticket nguyên văn + phụ lục AC-P2-01..19 + giao diện chốt sẵn); bảng giao diện chốt sẵn cũng có ở `docs/contracts/README.md` mục 6.4. Chưa báo kênh nhóm.
+- [x] `game.contract.json`: `contract_version:"1.1"`, toàn bộ số chuẩn mục 1.1–1.3, 6 nguyên liệu, 6 món, `day_plan` D1–D5, `shop.upgrades.oxygen/hp`, `gather.monsters`, khóa cá mới (mục 4.1). — xong, nhánh `p2/c-HoangHongNgo`.
+- [x] `chonoi/contract.py`: kiểm khóa mới và dải hợp lệ; `day_plan.ingredients` phải bằng tổng công thức × số suất, sai thì mã 2. — xong; thêm `resolve_day_plan` dùng chung cho `scenario.py`/lát D. Test: `tests/test_p2_contract.py`.
+- [x] Cập nhật `docs/contracts/README.md`: event mới (`monster_hit`, `fish_spawned`, `day_start`, `phase_start`, `day_plan`, `paused`, `resumed`, `bought`, `buy_failed`, `shop_end`), trường snapshot mới, vỏ event có `day`. — xong (mục 6).
+- [x] Commit: `contract: v1.1 số chuẩn, day_plan, shop, monsters`.
+- [x] Khung `docs/verification/phase-2.md`: liệt kê AC-P2-xx theo `docs/plan/phase-2.md`, cột cách kiểm chứng / bằng chứng / kết quả; ghi sẵn lệnh kiểm cho từng AC để các lát biết test nào cần viết.
+- [x] Commit: `docs: khung verification Phase 2`.
+- [ ] Rà test P1 nào sẽ vỡ vì số chuẩn mới, gửi danh sách cho các lát (nhận từ RachalHys). — một phần: HoangHongNgo đã tự rà bằng cách chạy toàn bộ test (danh sách ở `docs/contracts/README.md` mục 6.8; test quán/gather còn lại sẽ vỡ khi lát A/Q gộp). Chưa nhận danh sách từ RachalHys, chưa gửi kênh nhóm.
+- [x] `headless.py`: thêm cờ `--mode day`, `--days 1..5` (mặc định 1, chỉ hợp lệ với `day`), sai thì mã 2; gọi `DaySim` của lát D (nhận từ phuthaitran). — xong: cờ và kiểm mã 2 chạy được; `DaySim` import trễ từ `chonoi/sim/day.py`, chưa có thì mã 1 "chưa hỗ trợ" (chờ lát D).
+- [x] Commit: `headless: cờ --mode day, --days`.
 
 ### haiquanng — Lát A (cá & hái)
 - [ ] `chonoi/sim/fish.py`: đàn cá bơi 1.5 m/s trong `fish_x`, dải độ sâu theo loài; đổi hướng theo seed ở bước bơi thứ 120, 240… (theo `age_ticks`); phản xạ mép (chạm góc đảo cả hai thành phần).
@@ -277,7 +277,7 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Commit: `ui: menu chính, DayIntro, EveningIntro`.
 
 ### Phút 20 — Smoke tích hợp (HoangHongNgo dẫn, cả nhóm)
-- [ ] Trên nhánh tích hợp tạm: `gather --inventory-out kho.json` → `quan --inventory kho.json`, đối chiếu snapshot kho ở tick 0, lưu `docs/proof/phase-2/integration.*`.
+- [x] Trên nhánh tích hợp tạm: `gather --inventory-out kho.json` → `quan --inventory kho.json`, đối chiếu snapshot kho ở tick 0, lưu `docs/proof/phase-2/integration.*`. — chạy trên nhánh C (chưa có lát A/B/Q/S/D): `docs/proof/phase-2/integration.md`; cần chạy lại trên `main` sau khi gộp.
 - [ ] Standup 2–3 phút; lát chậm thì người dự phòng (TEAM.md) vào pair.
 
 ---
@@ -285,11 +285,11 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 ## 2.2 Hoàn thiện & nối vòng ngày (phút 20–35)
 
 ### HoangHongNgo — Lát C (pause) + gộp
-- [ ] `chonoi/sim/pause.py`: bọc sim bất kỳ; xét cạnh `pause` trước; khi đang pause chỉ tăng tick ngoài, phát `paused`, bỏ qua cạnh hành động và `buy`; cạnh kế tiếp phát `resumed` và chạy gameplay ngay bước đó. Snapshot `state:"paused"`. Giữ nút qua đổi pha không tạo cạnh mới.
-- [ ] Test `tests/test_p2_pause.py` cho cả 3 mode (dùng fixture có sẵn).
-- [ ] `scenario.py` khối `day` (nhận từ minhphuong150505): cấm `quan.stock`/`quan.reputation` khi chạy day; `day {money,earned,reputation,upgrades,day_plan}` với `0 ≤ money ≤ earned`; `day.day_plan` ghi đè theo Ngày, tính lại `ingredients` và so với giá trị khai nếu có, sai thì mã 2. Test `tests/test_p2_scenario_day.py`.
+- [x] `chonoi/sim/pause.py`: bọc sim bất kỳ; xét cạnh `pause` trước; khi đang pause chỉ tăng tick ngoài, phát `paused`, bỏ qua cạnh hành động và `buy`; cạnh kế tiếp phát `resumed` và chạy gameplay ngay bước đó. Snapshot `state:"paused"`. Giữ nút qua đổi pha không tạo cạnh mới.
+- [x] Test `tests/test_p2_pause.py` cho cả 3 mode (dùng fixture có sẵn). — mode day kiểm bằng sim giả; thêm ca day thật khi lát D gộp.
+- [x] `scenario.py` khối `day` (nhận từ minhphuong150505): cấm `quan.stock`/`quan.reputation` khi chạy day; `day {money,earned,reputation,upgrades,day_plan}` với `0 ≤ money ≤ earned`; `day.day_plan` ghi đè theo Ngày, tính lại `ingredients` và so với giá trị khai nếu có, sai thì mã 2. Test `tests/test_p2_scenario_day.py`. — xong: `tests/test_p2_scenario_day.py`; `load_scenario(.., "day", ..)` trả `{gather, quan, day}` đã điền mặc định.
 - [ ] Gộp PR lát A, B khi xanh.
-- [ ] Commit: `sim: pause cho gather/quan/day`.
+- [x] Commit: `sim: pause cho gather/quan/day`.
 
 ### haiquanng — Lát A
 - [ ] Sinh cá tại `phase_tick = 360·k` **sau khi cá bơi**: dưới trần 12, điểm cách mọi đàn đang sống > 1 m, trọng số 40/30/30 chuẩn hóa theo loài còn điểm, chọn đều một điểm, hướng theo seed; cá mới bơi từ bước sau; phát `fish_spawned`.
