@@ -323,7 +323,7 @@ class QuanSim:
                 valid_dishes.append(did)
 
         if not valid_dishes:
-            events.append(("no_dish", {"table_id": table["id"]}))
+            events.append(("no_dish", {}))  # PRD-0 mục E: {} khi có bàn mà thiếu món
             return events
 
         rng = self.rng.get("customers")
@@ -348,7 +348,8 @@ class QuanSim:
         self.customers.append(new_customer)
         events.append((
             "customer_arrived",
-            {
+            {  # PRD-0 mục E: order_id, table_id, dish_id; giữ customer_id/reserved cho hợp đồng nhóm
+                "order_id": customer_id,
                 "customer_id": customer_id,
                 "table_id": table["id"],
                 "dish_id": chosen_dish,
