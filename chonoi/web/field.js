@@ -11,6 +11,7 @@ function openAtlas(tab) {
   if (screenName === "menu") renderAtlas(true);
   else if (screen.hidden && snap) { clearHeld(); press("pause"); }
 }
+byId("lobby-guide").onclick = () => openAtlas("controls");
 byId("hud-menu").onclick = () => openAtlas("mission");
 byId("mini-map").onclick = () => openAtlas("map");
 document.querySelector(".lobby-atlas").onclick = () => openAtlas("map");
