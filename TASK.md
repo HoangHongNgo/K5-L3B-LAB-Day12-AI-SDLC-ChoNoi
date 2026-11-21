@@ -199,15 +199,16 @@ git tag phase-1 && git push origin phase-1
    - Cả hai sim có `step(inputs) -> events`, `snapshot() -> dict`, thuộc tính `done`, `result` (dict trạng thái cuối: tiền, earned, uy tín, kho dư…).
    - `pause` xử lý ở **lớp bọc chung** (`chonoi/sim/pause.py`), không nằm trong từng sim.
    - `ShopSim(tuning, *, money, earned, upgrades, stock)`: cùng giao diện `step/snapshot/done/result`; `result` trả `money`, `upgrades` (cấp đã mua). Lát D gọi Shop như một pha, không tự viết luật mua.
+   - `DaySim(tuning, scenario, streams, *, days=1)`: cùng giao diện `step/snapshot/done/result`; `headless.py` chỉ dựng và chạy nó như hai mode kia, nên cờ CLI viết được trước khi `day.py` xong.
 
 | Lát | Người | File sở hữu | Người review |
 |---|---|---|---|
-| C — Contract v1.1 + pause + kiểm chứng | HoangHongNgo | `game.contract.json`, `chonoi/contract.py`, `docs/contracts/`, `chonoi/sim/pause.py`, `docs/verification/phase-2.md`, `docs/proof/phase-2/` | RachalHys |
+| C — Contract v1.1 + pause + CLI/scenario day + kiểm chứng | HoangHongNgo | `game.contract.json`, `chonoi/contract.py`, `docs/contracts/`, `chonoi/sim/pause.py`, CLI `--mode day/--days` trong `headless.py`, `chonoi/scenario.py` (khối `day`), `docs/verification/phase-2.md` | RachalHys |
 | A — Cá bơi/sinh + nút/catch | haiquanng | `chonoi/sim/fish.py` (mới), phần hái/catch trong `gather.py` | ChuTungDuongg |
-| S — Shop & nâng cấp | haiquanng | `chonoi/sim/shop.py` (mới), `tests/test_p2_shop.py` | phuthaitran |
+| S — Shop & nâng cấp + proof | haiquanng | `chonoi/sim/shop.py` (mới), `tests/test_p2_shop.py`, `docs/proof/phase-2/` | phuthaitran |
 | B — Cá Sấu, Máu, ngất | ChuTungDuongg | `chonoi/sim/monsters.py` (mới), phần oxy/ngạt/faint trong `gather.py` | haiquanng |
-| Q — 2 bếp/4 bàn, 6 món, lọc kế hoạch | minhphuong150505 | `chonoi/sim/quan.py`, `chonoi/scenario.py` (phần quan/day) | phuthaitran |
-| D — Vòng ngày | phuthaitran | `chonoi/sim/day.py` (mới), nhánh `--mode day` trong `headless.py` | minhphuong150505 |
+| Q — 2 bếp/4 bàn, 6 món, lọc kế hoạch | minhphuong150505 | `chonoi/sim/quan.py`, `chonoi/scenario.py` (phần quan) | phuthaitran |
+| D — Vòng ngày | phuthaitran | `chonoi/sim/day.py` (mới), phần gọi `DaySim` trong `headless.py` | minhphuong150505 |
 | U — Menu, pause UI, HUD | RachalHys | `chonoi/web/`, `chonoi/live.py`, regression test P1 | HoangHongNgo |
 
 Quy ước: nhánh `p2/<lát>-<handle>`, test xanh trước khi mở PR. Thứ tự gộp: **C → A → B → Q → S → D → U**. Test P1 nào phải đổi vì số chuẩn mới thì ghi lý do trong commit.
@@ -234,6 +235,9 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Commit: `contract: v1.1 số chuẩn, day_plan, shop, monsters`.
 - [ ] Khung `docs/verification/phase-2.md`: liệt kê AC-P2-xx theo `docs/plan/phase-2.md`, cột cách kiểm chứng / bằng chứng / kết quả; ghi sẵn lệnh kiểm cho từng AC để các lát biết test nào cần viết.
 - [ ] Commit: `docs: khung verification Phase 2`.
+- [ ] Rà test P1 nào sẽ vỡ vì số chuẩn mới, gửi danh sách cho các lát (nhận từ RachalHys).
+- [ ] `headless.py`: thêm cờ `--mode day`, `--days 1..5` (mặc định 1, chỉ hợp lệ với `day`), sai thì mã 2; gọi `DaySim` của lát D (nhận từ phuthaitran).
+- [ ] Commit: `headless: cờ --mode day, --days`.
 
 ### haiquanng — Lát A (cá & hái)
 - [ ] `chonoi/sim/fish.py`: đàn cá bơi 1.5 m/s trong `fish_x`, dải độ sâu theo loài; đổi hướng theo seed ở bước bơi thứ 120, 240… (theo `age_ticks`); phản xạ mép (chạm góc đảo cả hai thành phần).
@@ -263,12 +267,11 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 ### phuthaitran — Lát D (vòng ngày)
 - [ ] `chonoi/sim/day.py`: máy pha `gather → quan → shop → (Ngày kế | end)`; event `day_start → day_plan → phase_start(gather)`; sau `gather_end` dựng quán và phát `phase_start(quan)` cùng tick; pha mới chạy gameplay từ bước sau.
 - [ ] Làm với **sim giả (stub)** cùng giao diện chốt sẵn (`step/snapshot/done/result`) cho gather, quan và shop để không phải chờ lát A/B/Q/S.
-- [ ] `headless.py`: `--mode day`, `--days 1..5` (mặc định 1), sai thì mã 2. Vỏ event có `day`, dòng `end` có `days_completed`, `reason:"days_complete"`.
+- [ ] Output day: vỏ event có `day`, dòng `end` có `days_completed`, `reason:"days_complete"` (cờ CLI do HoangHongNgo làm).
 - [ ] Commit: `day: máy pha gather→quan→shop, --mode day`.
 
 ### RachalHys — Lát U (UI)
 - [ ] Màn hình menu chính (Chơi/Thoát), DayIntro (Ngày + danh sách Má Tư, tự chuyển sau 4 s hoặc khi nhấn phím), EveningIntro (số nhập kho + món nấu được), dùng snapshot giả trước.
-- [ ] Rà test P1 nào sẽ vỡ vì số chuẩn mới, gửi danh sách cho các lát.
 - [ ] Commit: `ui: menu chính, DayIntro, EveningIntro`.
 
 ### Phút 20 — Smoke tích hợp (HoangHongNgo dẫn, cả nhóm)
@@ -282,6 +285,7 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 ### HoangHongNgo — Lát C (pause) + gộp
 - [ ] `chonoi/sim/pause.py`: bọc sim bất kỳ; xét cạnh `pause` trước; khi đang pause chỉ tăng tick ngoài, phát `paused`, bỏ qua cạnh hành động và `buy`; cạnh kế tiếp phát `resumed` và chạy gameplay ngay bước đó. Snapshot `state:"paused"`. Giữ nút qua đổi pha không tạo cạnh mới.
 - [ ] Test `tests/test_p2_pause.py` cho cả 3 mode (dùng fixture có sẵn).
+- [ ] `scenario.py` khối `day` (nhận từ minhphuong150505): cấm `quan.stock`/`quan.reputation` khi chạy day; `day {money,earned,reputation,upgrades,day_plan}` với `0 ≤ money ≤ earned`; `day.day_plan` ghi đè theo Ngày, tính lại `ingredients` và so với giá trị khai nếu có, sai thì mã 2. Test `tests/test_p2_scenario_day.py`.
 - [ ] Gộp PR lát A, B khi xanh.
 - [ ] Commit: `sim: pause cho gather/quan/day`.
 
@@ -306,7 +310,6 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Mở PR, nhờ haiquanng review.
 
 ### minhphuong150505 — Lát Q
-- [ ] `scenario.py` cho `--mode day`: cấm `quan.stock`/`quan.reputation`; khối `day {money,earned,reputation,upgrades,day_plan}` với `0 ≤ money ≤ earned`; `day.day_plan` ghi đè theo Ngày, tính lại `ingredients` và so với giá trị khai nếu có, sai thì mã 2.
 - [ ] Hàm `validate_quan_against_inventory` để lát D gọi lúc mở quán: kiểm kho/khách/bếp/món thuộc kế hoạch trên kho thực.
 - [ ] Đóng ca số chuẩn: khách đang ăn trả ngay, khách chờ rời không trừ uy tín, dọn món và phần giữ.
 - [ ] Test `tests/test_p2_quan.py`: 2 bếp nấu song song, lọc kế hoạch, `no_dish`, khách vẫn gọi tiếp món đủ hàng khi đã bán đủ suất.
@@ -335,7 +338,6 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 ### HoangHongNgo
 - [ ] Gộp nốt Q → S → D → U, xử lý xung đột ở `gather.py`/`quan.py`/`headless.py`.
 - [ ] Trên `main` sạch: toàn bộ test xanh; chạy `--mode day --days 1` và `--days 3` (cấp nâng cấp có hiệu lực từ Ngày kế, M2 xuất hiện ở Ngày 3); chạy 2 lần cùng seed, `cmp` giống từng byte; đo headless 1 Ngày ≤ 20 s.
-- [ ] Lưu bằng chứng vào `docs/proof/phase-2/` (log test, `day.jsonl`, `integration.*`, kết quả `cmp`, thời gian headless 1 Ngày).
 - [ ] Điền `docs/verification/phase-2.md`: AC → cách kiểm → bằng chứng → đạt/chưa đạt (ghi trung thực), khớp commit gắn tag.
 - [ ] Cập nhật `docs/clarify.md`, `docs/standup.md`; dẫn retro (phút 45–50) vào `docs/retro.md` (điều tốt / điều vướng / 1 hành động có người nhận).
 - [ ] Gắn tag trên commit bàn giao ở `main` **trước 1:55**:
@@ -346,7 +348,12 @@ git tag phase-2 && git push origin phase-2
 
 ### RachalHys
 - [ ] Chạy regression P1 với số chuẩn; test nào đổi phải có lý do trong commit.
-- [ ] Chụp ảnh HUD/menu/pause và đo FPS ở 1280×720, gửi cho HoangHongNgo để đưa vào `docs/proof/phase-2/`.
+- [ ] Chụp ảnh HUD/menu/pause và đo FPS ở 1280×720, gửi cho haiquanng để đưa vào `docs/proof/phase-2/`.
+
+### haiquanng — Proof
+- [ ] Viết bằng chứng vào `docs/proof/phase-2/`: log test đầy đủ, `integration.*` (từ smoke phút 20), `day.jsonl` (`--days 1` và `--days 3`), kết quả `cmp` hai lần cùng seed, thời gian headless 1 Ngày, ảnh HUD/FPS của RachalHys. Mỗi file ghi commit đã chạy.
+- [ ] Gửi danh sách file cho HoangHongNgo để nối vào `docs/verification/phase-2.md`.
+- [ ] Commit: `docs: proof Phase 2`.
 
 ### haiquanng + ChuTungDuongg
 - [ ] Chơi thử `gather` số chuẩn: cá bơi/sinh, bị Cá Sấu đuổi và chạm, ngất, cập bến; sửa nhanh lỗi thấy được.
@@ -367,9 +374,9 @@ git tag phase-2 && git push origin phase-2
 
 | Handle | 2.1 | 2.2 | 2.3 |
 |---|---|---|---|
-| HoangHongNgo | contract v1.1 · khung verification | pause + test | proof, verification, ghi chép, retro, tag |
-| haiquanng | cá bơi, đàn ban đầu · khung Shop | sinh cá + test · luật Shop + test | sửa lỗi chơi thử · mở rộng net |
+| HoangHongNgo | contract v1.1 · khung verification · cờ `--mode day` | pause + test · scenario day + test | verification, ghi chép, retro, tag |
+| haiquanng | cá bơi, đàn ban đầu · khung Shop | sinh cá + test · luật Shop + test | proof · sửa lỗi chơi thử · mở rộng net |
 | ChuTungDuongg | oxy/ngạt số chuẩn, Cá Sấu patrol/chase | hit/recoil/ngất + test | sửa lỗi chơi thử · mở rộng snake |
-| minhphuong150505 | 2 bếp 4 bàn, 6 món | scenario day + test | sửa lỗi chơi thử · mở rộng burn |
-| phuthaitran | máy pha day + `--mode day` | nối sim thật + test day | sửa lỗi chơi thử day |
+| minhphuong150505 | 2 bếp 4 bàn, 6 món | kiểm kho lúc mở quán, đóng ca + test | sửa lỗi chơi thử · mở rộng burn |
+| phuthaitran | máy pha day + output day | nối sim thật + test day | sửa lỗi chơi thử day |
 | RachalHys | menu, intro | HUD v1.1, pause UI, Shop UI | regression P1, ảnh HUD/FPS |
