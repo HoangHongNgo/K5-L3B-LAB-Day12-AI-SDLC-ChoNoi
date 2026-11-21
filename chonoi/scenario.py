@@ -190,11 +190,32 @@ def _validate_monsters(monsters, species, bounds):
 CUSTOMER_KEYS = {"id", "table_id", "dish_id", "order_tick", "state", "patience_ticks_left",
                  "eat_ticks_left", "order_status", "reserved", "base_price", "tip"}
 CUSTOMER_STATES = {"waiting", "eating"}
-ORDER_STATUSES = {"reserved", "cooking", "ready", "carried", "served"}
+# PRD-0 mục D: reserved / assigned / unfulfillable / served. Tên cũ của nhóm quy về assigned.
+LEGACY_ASSIGNED = {"cooking", "ready", "carried"}
+ORDER_STATUSES = {"reserved", "assigned", "unfulfillable", "served"} | LEGACY_ASSIGNED
 STOVE_STATES = {"idle", "cooking", "ready"}
 STOVE_KEYS = {"id", "pos", "state", "dish", "dish_id", "cook_ticks_left", "ready_ticks", "order_id", "customer_id"}
 TABLE_KEYS = {"id", "pos", "customer_id"}
-HAND_KEYS = {"dish", "dish_id", "order_id", "customer_id"}
+HAND_KEYS = {"dish", "dish_id", "order_id", "customer_id", "base_price"}
+PAYLOAD_KEYS = {"order_id", "dish_id", "base_price"}
+
+
+def _dish_payload(where, obj, menu):
+    """Payload món PRD-0 mục D {order_id, dish_id, base_price} -> (order_id, dish_id)."""
+    extra = set(obj) - PAYLOAD_KEYS
+    if extra:
+        raise BadInput(f"{where}: payload món có trường lạ: {sorted(extra)}")
+    did = obj.get("dish_id")
+    if not isinstance(did, str) or did not in menu:
+        raise BadInput(f"{where}: dish_id không có trong menu: {did}")
+    oid = obj.get("order_id")
+    if not isinstance(oid, str) or not oid:
+        raise BadInput(f"{where}: payload món cần order_id")
+    if "base_price" in obj:
+        bp = obj["base_price"]
+        if isinstance(bp, bool) or not isinstance(bp, int) or bp <= 0:
+            raise BadInput(f"{where}: base_price phải là số nguyên dương")
+    return oid, did
 
 
 def _validate_quan(b, tuning):
@@ -238,6 +259,7 @@ def _validate_quan(b, tuning):
 
     known_stoves = {s["id"]: s for s in q_tuning["stoves"]}
     stove_orders = {}
+    stove_dishes = {}
     for s in b.get("stoves", []):
         if not isinstance(s, dict):
             raise BadInput("stoves phải là mảng object")
@@ -252,12 +274,22 @@ def _validate_quan(b, tuning):
         if state not in STOVE_STATES:
             raise BadInput(f"stoves.{s['id']}: state không hợp lệ: {state}")
         dish = s.get("dish") or s.get("dish_id")
-        if dish is not None and dish not in menu:
+        oid = s.get("order_id") or s.get("customer_id")
+        if isinstance(dish, dict):
+            oid, dish = _dish_payload(f"stoves.{s['id']}.dish", dish, menu)
+        elif dish is not None and dish not in menu:
             raise BadInput(f"stoves.{s['id']}: dish không có trong menu: {dish}")
         for key in ("cook_ticks_left", "ready_ticks"):
             if key in s:
                 _nonneg_int(f"stoves.{s['id']}.{key}", s[key])
-        oid = s.get("order_id") or s.get("customer_id")
+        if state == "cooking" and s.get("cook_ticks_left", 0) <= 0 and isinstance(s.get("dish"), dict):
+            raise BadInput(f"stoves.{s['id']}: bếp cooking phải có cook_ticks_left dương")
+        if state == "idle" and (dish is not None or oid is not None):
+            raise BadInput(f"stoves.{s['id']}: bếp idle không được giữ món hay đơn")
+        if state != "idle" and dish is None:
+            raise BadInput(f"stoves.{s['id']}: bếp {state} phải có món")
+        if dish is not None:
+            stove_dishes[s["id"]] = dish
         if oid is not None:
             if not isinstance(oid, str) or not oid:
                 raise BadInput(f"stoves.{s['id']}: order_id phải là chuỗi khác rỗng")
@@ -268,6 +300,7 @@ def _validate_quan(b, tuning):
 
     hand = b.get("hand")
     hand_oid = None
+    hand_dish = None
     if hand is not None:
         if isinstance(hand, dict):
             extra = set(hand) - HAND_KEYS
@@ -276,7 +309,10 @@ def _validate_quan(b, tuning):
             dish = hand.get("dish") or hand.get("dish_id")
             if dish is not None and dish not in menu:
                 raise BadInput(f"hand: món không có trong menu: {dish}")
+            if "base_price" in hand:
+                _dish_payload("hand", hand, menu)
             hand_oid = hand.get("order_id") or hand.get("customer_id")
+            hand_dish = dish
             if hand_oid is not None and (not isinstance(hand_oid, str) or not hand_oid):
                 raise BadInput("hand: order_id phải là chuỗi khác rỗng")
         elif isinstance(hand, str):
@@ -320,12 +356,25 @@ def _validate_quan(b, tuning):
         if status not in ORDER_STATUSES:
             raise BadInput(f"customers.{cid}: order_status không hợp lệ: {status}")
 
-        if state == "eating" and status != "served":
-            raise BadInput(f"customers.{cid}: khách đang ăn phải có order_status là 'served'")
-
         for timer in ("order_tick", "patience_ticks_left", "eat_ticks_left"):
             if timer in c:
                 _nonneg_int(f"customers.{cid}.{timer}", c[timer])
+
+        if state == "eating" and status != "served":
+            raise BadInput(f"customers.{cid}: khách đang ăn phải có order_status là 'served'")
+        if state == "eating" and (c.get("eat_ticks_left", 0) <= 0 or c.get("base_price") is None):
+            raise BadInput(f"customers.{cid}: khách đang ăn phải có eat_ticks_left dương và base_price đã chốt")
+        if state == "waiting" and status == "served":
+            raise BadInput(f"customers.{cid}: đơn served chỉ dành cho khách đang ăn")
+        refs = [d for o, d in ([(o, stove_dishes.get(sid)) for o, sid in stove_orders.items()]
+                               + [(hand_oid, hand_dish)]) if o == cid]
+        if status == "assigned" or status in LEGACY_ASSIGNED:
+            if len(refs) != 1:
+                raise BadInput(f"customers.{cid}: đơn assigned phải có đúng một món ở bếp hoặc tay")
+            if refs[0] is not None and refs[0] != did:
+                raise BadInput(f"customers.{cid}: món ở bếp/tay không khớp đơn ({refs[0]} ≠ {did})")
+        elif refs:
+            raise BadInput(f"customers.{cid}: đơn {status} không được có món ở bếp hoặc tay")
 
         if "tip" in c:
             tip = c["tip"]

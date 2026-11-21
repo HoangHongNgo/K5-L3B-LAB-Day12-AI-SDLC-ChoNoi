@@ -16,20 +16,25 @@ TICK = 60.0
 
 
 def _order_ref(obj):
-    """Chuẩn hóa món trên bếp/tay về {"order_id","dish_id"} (hợp đồng mục 3) hoặc None.
-
-    Scenario có thể ghi dish là chuỗi kèm order_id/customer_id, hoặc dish/dish_id là object.
+    """Chuẩn hóa món trên bếp/tay về payload PRD-0 mục D {"order_id","dish_id","base_price"} hoặc None.
+    Nhận payload object, hoặc dạng cũ của nhóm: dish là chuỗi kèm order_id/customer_id.
+    base_price thiếu sẽ được điền sau khi dựng khách (_fill_payload_prices).
     """
     if obj is None:
         return None
     if isinstance(obj, str):
-        return {"order_id": None, "dish_id": obj}
+        return {"order_id": None, "dish_id": obj, "base_price": None}
     dish = obj.get("dish_id") or obj.get("dish")
     if isinstance(dish, dict):
         return _order_ref(dish)
     if dish is None:
         return None
-    return {"order_id": obj.get("order_id") or obj.get("customer_id"), "dish_id": dish}
+    return {"order_id": obj.get("order_id") or obj.get("customer_id"), "dish_id": dish,
+            "base_price": obj.get("base_price")}
+
+
+# Trạng thái đơn theo PRD-0 mục D; tên cũ của nhóm (cooking/ready/carried) quy về assigned.
+LEGACY_ASSIGNED = {"cooking", "ready", "carried"}
 
 
 class QuanSim:
@@ -66,6 +71,7 @@ class QuanSim:
         self.tables = self._merge(t["tables"], scenario.get("tables", []))
         self.customers = []
         self._init_customers(scenario.get("customers", []))
+        self._fill_payload_prices()
         self.money = 0
         self.earned = 0
         self.shift_earned = 0
@@ -144,9 +150,6 @@ class QuanSim:
             if s["state"] == "cooking" and s["cook_ticks_left"] <= 0:
                 s["state"] = "ready"
                 s["ready_ticks"] = 0
-                c = self._customer(s["dish"]["order_id"])
-                if c is not None:
-                    c["order_status"] = "ready"
                 events.append(("dish_ready", self._stove_data(s)))
         return events
 
@@ -186,10 +189,10 @@ class QuanSim:
             self.stock[k] = self.stock.get(k, 0) - n
         dish = self.menu[c["dish_id"]]
         c["reserved"] = {}
-        c["order_status"] = "cooking"
+        c["order_status"] = "assigned"
         c["base_price"] = dish["price"]
         stove["state"] = "cooking"
-        stove["dish"] = {"order_id": c["id"], "dish_id": c["dish_id"]}
+        stove["dish"] = {"order_id": c["id"], "dish_id": c["dish_id"], "base_price": c["base_price"]}
         stove["cook_ticks_left"] = int(round(dish["cook_s"] * self.tick_hz))
         stove["ready_ticks"] = 0
         items = sorted(k for k, n in used.items() for _ in range(n))
@@ -201,9 +204,6 @@ class QuanSim:
             return []
         data = self._stove_data(stove)
         self.hand = dict(stove["dish"])
-        c = self._customer(self.hand["order_id"])
-        if c is not None:
-            c["order_status"] = "carried"
         stove.update(state="idle", dish=None, cook_ticks_left=0, ready_ticks=0)
         return [("dish_picked", data)]
 
@@ -212,7 +212,9 @@ class QuanSim:
         c = next((x for x in self.customers if x["table_id"] == table["id"]), None)
         if c is None or self.hand is None or c["state"] != "waiting" or self.hand["order_id"] != c["id"]:
             return []
-        price = c["base_price"] if c["base_price"] is not None else self.menu[c["dish_id"]]["price"]
+        price = self.hand.get("base_price")
+        if price is None:
+            price = c["base_price"] if c["base_price"] is not None else self.menu[c["dish_id"]]["price"]
         patience_max = int(round(self.t["patience_s"] * self.tick_hz))
         ratio = Fraction(c["patience_ticks_left"], patience_max)
         tip = 0
@@ -382,7 +384,7 @@ class QuanSim:
                 "state": c.get("state", "waiting"),
                 "patience_ticks_left": c.get("patience_ticks_left", pat_ticks),
                 "eat_ticks_left": c.get("eat_ticks_left", 0),
-                "order_status": c.get("order_status", "reserved" if c.get("state", "waiting") == "waiting" else "served"),
+                "order_status": self._norm_status(c),
                 "reserved": dict(c["reserved"]) if "reserved" in c else None,
                 "base_price": c.get("base_price", None),
                 "tip": c.get("tip", 0),
@@ -390,6 +392,23 @@ class QuanSim:
             self.customers.append(cust)
             self.ids.reserve(cust["id"])
         self._infer_customer_reservations()
+
+    @staticmethod
+    def _norm_status(c):
+        status = c.get("order_status", "reserved" if c.get("state", "waiting") == "waiting" else "served")
+        return "assigned" if status in LEGACY_ASSIGNED else status
+
+    def _fill_payload_prices(self):
+        """Payload món thiếu base_price (dạng cũ) lấy giá đã chốt của đơn, không có thì giá menu."""
+        for d in [s["dish"] for s in self.stoves] + [self.hand]:
+            if d is not None and d.get("base_price") is None:
+                c = self._customer(d["order_id"])
+                d["base_price"] = (c["base_price"] if c is not None and c["base_price"] is not None
+                                   else self.menu[d["dish_id"]]["price"])
+            if d is not None and d.get("order_id") is not None:
+                c = self._customer(d["order_id"])
+                if c is not None and c["base_price"] is None:
+                    c["base_price"] = d["base_price"]
 
     def _available_stock(self) -> dict:
         """Kho khả dụng = stock - tổng nguyên liệu đang được giữ (reserved)."""

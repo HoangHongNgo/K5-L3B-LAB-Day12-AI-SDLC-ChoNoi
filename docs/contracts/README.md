@@ -39,30 +39,30 @@ Mỗi event là một dòng `{"type":"event","tick":k+1,"phase":"gather|quan","n
 | 1 | `node_regrown` | `{"node_id"}` | khung (có sẵn) | UI, test |
 | 2 | `dive` | `{"pos"}` — pos cuối bước | lát 1 | UI, test |
 | 2 | `surface` | `{"pos"}` — pos cuối bước | lát 1 | UI, test |
-| 2 | `oxygen_empty` | `{}` **[giả định]** | lát 1 | UI (cảnh báo), test |
+| 2 | `oxygen_empty` | `{"oxygen_ticks":0}` (PRD-0 mục E) | lát 1 | UI (cảnh báo), test |
 | 2 | `choke` | `{"hp"}` — Máu sau khi trừ | lát 1 | UI, test |
 | 2 | `faint` | `{"cause":"choke","lost":[kind…],"hp":0}` — `lost` theo LIFO (mới nhất trước) | lát 1 | UI, test |
-| 3 | `gather` | `{"node_id","kind","count"}` **[giả định `kind`,`count`]**; `count` = `node_yield` | lát 2 | UI, test |
+| 3 | `gather` | `{"node_id","kind","amount"}` — `amount` = `node_yield` (PRD-0 mục E) | lát 2 | UI, test |
 | 3/4 | `hold_full` | `{"action":"gather"\|"catch","node_id"\|"fish_id","required","free"}` | lát 2 | UI, test |
-| 4 | `fish_caught` | `{"fish_id","kind","count"}` **[giả định]**; `count` = `fish_yield[kind]` | lát 2 | UI, test |
+| 4 | `fish_caught` | `{"fish_id","kind","yield"}` — `yield` = `fish_yield[kind]` (PRD-0 mục E) | lát 2 | UI, test |
 | 3/5, hoặc 2 khi ngất | `gather_end` | `{"reason":"docked"\|"time"\|"fainted","inventory":{"items":{…}}}` | khung + lát 1 (`fainted`) | runner (ghi kho), UI |
 
 Thứ tự trong một bước (khung đã đặt sẵn trong `step()`): 1 đồng hồ/hồi chiêu/mọc lại → 2 bơi + chặn mép → dive/surface → oxy/ngạt/ngất → 3 `interact` (bến **trước**, rồi hái) → 4 `catch` → 5 hết giờ.
 
 ### 2.2 Quán — `QuanSim.step`
 
-`order_id` **= id khách** (mỗi khách đúng một đơn ở P1) **[giả định]**.
+`order_id` **= id khách** (PRD-0 mục D: "order_id bằng id khách"). Trường theo PRD-0 mục E; code có thể phát thêm trường phụ (ví dụ `customer_id`, `reserved`), test chỉ dựa vào trường PRD.
 
 | Event | `data` | Ai phát (lát) |
 |---|---|---|
-| `customer_arrived` | `{"customer_id","table_id","dish_id","reserved":{kind:n}}` **[giả định]** | lát 3 |
-| `no_dish` | `{"table_id"}` **[giả định]** — có bàn trống nhưng không món nào đủ kho khả dụng | lát 3 |
-| `customer_left` | `{"customer_id","table_id","reason":"patience"\|"closing"}` | lát 3 (patience), lát 4 (closing) |
-| `cook_started` | `{"stove_id","order_id","dish_id","items":{kind:n} (sắp theo kind),"base_price"}` | lát 4 |
+| `customer_arrived` | `{"order_id","table_id","dish_id"}` (+ phụ `customer_id`, `reserved`) | lát 3 |
+| `no_dish` | `{}` — có bàn trống nhưng không món nào đủ kho khả dụng | lát 3 |
+| `customer_left` | `{"order_id","table_id","reason":"patience"\|"closing","reputation"}` (+ phụ `customer_id`) | lát 3 (patience), lát 4 (closing) |
+| `cook_started` | `{"stove_id","order_id","dish_id","items":[kind…] (mảng, sắp theo kind),"base_price"}` | lát 4 |
 | `dish_ready` | `{"stove_id","order_id","dish_id"}` | lát 4 |
 | `dish_picked` | `{"stove_id","order_id","dish_id"}` | lát 4 |
-| `served` | `{"table_id","customer_id","order_id","dish_id","tip"}` | lát 4 |
-| `paid` | `{"customer_id","order_id","amount","tip","reason":"finished_eating"\|"closing"}` — `amount` = `base_price + tip` | lát 4 |
+| `served` | `{"order_id","table_id","dish_id","patience_ticks_left","base_price","tip"}` | lát 4 |
+| `paid` | `{"order_id","table_id","base_price","tip","amount","reason":"finished_eating"\|"closing"}` — `amount` = `base_price + tip` | lát 4 |
 | `quan_end` | `{"reason":"time","money","earned","shift_earned","reputation"}` | khung + lát 4 |
 
 Cuối ca (lát 4): khách đang ăn → `paid` `closing`; khách đang chờ → `customer_left` `closing` (không trừ uy tín); rồi `quan_end`. Điểm = `earned + reputation_multiplier × floor(reputation)` (runner đã tính).

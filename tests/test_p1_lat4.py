@@ -96,7 +96,7 @@ class TestInteractSelection(unittest.TestCase):
                         "hand": {"order_id": "C1", "dish_id": "goi_bong_sung"},
                         "customers": [carried(), cooking]}, tuning)
         self.assertEqual(sim.step(PRESS), [])
-        self.assertEqual(sim.hand, {"order_id": "C1", "dish_id": "goi_bong_sung"})
+        self.assertEqual(sim.hand, {"order_id": "C1", "dish_id": "goi_bong_sung", "base_price": 40})
         self.assertEqual(sim.customers[0]["state"], "waiting")
 
     def test_radius_edge_inclusive(self):
@@ -136,7 +136,7 @@ class TestCooking(unittest.TestCase):
         s1 = snap_at(rows, 1)
         self.assertEqual(s1["stock"], {"bong_sung": 1, "ca_loc": 1})  # tiêu đúng phần giữ
         c = s1["customers"][0]
-        self.assertEqual((c["order_status"], c["reserved"], c["base_price"]), ("cooking", {}, MENU[dish]["price"]))
+        self.assertEqual((c["order_status"], c["reserved"], c["base_price"]), ("assigned", {}, MENU[dish]["price"]))
         self.assertEqual(s1["stoves"][0]["state"], "cooking")
         self.assertEqual(s1["stoves"][0]["cook_ticks_left"], cook)
         ready = events(rows, "dish_ready")
@@ -196,9 +196,9 @@ class TestPickAndServe(unittest.TestCase):
         ev = events(rows, "dish_picked")
         self.assertEqual(ev[0]["data"], {"stove_id": STOVE["id"], "order_id": "C1", "dish_id": "goi_bong_sung"})
         s = snap_at(rows, 1)
-        self.assertEqual(s["hand"], {"order_id": "C1", "dish_id": "goi_bong_sung"})
+        self.assertEqual(s["hand"], {"order_id": "C1", "dish_id": "goi_bong_sung", "base_price": 40})
         self.assertEqual((s["stoves"][0]["state"], s["stoves"][0]["dish"]), ("idle", None))
-        self.assertEqual(s["customers"][0]["order_status"], "carried")
+        self.assertEqual(s["customers"][0]["order_status"], "assigned")
 
     def test_full_hand_cannot_pick(self):
         sim = make_sim(self.ready_block())

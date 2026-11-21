@@ -70,7 +70,7 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 
 ### haiquanng — Lát 2
 - [x] Hái: chỉ ở mặt nước, ngoài bến; nút `ready` gần nhất trong `interact_radius` (tính cả đúng mép, hòa theo id); đủ chỗ → `gather` + `regrow_ticks = regrow_s × 60`; thiếu chỗ → `hold_full` (`action`, `node_id`, `required`, `free`).
-- [ ] Chạy thử `--inventory-out` thật bằng smoke dock.json và đưa file cho lát 3/4 (**mốc phút 25**). — *haiquanng: `--inventory-out` thật đã chạy trong `test_full_run_gather_catch_dock_then_quan` (quán đọc đúng `stock`); chưa tạo `dock.json` và chưa gửi file cho lát 3/4.*
+- [x] Chạy thử `--inventory-out` thật bằng smoke dock.json và đưa file cho lát 3/4 (**mốc phút 25**). — *haiquanng: trễ mốc; lát 3/4 đã tự dùng fixture. Smoke `dock.json` seed 42 chạy thật trong `docs/proof/phase-1/check_ac.py` (AC-P1-06), file kho ở `docs/proof/phase-1/catch.json`.*
 - [x] Commit: `gather: hái nút, hold_full, regrow`.
 
 ### minhphuong150505 — Lát 3
