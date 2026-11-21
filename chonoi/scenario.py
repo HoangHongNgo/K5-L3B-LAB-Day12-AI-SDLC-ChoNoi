@@ -625,6 +625,14 @@ def validate_quan_against_inventory(scenario_quan: dict, inventory, tuning: dict
     else:
         raise BadInput("inventory phải là dict hoặc mảng")
 
+    reservation_type = list if isinstance(inv_data, list) else dict
+    for customer in scenario_quan.get("customers", []):
+        default_status = "reserved" if customer.get("state", "waiting") == "waiting" else "served"
+        reserved = customer.get("reserved")
+        if (customer.get("order_status", default_status) == "reserved" and reserved is not None
+                and not isinstance(reserved, reservation_type)):
+            raise BadInput(f"customers.{customer.get('id')}.reserved: kiểu giữ chỗ phải khớp kiểu kho")
+
     menu = tuning.get("menu", {})
     all_kinds = set(KINDS_P1) | {k for dish in menu.values() for k in dish.get("recipe", {})}
     cleaned_inv = validate_items(inv_data, kinds=all_kinds, contract_version="1.2" if "freshness" in tuning else None)
