@@ -59,7 +59,7 @@ class Gather(unittest.TestCase):
             ev = events(rows, "gather")
             self.assertEqual(len(ev), 1)
             self.assertEqual(ev[0]["tick"], 1)
-            self.assertEqual(ev[0]["data"], {"node_id": "N1", "kind": "bong_sung", "count": G["node_yield"]})
+            self.assertEqual(ev[0]["data"], {"node_id": "N1", "kind": "bong_sung", "amount": G["node_yield"]})
             snap = [s for s in snapshots(rows) if s["tick"] == 1][0]
             self.assertEqual(snap["hold"], ["bong_sung"] * G["node_yield"])
             self.assertEqual(snap["nodes"][0]["ready"], False)
@@ -139,7 +139,7 @@ class Catch(unittest.TestCase):
                                       "fish": [fish("F1", kind, [50, 11])]}, press(0, "catch"), 2)
                 ev = events(rows, "fish_caught")
                 self.assertEqual(len(ev), 1, kind)
-                self.assertEqual(ev[0]["data"], {"fish_id": "F1", "kind": kind, "count": G["fish_yield"][kind]})
+                self.assertEqual(ev[0]["data"], {"fish_id": "F1", "kind": kind, "yield": G["fish_yield"][kind]})
                 snap = [s for s in snapshots(rows) if s["tick"] == 1][0]
                 self.assertEqual(snap["hold"], [kind] * G["fish_yield"][kind])
                 self.assertEqual(snap["fish"], [])

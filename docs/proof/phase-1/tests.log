@@ -112,6 +112,59 @@ test_quan_stove_and_hand_share_order (test_p1_lat3.ScenarioValidation.test_quan_
 test_quan_valid_customer_fixture (test_p1_lat3.ScenarioValidation.test_quan_valid_customer_fixture) ... ok
 test_quan_valid_customer_fixture_missing_reserved (test_p1_lat3.ScenarioValidation.test_quan_valid_customer_fixture_missing_reserved)
 Khách fixture thiếu reserved nhưng hợp lệ và suy ra được. ... ok
+test_eating_customer_pays_closing_then_quan_end (test_p1_lat4.TestClosing.test_eating_customer_pays_closing_then_quan_end) ... ok
+test_no_new_customer_after_closing (test_p1_lat4.TestClosing.test_no_new_customer_after_closing)
+Hết ca thì không xét lượt khách (bước 5 chỉ khi còn giờ). ... ok
+test_patience_zero_on_closing_tick_is_closing (test_p1_lat4.TestClosing.test_patience_zero_on_closing_tick_is_closing)
+PRD-0 F4: chỉ 'nếu ca còn giờ' mới rời patience; đúng tick hết ca -> closing, không trừ uy tín. ... ok
+test_served_on_last_tick_pays_closing (test_p1_lat4.TestClosing.test_served_on_last_tick_pays_closing)
+Phục vụ đúng tick hết ca vẫn hợp lệ, rồi khách trả ngay với closing. ... ok
+test_waiting_customer_leaves_closing_without_penalty (test_p1_lat4.TestClosing.test_waiting_customer_leaves_closing_without_penalty) ... ok
+test_cook_started_and_dish_ready (test_p1_lat4.TestCooking.test_cook_started_and_dish_ready) ... ok
+test_idle_stove_no_reserved_order_skips (test_p1_lat4.TestCooking.test_idle_stove_no_reserved_order_skips) ... ok
+test_items_sorted_by_kind (test_p1_lat4.TestCooking.test_items_sorted_by_kind) ... ok
+test_oldest_reserved_order_by_order_tick_then_table (test_p1_lat4.TestCooking.test_oldest_reserved_order_by_order_tick_then_table) ... ok
+test_ready_ticks_only_for_dish_ready_at_step_start (test_p1_lat4.TestCooking.test_ready_ticks_only_for_dish_ready_at_step_start) ... ok
+test_cook_carry_serve_pay (test_p1_lat4.TestFullLoopFixture.test_cook_carry_serve_pay) ... ok
+test_same_seed_byte_identical (test_p1_lat4.TestFullLoopFixture.test_same_seed_byte_identical) ... ok
+test_chosen_object_not_interactable_skips_turn (test_p1_lat4.TestInteractSelection.test_chosen_object_not_interactable_skips_turn)
+Đối tượng được chọn (bếp đang nấu) không tương tác được -> bỏ lượt, không thử bàn. ... ok
+test_only_rising_edge (test_p1_lat4.TestInteractSelection.test_only_rising_edge)
+Giữ E không lặp tương tác: chỉ cạnh lên. ... ok
+test_out_of_radius_nothing (test_p1_lat4.TestInteractSelection.test_out_of_radius_nothing) ... ok
+test_radius_edge_inclusive (test_p1_lat4.TestInteractSelection.test_radius_edge_inclusive)
+Đúng mép interact_radius vẫn tương tác được. ... ok
+test_stove_before_table_at_equal_distance (test_p1_lat4.TestInteractSelection.test_stove_before_table_at_equal_distance)
+Hòa khoảng cách: bếp trước bàn. ... ok
+test_leave_drops_dish_in_hand (test_p1_lat4.TestLeavingDropsDish.test_leave_drops_dish_in_hand) ... ok
+test_patience_leave_drops_cooking_dish_no_refund (test_p1_lat4.TestLeavingDropsDish.test_patience_leave_drops_cooking_dish_no_refund) ... ok
+test_dish_picked_to_empty_hand (test_p1_lat4.TestPickAndServe.test_dish_picked_to_empty_hand) ... ok
+test_full_hand_cannot_pick (test_p1_lat4.TestPickAndServe.test_full_hand_cannot_pick) ... ok
+test_serve_on_tick_patience_reaches_zero_is_valid (test_p1_lat4.TestPickAndServe.test_serve_on_tick_patience_reaches_zero_is_valid) ... ok
+test_served_below_ratio_no_tip_no_reputation (test_p1_lat4.TestPickAndServe.test_served_below_ratio_no_tip_no_reputation) ... ok
+test_served_with_tip_at_ratio_threshold (test_p1_lat4.TestPickAndServe.test_served_with_tip_at_ratio_threshold)
+Kiên nhẫn còn lại sau bước 1 đúng tip_min_patience_ratio -> có boa floor(giá × tip_rate). ... ok
+test_tip_reputation_clamped_to_max (test_p1_lat4.TestPickAndServe.test_tip_reputation_clamped_to_max) ... ok
+test_wrong_order_on_table_skips (test_p1_lat4.TestPickAndServe.test_wrong_order_on_table_skips) ... ok
+test_cooking_stove_payload_becomes_ready (test_p1_prd_fixture.AcceptPrdFixtures.test_cooking_stove_payload_becomes_ready) ... ok
+test_eating_customer_from_prd_fixture (test_p1_prd_fixture.AcceptPrdFixtures.test_eating_customer_from_prd_fixture) ... ok
+test_hand_base_price_is_the_settled_price (test_p1_prd_fixture.AcceptPrdFixtures.test_hand_base_price_is_the_settled_price)
+Giá đã chốt nằm trong payload món; served dùng base_price của payload. ... ok
+test_hand_payload_serve_with_tip_at_threshold (test_p1_prd_fixture.AcceptPrdFixtures.test_hand_payload_serve_with_tip_at_threshold)
+Tay cầm payload có base_price, đơn assigned; phục vụ ở đúng ngưỡng 50% kiên nhẫn thì có boa. ... ok
+test_ready_stove_payload_pick_to_hand (test_p1_prd_fixture.AcceptPrdFixtures.test_ready_stove_payload_pick_to_hand) ... ok
+test_unfulfillable_waits_and_is_not_cooked (test_p1_prd_fixture.AcceptPrdFixtures.test_unfulfillable_waits_and_is_not_cooked) ... ok
+test_assigned_with_reserved (test_p1_prd_fixture.RejectContradictions.test_assigned_with_reserved) ... ok
+test_assigned_without_dish (test_p1_prd_fixture.RejectContradictions.test_assigned_without_dish) ... ok
+test_cooking_stove_needs_positive_timer (test_p1_prd_fixture.RejectContradictions.test_cooking_stove_needs_positive_timer) ... ok
+test_eating_timer_wrong_type_is_exit_2_not_crash (test_p1_prd_fixture.RejectContradictions.test_eating_timer_wrong_type_is_exit_2_not_crash) ... ok
+test_eating_without_timer_or_price (test_p1_prd_fixture.RejectContradictions.test_eating_without_timer_or_price) ... ok
+test_hand_dish_not_matching_order (test_p1_prd_fixture.RejectContradictions.test_hand_dish_not_matching_order) ... ok
+test_idle_stove_with_dish (test_p1_prd_fixture.RejectContradictions.test_idle_stove_with_dish) ... ok
+test_payload_unknown_field (test_p1_prd_fixture.RejectContradictions.test_payload_unknown_field) ... ok
+test_stove_dish_not_matching_order (test_p1_prd_fixture.RejectContradictions.test_stove_dish_not_matching_order) ... ok
+test_unfulfillable_with_dish (test_p1_prd_fixture.RejectContradictions.test_unfulfillable_with_dish) ... ok
+test_cook_pick_serve_statuses_and_payloads (test_p1_prd_fixture.SnapshotUsesPrdStatuses.test_cook_pick_serve_statuses_and_payloads) ... ok
 test_bad_frames_raise (test_python_starter_units.Units.test_bad_frames_raise) ... ok
 test_catch_is_a_v10_button_and_attack_is_not (test_python_starter_units.Units.test_catch_is_a_v10_button_and_attack_is_not) ... ok
 test_id_allocator_continues_after_max (test_python_starter_units.Units.test_id_allocator_continues_after_max) ... ok
@@ -151,6 +204,6 @@ test_too_few_members (test_team_check.TeamCheck.test_too_few_members) ... ok
 test_wrong_size_duplicate_and_outsider (test_team_check.TeamCheck.test_wrong_size_duplicate_and_outsider) ... ok
 
 ----------------------------------------------------------------------
-Ran 110 tests in 10.230s
+Ran 153 tests in 4.410s
 
 OK
