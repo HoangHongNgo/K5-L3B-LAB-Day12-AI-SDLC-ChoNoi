@@ -624,5 +624,68 @@ class CustomerPatienceAndLeft(unittest.TestCase):
         self.assertEqual(sim.reputation, 3.0)
 
 
+class EdgeCasesAndDeterminism(unittest.TestCase):
+    def test_sample_inventory_determinism_identical_bytes(self):
+        """T19 & BƯỚC 9: Hai lần chạy cùng seed và inventory.sample.json cho JSONL giống từng byte."""
+        inv_sample = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                  "docs", "contracts", "inventory.sample.json")
+        with Workdir() as w:
+            out1 = w.path("quan_a.jsonl")
+            out2 = w.path("quan_b.jsonl")
+            code1, err1 = run_headless("--mode", "quan", "--seed", "42", "--ticks", "1500",
+                                       "--inventory", inv_sample, "--out", out1)
+            self.assertEqual(code1, 0, err1)
+            code2, err2 = run_headless("--mode", "quan", "--seed", "42", "--ticks", "1500",
+                                       "--inventory", inv_sample, "--out", out2)
+            self.assertEqual(code2, 0, err2)
+            with open(out1, "rb") as f1, open(out2, "rb") as f2:
+                self.assertEqual(f1.read(), f2.read(), "Hai lần chạy phải giống nhau từng byte")
+
+    def test_inventory_missing_one_ingredient_emits_no_dish(self):
+        """Inventory thiếu đúng 1 nguyên liệu -> không đủ nấu món nào -> no_dish."""
+        with Workdir() as w:
+            # goi_bong_sung cần 2 bông súng, kho chỉ có 1
+            sc = write_json(w.path("sc.json"), {
+                "quan": {"stock": {"bong_sung": 1}}
+            })
+            out = w.path("o.jsonl")
+            code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "125",
+                                     "--scenario", sc, "--out", out)
+            self.assertEqual(code, 0, err)
+            rows = read_jsonl(out)
+            no_dish_evs = events(rows, "no_dish")
+            self.assertEqual(len(no_dish_evs), 1)
+            self.assertEqual(no_dish_evs[0]["tick"], 120)
+
+    def test_customer_fixture_cooking_state_no_double_reservation(self):
+        """Khách fixture ở trạng thái cooking không chiếm giữ reserved từ stock."""
+        from chonoi.contract import load_contract
+        from chonoi.ids import IdAllocator
+        from chonoi.rng import Streams
+        from chonoi.sim.quan import QuanSim
+        tuning = load_contract()["tuning"]
+        sim = QuanSim(tuning, {
+            "stock": {"ca_loc": 1},
+            "customers": [{
+                "id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
+                "order_status": "cooking", "reserved": {}
+            }]
+        }, Streams(1), IdAllocator())
+
+        # Kho khả dụng vẫn còn 1 ca_loc vì C1 không ở trạng thái reserved
+        self.assertEqual(sim._available_stock()["ca_loc"], 1)
+
+    def test_ticks_zero_lat3(self):
+        """Chạy --ticks 0 trong chế độ quan tạo snapshot tick 0 hợp lệ và end line."""
+        with Workdir() as w:
+            out = w.path("o.jsonl")
+            code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "0", "--out", out)
+            self.assertEqual(code, 0, err)
+            rows = read_jsonl(out)
+            self.assertEqual(rows[0]["type"], "snapshot")
+            self.assertEqual(rows[0]["tick"], 0)
+            self.assertEqual(rows[-1]["type"], "end")
+
+
 if __name__ == "__main__":
     unittest.main()
