@@ -201,12 +201,13 @@ git tag phase-1 && git push origin phase-1
    - `pause` xử lý ở **lớp bọc chung** (`chonoi/sim/pause.py`), không nằm trong từng sim.
    - `ShopSim(tuning, *, money, earned, upgrades, stock)`: cùng giao diện `step/snapshot/done/result`; `result` trả `money`, `upgrades` (cấp đã mua). Lát D gọi Shop như một pha, không tự viết luật mua.
    - `DaySim(tuning, scenario, streams, *, days=1)`: cùng giao diện `step/snapshot/done/result`; `headless.py` chỉ dựng và chạy nó như hai mode kia, nên cờ CLI viết được trước khi `day.py` xong.
+   - `DayState` trong `chonoi/sim/progress.py` (hàm thuần, không giữ sim): `money, earned, reputation, upgrades, active_upgrades, day`; `apply_quan_result(result)`, `apply_shop_result(result)`, `start_next_day() -> {"oxygen_max_ticks", "hp_max"}`. Lát D chỉ gọi các hàm này, không tự tính trạng thái xuyên Ngày.
 
 | Lát | Người | File sở hữu | Người review |
 |---|---|---|---|
 | C — Contract v1.1 + pause + CLI/scenario day + kiểm chứng | HoangHongNgo | `game.contract.json`, `chonoi/contract.py`, `docs/contracts/`, `chonoi/sim/pause.py`, CLI `--mode day/--days` trong `headless.py`, `chonoi/scenario.py` (khối `day`), `docs/verification/phase-2.md` | RachalHys |
 | A — Cá bơi/sinh + nút/catch | haiquanng | `chonoi/sim/fish.py` (mới), phần hái/catch trong `gather.py` | ChuTungDuongg |
-| S — Shop & nâng cấp + proof | haiquanng | `chonoi/sim/shop.py` (mới), `tests/test_p2_shop.py`, `docs/proof/phase-2/` | phuthaitran |
+| S — Shop, nâng cấp, trạng thái xuyên Ngày + proof | haiquanng | `chonoi/sim/shop.py`, `chonoi/sim/progress.py` (mới), `tests/test_p2_shop.py`, `tests/test_p2_progress.py`, `docs/proof/phase-2/` | phuthaitran |
 | B — Cá Sấu, Máu, ngất | ChuTungDuongg | `chonoi/sim/monsters.py` (mới), phần oxy/ngạt/faint trong `gather.py` | haiquanng |
 | Q — 2 bếp/4 bàn, 6 món, lọc kế hoạch | minhphuong150505 | `chonoi/sim/quan.py`, `chonoi/scenario.py` (phần quan) | phuthaitran |
 | D — Vòng ngày | phuthaitran | `chonoi/sim/day.py` (mới), phần gọi `DaySim` trong `headless.py` | minhphuong150505 |
@@ -300,7 +301,9 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] `buy` (`oxygen`, `hp`) mua cấp kế tiếp, đủ đúng giá vẫn mua, trừ `money` giữ `earned`, phát `bought` (`upgrade,level,price,money`); thiếu tiền/đã tối đa/lệnh lạ thì `buy_failed` (`funds`/`max_level`/`unknown`), tiền và cấp giữ nguyên.
 - [ ] Đóng bằng `shop_done` → `shop_end(done)`, hoặc sau 600 tick hoạt động → `shop_end(time)`; buy xử lý trước `shop_done` trong cùng bước, kể cả bước cuối.
 - [ ] Test `tests/test_p2_shop.py`: đúng giá vẫn mua, mua 2 cấp liên tiếp, `max_level`, `funds`, lệnh lạ, buy + shop_done cùng bước, tự đóng ở tick 600.
-- [ ] Mở PR lát S, nhờ phuthaitran review (người sẽ nối Shop vào day).
+- [ ] `chonoi/sim/progress.py` (`DayState`, nhận từ phuthaitran): tiền/earned/uy tín/cấp giữ qua Ngày; `start_next_day` sao `upgrades → active_upgrades` (chỉ lúc dựng Ngày mới) và trả oxy/Máu tối đa theo cấp có hiệu lực; khởi tạo từ khối `day` của scenario (mặc định tiền/earned 0, uy tín theo tuning, cấp `{}`).
+- [ ] Test `tests/test_p2_progress.py`: mua oxygen cấp 1 ở Ngày 1 thì Ngày 2 có 2.700 tick, mua hp cấp 2 thì 5 Máu, cấp vừa mua chưa có hiệu lực trong cùng Ngày, uy tín kẹp [0,5].
+- [ ] Mở PR lát S, nhờ phuthaitran review (người sẽ nối Shop và `DayState` vào day).
 
 ### ChuTungDuongg — Lát B
 - [ ] Hit sau khi cả hai di chuyển: ≤ 1.5 m, d ≥ 10, hết bất tử thì −1 Máu, bỏ `floor(n/2)` hàng theo LIFO, bất tử 90 tick, `monster_hit`; tối đa 1 hit/bước, chọn con gần nhất, hòa theo id.
@@ -317,10 +320,10 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Mở PR, nhờ phuthaitran review.
 
 ### phuthaitran — Lát D
-- [ ] Day: tiền/earned/uy tín/cấp giữ qua Ngày; oxy và Máu hồi đầy theo `active_upgrades`; giỏ mới, kho dư bỏ sau Shop; chỉ sao `upgrades → active_upgrades` khi dựng Ngày mới. Ngày hoàn tất khi Shop đóng (kể cả Ngày cuối).
-- [ ] Thay stub bằng `GatherSim`/`QuanSim`/`ShopSim` thật khi lát A/B/Q/S đã gộp (bàn giao kho trong bộ nhớ; ngất vẫn mở quán với kho rỗng).
-- [ ] Snapshot mọi pha có `day`, `day_plan`, `upgrades`, `active_upgrades`; Shop có `stock` dư và `time_left_ticks`.
-- [ ] Test `tests/test_p2_day.py`: thứ tự event đổi pha, mua oxygen Ngày 1 thì Ngày 2 có oxy 2.700, `days_complete`.
+- [ ] Day: giỏ mới, kho dư bỏ sau Shop; Ngày hoàn tất khi Shop đóng (kể cả Ngày cuối). Trạng thái xuyên Ngày lấy từ `DayState` của haiquanng.
+- [ ] Thay stub bằng `GatherSim`/`QuanSim`/`ShopSim`/`DayState` thật khi lát A/B/Q/S đã gộp (bàn giao kho trong bộ nhớ; ngất vẫn mở quán với kho rỗng).
+- [ ] Snapshot mọi pha có `day`, `day_plan`, `upgrades`, `active_upgrades`.
+- [ ] Test `tests/test_p2_day.py`: thứ tự event đổi pha, `days_complete`.
 - [ ] Mở PR, nhờ minhphuong150505 review.
 
 ### RachalHys — Lát U
@@ -376,7 +379,7 @@ git tag phase-2 && git push origin phase-2
 | Handle | 2.1 | 2.2 | 2.3 |
 |---|---|---|---|
 | HoangHongNgo | contract v1.1 · khung verification · cờ `--mode day` | pause + test · scenario day + test | verification, ghi chép, retro, tag |
-| haiquanng | cá bơi, đàn ban đầu · khung Shop | sinh cá + test · luật Shop + test | proof · sửa lỗi chơi thử · mở rộng net |
+| haiquanng | cá bơi, đàn ban đầu · khung Shop | sinh cá + test · luật Shop + `DayState` + test | proof · sửa lỗi chơi thử · mở rộng net |
 | ChuTungDuongg | oxy/ngạt số chuẩn, Cá Sấu patrol/chase | hit/recoil/ngất + test | sửa lỗi chơi thử · mở rộng snake |
 | minhphuong150505 | 2 bếp 4 bàn, 6 món | kiểm kho lúc mở quán, đóng ca + test | sửa lỗi chơi thử · mở rộng burn |
 | phuthaitran | máy pha day + output day | nối sim thật + test day | sửa lỗi chơi thử day |
