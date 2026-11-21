@@ -1,6 +1,14 @@
 # Bằng chứng kiểm chứng Phase 1
 
-Chạy trên checkout sạch của `main` tại `a1c94cb`. [Revision đầy đủ](revision.txt) · [Log 110 test](tests.log) · [Đối chiếu Test Contract](contract.log)
+Chạy lại tại `aa18d1b` (nhánh `p1/close-haiquanng`, sau khi gộp lát 4 và sửa payload/fixture theo PRD-0 mục D–E). [Revision đầy đủ](revision.txt) · [Log 153 test](tests.log) · [Log kiểm chứng 12 AC](contract.log)
+
+Tái lập toàn bộ từ gốc repo (ghi lại `contract.log` và ba file smoke bên dưới):
+
+```bash
+PYTHONPATH=tests:. python3 docs/proof/phase-1/check_ac.py > docs/proof/phase-1/contract.log
+```
+
+[`check_ac.py`](check_ac.py) chạy headless hộp đen cho từng AC, in `PASS`/`FAIL` kèm số liệu thật và trả mã khác 0 nếu có AC trượt. Lần kiểm trước ở `a1c94cb` (5/12 đạt) còn trong lịch sử git.
 
 ## Kho qua hai tiến trình
 
@@ -16,4 +24,4 @@ Kho xuất và snapshot quán đều có 2 bông súng, 1 cá lóc. Lặp hai ti
 
 ## HUD
 
-Ảnh chụp Chromium ở 320 px, nguồn dữ liệu từ `chonoi.live --scenario`. Fixture quán có 3 bông súng trong kho và khách giữ 2 để đối chiếu lượng khả dụng. [Fixture sáng](hud-gather-fixture.json) · [Ảnh HUD sáng](hud-gather.png) · [Fixture tối](hud-quan-fixture.json) · [Ảnh HUD tối](hud-quan.png)
+Ảnh chụp Chromium ở 320 px trên bản ghép thử lát 4 (chưa chụp lại sau `aa18d1b`), nguồn dữ liệu từ `chonoi.live --scenario`. Fixture quán có 3 bông súng trong kho và khách giữ 2 để đối chiếu lượng khả dụng. [Fixture sáng](hud-gather-fixture.json) · [Ảnh HUD sáng](hud-gather.png) · [Fixture tối](hud-quan-fixture.json) · [Ảnh HUD tối](hud-quan.png)

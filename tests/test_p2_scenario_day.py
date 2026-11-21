@@ -16,15 +16,11 @@ def load(doc, mode="day"):
         return load_scenario(write_json(w.path("s.json"), doc), mode, TUNING)
 
 
-class TestDefaults(unittest.TestCase):
-    def test_no_file_gives_filled_defaults(self):
-        r = load_scenario(None, "day", TUNING)
-        self.assertEqual(r["gather"], {})
-        self.assertEqual(r["quan"], {})
-        day = r["day"]
-        self.assertEqual((day["money"], day["earned"], day["upgrades"]), (0, 0, {}))
-        self.assertEqual(day["reputation"], TUNING["quan"]["reputation_initial"])
-        self.assertEqual(day["day_plan"], TUNING["day_plan"])  # preset của contract
+class TestShape(unittest.TestCase):
+    """`load_scenario(.., "day", ..)` kiểm rồi trả nguyên scenario; mặc định do DaySim tự điền."""
+
+    def test_no_file_gives_empty(self):
+        self.assertEqual(load_scenario(None, "day", TUNING), {})
 
     def test_ticket_example_is_valid(self):
         r = load({"day": {"money": 200, "earned": 200},
@@ -32,14 +28,10 @@ class TestDefaults(unittest.TestCase):
         self.assertEqual((r["day"]["money"], r["day"]["earned"]), (200, 200))
         self.assertEqual(r["gather"]["hold"], ["ca_loc", "bong_sung", "bong_sung"])
 
-    def test_gather_only_or_quan_only_is_valid_and_day_filled(self):
-        self.assertEqual(load({"gather": {"random_fish": False}})["day"]["money"], 0)
-        self.assertIn("day", load({"quan": {"random_customers": False}}))
-
-    def test_day_block_alone(self):
-        r = load({"day": {"reputation": 4.5, "upgrades": {"oxygen": 1, "hp": 0}}})
-        self.assertEqual(r["day"]["reputation"], 4.5)
-        self.assertEqual(r["day"]["upgrades"], {"oxygen": 1})  # cấp 0 bị bỏ
+    def test_single_blocks_are_valid(self):
+        load({"gather": {"random_fish": False}})
+        load({"quan": {"random_customers": False}})
+        load({"day": {"reputation": 4.5, "upgrades": {"oxygen": 1, "hp": 0}}})
 
 
 class TestMoney(unittest.TestCase):
@@ -53,7 +45,7 @@ class TestMoney(unittest.TestCase):
             load({"day": {"money": 50}})  # earned mặc định 0 < money: phải khai cả hai
 
     def test_earned_alone_ok_and_equal_ok(self):
-        self.assertEqual(load({"day": {"earned": 80}})["day"]["money"], 0)
+        load({"day": {"earned": 80}})
         load({"day": {"money": 0, "earned": 0}})
         load({"day": {"money": 400, "earned": 400}})
 
@@ -87,22 +79,16 @@ class TestReputationAndUpgrades(unittest.TestCase):
 
 
 class TestDayPlanOverride(unittest.TestCase):
-    def test_override_recomputes_ingredients_and_keeps_other_days(self):
-        r = load({"day": {"day_plan": [{"day": 2, "dishes": {"goi_bong_sung": 2, "lau_mam": 1}}]}})
-        plan = r["day"]["day_plan"]
-        self.assertEqual(len(plan), 5)
-        self.assertEqual(plan[1], {"day": 2, "dishes": {"goi_bong_sung": 2, "lau_mam": 1},
-                                   "ingredients": {"bong_dien_dien": 1, "bong_sung": 4, "ca_keo": 1,
-                                                   "ca_linh": 2, "keo_neo": 1}})
-        for i in (0, 2, 3, 4):
-            self.assertEqual(plan[i], TUNING["day_plan"][i])
+    def test_valid_forms(self):
+        entry = {"dishes": {"goi_bong_sung": 2, "lau_mam": 1}}
+        load({"day": {"day_plan": [dict(entry, day=2)]}})  # mảng như tuning.day_plan
+        load({"day": {"day_plan": {"2": entry}}})  # map theo Ngày
 
     def test_declared_ingredients_must_match(self):
         ok = {"day": 1, "dishes": {"ca_loc_nuong_trui": 1}, "ingredients": {"ca_loc": 1}}
-        self.assertEqual(load({"day": {"day_plan": [ok]}})["day"]["day_plan"][0]["ingredients"], {"ca_loc": 1})
-        bad = dict(ok, ingredients={"ca_loc": 2})
+        load({"day": {"day_plan": [ok]}})
         with self.assertRaises(BadInput):
-            load({"day": {"day_plan": [bad]}})
+            load({"day": {"day_plan": [dict(ok, ingredients={"ca_loc": 2})]}})
 
     def test_invalid_plans(self):
         cases = [
@@ -114,17 +100,11 @@ class TestDayPlanOverride(unittest.TestCase):
             [{"day": 1, "dishes": {}}],
             [{"day": 1, "dishes": {"mon_la": 1}}],
             [{"day": 1, "dishes": {"lau_mam": 0}}],
-            [{"day": 1, "dishes": {"lau_mam": 1}, "extra": 1}],
-            {"1": {"dishes": {"lau_mam": 1}}},  # phải là mảng
+            "lau_mam",
         ]
         for plan in cases:
             with self.subTest(plan=plan), self.assertRaises(BadInput):
                 load({"day": {"day_plan": plan}})
-
-    def test_load_does_not_mutate_contract(self):
-        before = copy.deepcopy(TUNING["day_plan"])
-        load({"day": {"day_plan": [{"day": 1, "dishes": {"lau_mam": 3}}]}})
-        self.assertEqual(TUNING["day_plan"], before)
 
 
 class TestForbiddenAndShape(unittest.TestCase):

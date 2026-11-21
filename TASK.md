@@ -70,7 +70,7 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 
 ### haiquanng — Lát 2
 - [x] Hái: chỉ ở mặt nước, ngoài bến; nút `ready` gần nhất trong `interact_radius` (tính cả đúng mép, hòa theo id); đủ chỗ → `gather` + `regrow_ticks = regrow_s × 60`; thiếu chỗ → `hold_full` (`action`, `node_id`, `required`, `free`).
-- [ ] Chạy thử `--inventory-out` thật bằng smoke dock.json và đưa file cho lát 3/4 (**mốc phút 25**). — *haiquanng: `--inventory-out` thật đã chạy trong `test_full_run_gather_catch_dock_then_quan` (quán đọc đúng `stock`); chưa tạo `dock.json` và chưa gửi file cho lát 3/4.*
+- [x] Chạy thử `--inventory-out` thật bằng smoke dock.json và đưa file cho lát 3/4 (**mốc phút 25**). — *haiquanng: trễ mốc; lát 3/4 đã tự dùng fixture. Smoke `dock.json` seed 42 chạy thật trong `docs/proof/phase-1/check_ac.py` (AC-P1-06), file kho ở `docs/proof/phase-1/catch.json`.*
 - [x] Commit: `gather: hái nút, hold_full, regrow`.
 
 ### minhphuong150505 — Lát 3
@@ -242,15 +242,15 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Commit: `headless: cờ --mode day, --days`.
 
 ### haiquanng — Lát A (cá & hái)
-- [ ] `chonoi/sim/fish.py`: đàn cá bơi 1.5 m/s trong `fish_x`, dải độ sâu theo loài; đổi hướng theo seed ở bước bơi thứ 120, 240… (theo `age_ticks`); phản xạ mép (chạm góc đảo cả hai thành phần).
-- [ ] Đầu ca 8 đàn ở 8 điểm khác nhau (36 cặp loài–vị trí); `fish_yield` linh 3, lóc 1, kèo 2.
-- [ ] Thêm nút N5/N6 (kèo nèo); catch dùng **vị trí cá trước khi bơi**.
-- [ ] Fixture `tests/fixtures/p2_fish_*.json` (`random_fish:false`).
-- [ ] Commit: `gather: cá bơi, phản xạ mép, đàn ban đầu`.
+- [x] `chonoi/sim/fish.py`: đàn cá bơi 1.5 m/s trong `fish_x`, dải độ sâu theo loài; đổi hướng theo seed ở bước bơi thứ 120, 240… (theo `age_ticks`); phản xạ mép (chạm góc đảo cả hai thành phần).
+- [x] Đầu ca 8 đàn ở 8 điểm khác nhau (36 cặp loài–vị trí); `fish_yield` linh 3, lóc 1, kèo 2.
+- [x] Thêm nút N5/N6 (kèo nèo); catch dùng **vị trí cá trước khi bơi**. — *N5/N6 có trong fixture `p2_fish_tuning.json`, scenario nhận `keo_neo`/`ca_keo`; contract v1.1 (PO) cần thêm N5/N6 vào `gather.nodes`*
+- [x] Fixture `tests/fixtures/p2_fish_*.json` (`random_fish:false`).
+- [x] Commit: `gather: cá bơi, phản xạ mép, đàn ban đầu`. — *commit 7bbb51f, nhánh `p2/A-haiquanng`*
 
 ### haiquanng — Lát S (Shop, khung)
-- [ ] `chonoi/sim/shop.py` theo giao diện `ShopSim` chốt sẵn: đọc `shop.upgrades.oxygen/hp` và `shop.max_ticks` từ contract (không hard-code giá/cấp); snapshot có `stock` dư và `time_left_ticks`.
-- [ ] Commit: `shop: khung ShopSim, đọc nâng cấp từ contract`.
+- [x] `chonoi/sim/shop.py` theo giao diện `ShopSim` chốt sẵn: đọc `shop.upgrades.oxygen/hp` và `shop.max_ticks` từ contract (không hard-code giá/cấp); snapshot có `stock` dư và `time_left_ticks`.
+- [x] Commit: `shop: khung ShopSim, đọc nâng cấp từ contract`. — *commit 7bdcfeb, nhánh `p2/S-haiquanng`*
 
 ### ChuTungDuongg — Lát B (Cá Sấu & Máu)
 - [x] Oxy số chuẩn: cơ sở 1.800 tick, +6/tick ở mặt nước; ngạt mất 1 Máu mỗi 60 tick **tính cả bước vừa chạm 0**, reset khi oxy > 0 hoặc lên mặt nước; ngạt xuyên bất tử, không làm rơi hàng.
@@ -260,21 +260,21 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Commit: `gather: oxy/ngạt số chuẩn, Cá Sấu patrol/chase`.
 
 ### minhphuong150505 — Lát Q (quán)
-- [ ] Quán đọc bếp B1/B2, bàn T1–T4, 6 món từ contract (không hard-code); **cả 2 bếp** idle lấy đơn `reserved` cũ nhất (order_tick, id bàn), duyệt bếp theo id.
-- [ ] Lịch khách `120 + 900·k`, kiên nhẫn 3.600, ăn 600, boa `floor(giá×0.2)` khi còn ≥ 50% kiên nhẫn.
-- [ ] Thêm tham số `menu_ids` (lọc theo id món kế hoạch **trước** khi lọc nguyên liệu khả dụng); `None` là cả 6 món.
-- [ ] Fixture `tests/fixtures/p2_quan_*.json` (4 bàn, 2 bếp, kho dựng sẵn).
-- [ ] Commit: `quan: 2 bếp 4 bàn, 6 món, lọc theo kế hoạch`.
+- [x] Quán đọc bếp B1/B2, bàn T1–T4, 6 món từ contract (không hard-code); **cả 2 bếp** idle lấy đơn `reserved` cũ nhất (order_tick, id bàn), duyệt bếp theo id.
+- [x] Lịch khách `120 + 900·k`, kiên nhẫn 3.600, ăn 600, boa `floor(giá×0.2)` khi còn ≥ 50% kiên nhẫn.
+- [x] Thêm tham số `menu_ids` (lọc theo id món kế hoạch **trước** khi lọc nguyên liệu khả dụng); `None` là cả 6 món.
+- [x] Fixture `tests/fixtures/p2_quan_*.json` (4 bàn, 2 bếp, kho dựng sẵn).
+- [x] Commit: `quan: 2 bếp 4 bàn, 6 món, lọc theo kế hoạch`.
 
 ### phuthaitran — Lát D (vòng ngày)
-- [ ] `chonoi/sim/day.py`: máy pha `gather → quan → shop → (Ngày kế | end)`; event `day_start → day_plan → phase_start(gather)`; sau `gather_end` dựng quán và phát `phase_start(quan)` cùng tick; pha mới chạy gameplay từ bước sau.
-- [ ] Làm với **sim giả (stub)** cùng giao diện chốt sẵn (`step/snapshot/done/result`) cho gather, quan và shop để không phải chờ lát A/B/Q/S.
-- [ ] Output day: vỏ event có `day`, dòng `end` có `days_completed`, `reason:"days_complete"` (cờ CLI do HoangHongNgo làm).
-- [ ] Commit: `day: máy pha gather→quan→shop, --mode day`.
+- [x] `chonoi/sim/day.py`: máy pha `gather → quan → shop → (Ngày kế | end)`; event `day_start → day_plan → phase_start(gather)`; sau `gather_end` dựng quán và phát `phase_start(quan)` cùng tick; pha mới chạy gameplay từ bước sau.
+- [x] Làm với **sim giả (stub)** cùng giao diện chốt sẵn (`step/snapshot/done/result`) cho gather, quan và shop để không phải chờ lát A/B/Q/S.
+- [x] Output day: vỏ event có `day`, dòng `end` có `days_completed`, `reason:"days_complete"` (cờ CLI do HoangHongNgo làm).
+- [x] Commit: `day: máy pha gather→quan→shop, --mode day`.
 
 ### RachalHys — Lát U (UI)
-- [ ] Màn hình menu chính (Chơi/Thoát), DayIntro (Ngày + danh sách Má Tư, tự chuyển sau 4 s hoặc khi nhấn phím), EveningIntro (số nhập kho + món nấu được), dùng snapshot giả trước.
-- [ ] Commit: `ui: menu chính, DayIntro, EveningIntro`.
+- [x] Menu chính, DayIntro và EveningIntro. Playwright kiểm trên Chromium với snapshot giả ở 320 px và 1280×720, gồm bỏ qua DayIntro bằng phím, tự chuyển sau 4 giây và lọc món EveningIntro theo kho/kế hoạch.
+- [x] Commit: `ui: menu chính, DayIntro, EveningIntro`.
 
 ### Phút 20 — Smoke tích hợp (HoangHongNgo dẫn, cả nhóm)
 - [x] Trên nhánh tích hợp tạm: `gather --inventory-out kho.json` → `quan --inventory kho.json`, đối chiếu snapshot kho ở tick 0, lưu `docs/proof/phase-2/integration.*`. — chạy trên nhánh C (chưa có lát A/B/Q/S/D): `docs/proof/phase-2/integration.md`; cần chạy lại trên `main` sau khi gộp.
@@ -292,17 +292,17 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Commit: `sim: pause cho gather/quan/day`.
 
 ### haiquanng — Lát A
-- [ ] Sinh cá tại `phase_tick = 360·k` **sau khi cá bơi**: dưới trần 12, điểm cách mọi đàn đang sống > 1 m, trọng số 40/30/30 chuẩn hóa theo loài còn điểm, chọn đều một điểm, hướng theo seed; cá mới bơi từ bước sau; phát `fish_spawned`.
-- [ ] Scenario: `fish[].age_ticks`; `random_fish:false` thì cá fixture đứng yên, không sinh.
-- [ ] Test `tests/test_p2_fish.py`: phản xạ mép/góc, đổi hướng ở bước 120, sinh đúng tick, bỏ lượt khi hết điểm, catch theo vị trí trước khi bơi.
+- [x] Sinh cá tại `phase_tick = 360·k` **sau khi cá bơi**: dưới trần 12, điểm cách mọi đàn đang sống > 1 m, trọng số 40/30/30 chuẩn hóa theo loài còn điểm, chọn đều một điểm, hướng theo seed; cá mới bơi từ bước sau; phát `fish_spawned`.
+- [x] Scenario: `fish[].age_ticks`; `random_fish:false` thì cá fixture đứng yên, không sinh.
+- [x] Test `tests/test_p2_fish.py`: phản xạ mép/góc, đổi hướng ở bước 120, sinh đúng tick, bỏ lượt khi hết điểm, catch theo vị trí trước khi bơi.
 - [ ] Mở PR lát A, nhờ ChuTungDuongg review.
 
 ### haiquanng — Lát S (Shop, luật)
-- [ ] `buy` (`oxygen`, `hp`) mua cấp kế tiếp, đủ đúng giá vẫn mua, trừ `money` giữ `earned`, phát `bought` (`upgrade,level,price,money`); thiếu tiền/đã tối đa/lệnh lạ thì `buy_failed` (`funds`/`max_level`/`unknown`), tiền và cấp giữ nguyên.
-- [ ] Đóng bằng `shop_done` → `shop_end(done)`, hoặc sau 600 tick hoạt động → `shop_end(time)`; buy xử lý trước `shop_done` trong cùng bước, kể cả bước cuối.
-- [ ] Test `tests/test_p2_shop.py`: đúng giá vẫn mua, mua 2 cấp liên tiếp, `max_level`, `funds`, lệnh lạ, buy + shop_done cùng bước, tự đóng ở tick 600.
-- [ ] `chonoi/sim/progress.py` (`DayState`, nhận từ phuthaitran): tiền/earned/uy tín/cấp giữ qua Ngày; `start_next_day` sao `upgrades → active_upgrades` (chỉ lúc dựng Ngày mới) và trả oxy/Máu tối đa theo cấp có hiệu lực; khởi tạo từ khối `day` của scenario (mặc định tiền/earned 0, uy tín theo tuning, cấp `{}`).
-- [ ] Test `tests/test_p2_progress.py`: mua oxygen cấp 1 ở Ngày 1 thì Ngày 2 có 2.700 tick, mua hp cấp 2 thì 5 Máu, cấp vừa mua chưa có hiệu lực trong cùng Ngày, uy tín kẹp [0,5].
+- [x] `buy` (`oxygen`, `hp`) mua cấp kế tiếp, đủ đúng giá vẫn mua, trừ `money` giữ `earned`, phát `bought` (`upgrade,level,price,money`); thiếu tiền/đã tối đa/lệnh lạ thì `buy_failed` (`funds`/`max_level`/`unknown`), tiền và cấp giữ nguyên.
+- [x] Đóng bằng `shop_done` → `shop_end(done)`, hoặc sau 600 tick hoạt động → `shop_end(time)`; buy xử lý trước `shop_done` trong cùng bước, kể cả bước cuối.
+- [x] Test `tests/test_p2_shop.py`: đúng giá vẫn mua, mua 2 cấp liên tiếp, `max_level`, `funds`, lệnh lạ, buy + shop_done cùng bước, tự đóng ở tick 600.
+- [x] `chonoi/sim/progress.py` (`DayState`, nhận từ phuthaitran): tiền/earned/uy tín/cấp giữ qua Ngày; `start_next_day` sao `upgrades → active_upgrades` (chỉ lúc dựng Ngày mới) và trả oxy/Máu tối đa theo cấp có hiệu lực; khởi tạo từ khối `day` của scenario (mặc định tiền/earned 0, uy tín theo tuning, cấp `{}`).
+- [x] Test `tests/test_p2_progress.py`: mua oxygen cấp 1 ở Ngày 1 thì Ngày 2 có 2.700 tick, mua hp cấp 2 thì 5 Máu, cấp vừa mua chưa có hiệu lực trong cùng Ngày, uy tín kẹp [0,5].
 - [ ] Mở PR lát S, nhờ phuthaitran review (người sẽ nối Shop và `DayState` vào day).
 
 ### ChuTungDuongg — Lát B
@@ -314,23 +314,23 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Mở PR, nhờ haiquanng review.
 
 ### minhphuong150505 — Lát Q
-- [ ] Hàm `validate_quan_against_inventory` để lát D gọi lúc mở quán: kiểm kho/khách/bếp/món thuộc kế hoạch trên kho thực.
-- [ ] Đóng ca số chuẩn: khách đang ăn trả ngay, khách chờ rời không trừ uy tín, dọn món và phần giữ.
-- [ ] Test `tests/test_p2_quan.py`: 2 bếp nấu song song, lọc kế hoạch, `no_dish`, khách vẫn gọi tiếp món đủ hàng khi đã bán đủ suất.
+- [x] `scenario.py` cho `--mode day`: cấm `quan.stock`/`quan.reputation`; khối `day {money,earned,reputation,upgrades,day_plan}` với `0 ≤ money ≤ earned`; `day.day_plan` ghi đè theo Ngày, tính lại `ingredients` và so với giá trị khai nếu có, sai thì mã 2.
+- [x] Hàm `validate_quan_against_inventory` để lát D gọi lúc mở quán: kiểm kho/khách/bếp/món thuộc kế hoạch trên kho thực.
+- [x] Đóng ca số chuẩn: khách đang ăn trả ngay, khách chờ rời không trừ uy tín, dọn món và phần giữ.
+- [x] Test `tests/test_p2_quan.py`: 2 bếp nấu song song, lọc kế hoạch, `no_dish`, khách vẫn gọi tiếp món đủ hàng khi đã bán đủ suất.
 - [ ] Mở PR, nhờ phuthaitran review.
 
 ### phuthaitran — Lát D
-- [ ] Day: giỏ mới, kho dư bỏ sau Shop; Ngày hoàn tất khi Shop đóng (kể cả Ngày cuối). Trạng thái xuyên Ngày lấy từ `DayState` của haiquanng.
-- [ ] Thay stub bằng `GatherSim`/`QuanSim`/`ShopSim`/`DayState` thật khi lát A/B/Q/S đã gộp (bàn giao kho trong bộ nhớ; ngất vẫn mở quán với kho rỗng).
-- [ ] Snapshot mọi pha có `day`, `day_plan`, `upgrades`, `active_upgrades`.
-- [ ] Test `tests/test_p2_day.py`: thứ tự event đổi pha, `days_complete`.
+- [x] Day: giỏ mới, kho dư bỏ sau Shop; Ngày hoàn tất khi Shop đóng (kể cả Ngày cuối). Trạng thái xuyên Ngày lấy từ `DayState` của haiquanng.
+- [ ] Thay stub bằng `GatherSim`/`QuanSim`/`ShopSim`/`DayState` thật khi lát A/B/Q/S đã gộp (bàn giao kho trong bộ nhớ; ngất vẫn mở quán với kho rỗng). — GatherSim/QuanSim thật đã nối (mặc định); còn chờ ShopSim/DayState của lát S.
+- [x] Snapshot mọi pha có `day`, `day_plan`, `upgrades`, `active_upgrades`.
+- [x] Test `tests/test_p2_day.py`: thứ tự event đổi pha, `days_complete`.
 - [ ] Mở PR, nhờ minhphuong150505 review.
 
 ### RachalHys — Lát U
-- [ ] HUD sáng: Máu, oxy (< 25% đổi màu/nhấp nháy), thời gian (≤ 30 s đổi màu), độ sâu, giỏ theo loại, đã lấy/cần theo kế hoạch, hồi bắt; gợi ý hái/cập bến; "Thủy quái!" + viền tím; "Hết hơi!".
-- [ ] HUD quán: đồng hồ ca, tiền, uy tín, món + kiên nhẫn từng bàn (< 25% đổi màu), tiến độ bếp, món đang cầm, kho khả dụng. Chữ không chân ≥ 18 px ở 1280×720.
-- [ ] Menu pause (làm mờ nền, Tiếp tục / Về menu), DayResult, Shop UI, Summary sau Ngày 5.
-- [ ] Commit: `ui: HUD v1.1, pause, Shop, DayResult, Summary`.
+- [x] HUD sáng và quán theo TICKET-02, gồm cảnh báo, kế hoạch ngày, tiến độ bếp và kiên nhẫn từng bàn. Chromium kiểm font 18 px ở 1280×720, ngưỡng cảnh báo và phép trừ phần giữ chỗ.
+- [x] Menu pause, DayResult, Shop UI, Summary. Kiểm giao diện qua snapshot giả, gồm phím Esc/P, mua đủ hoặc thiếu tiền và hiển thị cấp mới. Cần kiểm pause với lớp bọc thật ở lát C.
+- [x] Commit: `ui: HUD v1.1, pause, Shop, DayResult, Summary`.
 
 ### Phút 35 — Standup
 - [ ] Mọi PR lát đã mở; lát nào trễ thì người đã xong vào pair.
@@ -351,17 +351,18 @@ git tag phase-2 && git push origin phase-2
 ```
 
 ### RachalHys
-- [ ] Chạy regression P1 với số chuẩn; test nào đổi phải có lý do trong commit.
-- [ ] Chụp ảnh HUD/menu/pause và đo FPS ở 1280×720, gửi cho haiquanng để đưa vào `docs/proof/phase-2/`.
+- [x] Chạy regression P1 với fixture số chuẩn v1.1 trên bản ghép thử. Giữ test kiểm đủ bàn theo danh sách thực, tắt cá/khách ngẫu nhiên trong fixture cần vị trí hoặc đơn cố định.
+- [x] Chụp HUD/menu/pause và đo FPS ở 1280×720. Ảnh và giới hạn kiểm chứng ở [proof lát U](docs/proof/phase-2/ui/README.md), để haiquanng nối vào proof chung.
+- [ ] Kiểm pause thật trong Shop và chạy lại regression trên manifest v1.1 chính thức sau khi lát C được gộp.
 
 ### haiquanng — Proof
-- [ ] Viết bằng chứng vào `docs/proof/phase-2/`: log test đầy đủ, `integration.*` (từ smoke phút 20), `day.jsonl` (`--days 1` và `--days 3`), kết quả `cmp` hai lần cùng seed, thời gian headless 1 Ngày, ảnh HUD/FPS của RachalHys. Mỗi file ghi commit đã chạy.
+- [ ] Viết bằng chứng vào `docs/proof/phase-2/`: log test đầy đủ, `integration.*` (từ smoke phút 20), `day.jsonl` (`--days 1` và `--days 3`), kết quả `cmp` hai lần cùng seed, thời gian headless 1 Ngày, ảnh HUD/FPS của RachalHys. Mỗi file ghi commit đã chạy. — *haiquanng: script `docs/proof/phase-2/run_proof.py` đã có (nhánh `p2/proof-haiquanng`); chạy lại trên commit gắn tag khi có contract v1.1 và cờ `--days`*
 - [ ] Gửi danh sách file cho HoangHongNgo để nối vào `docs/verification/phase-2.md`.
 - [ ] Commit: `docs: proof Phase 2`.
 
 ### haiquanng + ChuTungDuongg
 - [ ] Chơi thử `gather` số chuẩn: cá bơi/sinh, bị Cá Sấu đuổi và chạm, ngất, cập bến; sửa nhanh lỗi thấy được.
-- [ ] (Mở rộng, chỉ khi lõi đã xanh) ChuTungDuongg làm **snake** (dùng lại luật chạm/recoil); haiquanng làm **net** (mở rộng catch, mua trong Shop). Khai `extensions` và ghi README.
+- [ ] (Mở rộng, chỉ khi lõi đã xanh) ChuTungDuongg làm **snake** (dùng lại luật chạm/recoil); haiquanng làm **net** (mở rộng catch, mua trong Shop). Khai `extensions` và ghi README. — *haiquanng: `net` xong ở nhánh `p2/net-haiquanng` (`tests/test_p2_net.py`, README mục "Mở rộng đã làm"); PO cần khai `extensions` + `shop.upgrades.net` trong contract v1.1*
 
 ### minhphuong150505 + phuthaitran
 - [ ] Chơi thử `day` trọn 1 Ngày: DayIntro → gather → EveningIntro → quan → DayResult → Shop (mua oxygen) → Ngày 2.

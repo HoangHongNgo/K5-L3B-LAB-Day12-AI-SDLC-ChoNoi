@@ -39,30 +39,30 @@ Mỗi event là một dòng `{"type":"event","tick":k+1,"phase":"gather|quan","n
 | 1 | `node_regrown` | `{"node_id"}` | khung (có sẵn) | UI, test |
 | 2 | `dive` | `{"pos"}` — pos cuối bước | lát 1 | UI, test |
 | 2 | `surface` | `{"pos"}` — pos cuối bước | lát 1 | UI, test |
-| 2 | `oxygen_empty` | `{}` **[giả định]** | lát 1 | UI (cảnh báo), test |
+| 2 | `oxygen_empty` | `{"oxygen_ticks":0}` (PRD-0 mục E) | lát 1 | UI (cảnh báo), test |
 | 2 | `choke` | `{"hp"}` — Máu sau khi trừ | lát 1 | UI, test |
 | 2 | `faint` | `{"cause":"choke","lost":[kind…],"hp":0}` — `lost` theo LIFO (mới nhất trước) | lát 1 | UI, test |
-| 3 | `gather` | `{"node_id","kind","count"}` **[giả định `kind`,`count`]**; `count` = `node_yield` | lát 2 | UI, test |
+| 3 | `gather` | `{"node_id","kind","amount"}` — `amount` = `node_yield` (PRD-0 mục E) | lát 2 | UI, test |
 | 3/4 | `hold_full` | `{"action":"gather"\|"catch","node_id"\|"fish_id","required","free"}` | lát 2 | UI, test |
-| 4 | `fish_caught` | `{"fish_id","kind","count"}` **[giả định]**; `count` = `fish_yield[kind]` | lát 2 | UI, test |
+| 4 | `fish_caught` | `{"fish_id","kind","yield"}` — `yield` = `fish_yield[kind]` (PRD-0 mục E) | lát 2 | UI, test |
 | 3/5, hoặc 2 khi ngất | `gather_end` | `{"reason":"docked"\|"time"\|"fainted","inventory":{"items":{…}}}` | khung + lát 1 (`fainted`) | runner (ghi kho), UI |
 
 Thứ tự trong một bước (khung đã đặt sẵn trong `step()`): 1 đồng hồ/hồi chiêu/mọc lại → 2 bơi + chặn mép → dive/surface → oxy/ngạt/ngất → 3 `interact` (bến **trước**, rồi hái) → 4 `catch` → 5 hết giờ.
 
 ### 2.2 Quán — `QuanSim.step`
 
-`order_id` **= id khách** (mỗi khách đúng một đơn ở P1) **[giả định]**.
+`order_id` **= id khách** (PRD-0 mục D: "order_id bằng id khách"). Trường theo PRD-0 mục E; code có thể phát thêm trường phụ (ví dụ `customer_id`, `reserved`), test chỉ dựa vào trường PRD.
 
 | Event | `data` | Ai phát (lát) |
 |---|---|---|
-| `customer_arrived` | `{"customer_id","table_id","dish_id","reserved":{kind:n}}` **[giả định]** | lát 3 |
-| `no_dish` | `{"table_id"}` **[giả định]** — có bàn trống nhưng không món nào đủ kho khả dụng | lát 3 |
-| `customer_left` | `{"customer_id","table_id","reason":"patience"\|"closing"}` | lát 3 (patience), lát 4 (closing) |
-| `cook_started` | `{"stove_id","order_id","dish_id","items":{kind:n} (sắp theo kind),"base_price"}` | lát 4 |
+| `customer_arrived` | `{"order_id","table_id","dish_id"}` (+ phụ `customer_id`, `reserved`) | lát 3 |
+| `no_dish` | `{}` — có bàn trống nhưng không món nào đủ kho khả dụng | lát 3 |
+| `customer_left` | `{"order_id","table_id","reason":"patience"\|"closing","reputation"}` (+ phụ `customer_id`) | lát 3 (patience), lát 4 (closing) |
+| `cook_started` | `{"stove_id","order_id","dish_id","items":[kind…] (mảng, sắp theo kind),"base_price"}` | lát 4 |
 | `dish_ready` | `{"stove_id","order_id","dish_id"}` | lát 4 |
 | `dish_picked` | `{"stove_id","order_id","dish_id"}` | lát 4 |
-| `served` | `{"table_id","customer_id","order_id","dish_id","tip"}` | lát 4 |
-| `paid` | `{"customer_id","order_id","amount","tip","reason":"finished_eating"\|"closing"}` — `amount` = `base_price + tip` | lát 4 |
+| `served` | `{"order_id","table_id","dish_id","patience_ticks_left","base_price","tip"}` | lát 4 |
+| `paid` | `{"order_id","table_id","base_price","tip","amount","reason":"finished_eating"\|"closing"}` — `amount` = `base_price + tip` | lát 4 |
 | `quan_end` | `{"reason":"time","money","earned","shift_earned","reputation"}` | khung + lát 4 |
 
 Cuối ca (lát 4): khách đang ăn → `paid` `closing`; khách đang chờ → `customer_left` `closing` (không trừ uy tín); rồi `quan_end`. Điểm = `earned + reputation_multiplier × floor(reputation)` (runner đã tính).
@@ -139,7 +139,7 @@ Hàm dùng chung giỏ (lát 2 viết, lát 1 dùng): `_add_to_hold(kinds: list[
 | `day_plan` | Mảng đúng 5 object `{day, dishes, ingredients}` (`dishes`/`ingredients` là map id → số nguyên dương). `ingredients` **phải bằng** Σ công thức × số suất (`contract.plan_ingredients`). |
 | `shop` | `{max_ticks, upgrades}`; `upgrades.oxygen[] {level, price, oxygen_max_s}`, `upgrades.hp[] {level, price, hp_max}`, mảng theo cấp (level 1, 2, …; giá trị tăng dần). |
 
-Hàm dùng chung cho các lát: `chonoi.contract.plan_ingredients(dishes, menu)` và `check_dishes(name, dishes, menu)` (kiểm `day.day_plan` trong scenario).
+Hàm dùng chung: `chonoi.contract.plan_ingredients(dishes, menu)` và `check_dishes(name, dishes, menu)`.
 
 ### 6.2 Event mới và đổi
 
@@ -195,7 +195,7 @@ Snapshot lúc đổi pha ghi pha mới với `phase_tick:0`.
 
 - `gather.fish[]` thêm `age_ticks` (mặc định 0). `random_fish:false` tắt cá mặc định, bơi và sinh (cá fixture đứng yên). Khai `fish` khi cờ bật thì thay đàn ban đầu, vẫn bơi/sinh.
 - `gather.monsters[]` thay danh sách mặc định (`{id,kind,pos,waypoints,target_idx,state,state_ticks_left,recoil_dir}`); `gather.player.invuln_ticks`.
-- Khối `day {money,earned,reputation,upgrades,day_plan}` (lát C, `chonoi/scenario.py`): chạy `--mode day` nhận `gather` và `quan` làm mẫu khởi tạo mỗi Ngày; **cấm** `quan.stock`, `quan.reputation`. `0 ≤ money ≤ earned`; mặc định tiền/earned 0, uy tín theo tuning, `upgrades {}`. `day.day_plan` ghi đè theo số Ngày (**[giả định]** mảng `[{"day":N,"dishes":{…},"ingredients":{…}?}]` cùng dạng `tuning.day_plan`, xem `docs/clarify.md`); `ingredients` luôn tính lại từ `dishes` và so với giá trị khai nếu có, sai → mã 2. `load_scenario(path, "day", tuning)` trả `{"gather","quan","day"}` đã **điền mặc định**: `day` luôn đủ `money, earned, reputation, upgrades, day_plan` (mảng 5 Ngày hiệu lực) — lát D chỉ cần đọc, không tự tính lại.
+- Khối `day {money,earned,reputation,upgrades,day_plan}` (lát C, `chonoi/scenario.py`): chạy `--mode day` nhận `gather` và `quan` làm mẫu khởi tạo mỗi Ngày; **cấm** `quan.stock`, `quan.reputation`. `0 ≤ money ≤ earned`; mặc định tiền/earned 0, uy tín theo tuning, `upgrades {}`. `day.day_plan` ghi đè theo số Ngày: nhận mảng `[{"day":N,"dishes":{…},"ingredients":{…}?}]` (như `tuning.day_plan`) hoặc map `{"<ngày>": {…}}`; `ingredients` luôn tính lại từ `dishes` (`DaySim.plan_for`) và nếu khai thì phải khớp, sai → mã 2. `load_scenario(path, "day", tuning)` kiểm rồi trả nguyên scenario; mặc định do `DaySim` điền.
 
 ### 6.7 Ranh giới file Phase 2
 
@@ -217,6 +217,6 @@ File chung (`gather.py`, `quan.py`) chỉ thêm **một dòng gọi hook** đún
 |---|---|
 | `test_p1_lat3` `test_t05_no_table_skips_turn` | 4 bàn: hết bàn chỉ khi cả T1–T4 có khách |
 | `fixtures/quan_one_customer.json` (dùng ở `test_p1_lat4` `TestFullLoopFixture`) | fixture là đúng một khách; thêm `random_customers:false` vì có bàn trống từ tick 120 |
-| `test_smoke_p1` `test_gather_snapshot_has_gather_fields` | 6 đàn → `fish_initial` (8); **đang skip** tới khi lát A đặt đàn đầu ca theo seed (gỡ skip khi gộp lát A) |
+| `test_smoke_p1` `test_gather_snapshot_has_gather_fields` | 6 đàn → `fish_initial` (8); đã bật lại sau khi lát A gộp (đàn đầu ca theo seed) |
 | `test_smoke_p1` `test_con_03_bad_input_exit_2` | v1.1: `attack`/`photo`/`pause`/`shop_done` là nút hợp lệ (sai pha hoặc mở rộng chưa bật thì bỏ qua) nên bỏ `attack` khỏi danh sách nút bị từ chối; dùng thêm nút lạ `fire` |
 | `test_smoke_p1` `test_con_03_old_and_future_modes_rejected` | v1.1: `--mode day` hợp lệ (kiểm ở `tests/test_p2_cli_day.py`); mode lạ dùng `night` thay `day` |

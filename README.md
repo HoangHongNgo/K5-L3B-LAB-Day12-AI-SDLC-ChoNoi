@@ -40,6 +40,17 @@ Chấm tự động qua chế độ **headless** của Test Contract. Chi tiết
 
 Ngoài phần đề yêu cầu, nhóm được **thêm** nhân vật, loài cá/cây, sinh vật, món, bản đồ, cơ chế, câu chuyện, đồ họa, âm nhạc… với ba điều kiện: **không phá phần cố định** (tắt ở headless), ghi mục **"Sáng tạo của nhóm"** trong README của nhóm, và **làm lõi đúng trước**.
 
+## Mở rộng đã làm
+
+### `net` — Vợt hút cá (haiquanng)
+
+Mua trong Shop (`buy: "net"`), có hiệu lực từ Ngày kế. Cấp 1 giá 250: bán kính 4.0 m, tối đa 2 đàn mỗi lần `catch`. Cấp 2 giá 500: 6.0 m, tối đa 3 đàn. Từ cấp 1, duyệt đàn trong bán kính theo id và bắt tới đủ số đàn; đàn thiếu chỗ phát `hold_full`, được giữ lại và xét đàn kế; chỉ đặt hồi bắt khi có ít nhất một đàn bắt thành công. Cấp 0 dùng luật lõi (đàn gần nhất).
+
+- Luật: `chonoi/sim/gather.py` (`_try_net`), giá và cấp đọc từ `shop.upgrades.net`.
+- Bằng chứng: `PYTHONPATH=tests:. python3 -m unittest tests.test_p2_net -v` (9 ca: theo id, đúng mép bán kính, `hold_full` rồi xét đàn kế, không bắt được thì không hồi, cấp 2, cấp 0 giữ luật lõi, mua 2 cấp trong Shop).
+- Lõi không đổi: không có `net` trong `active_upgrades` hoặc contract chưa khai `shop.upgrades.net` thì dùng luật lõi; toàn bộ test Phase 1 vẫn xanh.
+- Cần thêm vào `game.contract.json` khi lên v1.1 (PO): `"extensions": ["net"]` ở gốc và `shop.upgrades.net` = `[{"level":1,"price":250,"catch_radius":4.0,"max_schools":2},{"level":2,"price":500,"catch_radius":6.0,"max_schools":3}]`.
+
 ## Lịch 3 giờ
 
 | Mốc | Phase | Hạn tag |

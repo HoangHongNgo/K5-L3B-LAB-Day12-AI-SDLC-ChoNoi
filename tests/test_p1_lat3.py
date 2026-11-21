@@ -392,11 +392,10 @@ class CustomerArrivalSchedule(unittest.TestCase):
 
     def test_t05_no_table_skips_turn(self):
         """T05: Không còn bàn thì bỏ lượt."""
-        # Số chuẩn v1.1: 4 bàn T1–T4, nên phải có khách ở cả bốn bàn mới hết chỗ.
-        for i, t in enumerate(self.sim.tables, start=1):
+        for i, table in enumerate(self.sim.tables, 1):
             self.sim.customers.append({
-                "id": f"C{i}", "table_id": t["id"], "dish_id": "ca_loc_nuong_trui",
-                "order_status": "reserved", "reserved": {"ca_loc": 1}
+                "id": f"C{i}", "table_id": table["id"], "dish_id": "ca_loc_nuong_trui",
+                "order_status": "reserved", "reserved": {"ca_loc": 1},
             })
         self.assertIsNone(self.sim._find_available_table())
 

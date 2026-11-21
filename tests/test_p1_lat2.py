@@ -24,7 +24,8 @@ FAR = [80, 0]  # mặt nước, xa bến
 
 
 def run_gather(w, scenario, input_frames, ticks, inventory_out=None):
-    sc = write_json(w.path("sc.json"), {"gather": scenario})
+    # Phase 2 bơi và sinh cá khi random_fish bật. Các ca này dựng vị trí cá cố định.
+    sc = write_json(w.path("sc.json"), {"gather": {"random_fish": False, **scenario}})
     inp = write_json(w.path("in.json"), frames(*input_frames))
     args = ["--mode", "gather", "--seed", "1", "--ticks", str(ticks), "--scenario", sc, "--inputs", inp,
             "--out", w.path("o.jsonl"), "--snapshot-every", "1"]
@@ -59,7 +60,7 @@ class Gather(unittest.TestCase):
             ev = events(rows, "gather")
             self.assertEqual(len(ev), 1)
             self.assertEqual(ev[0]["tick"], 1)
-            self.assertEqual(ev[0]["data"], {"node_id": "N1", "kind": "bong_sung", "count": G["node_yield"]})
+            self.assertEqual(ev[0]["data"], {"node_id": "N1", "kind": "bong_sung", "amount": G["node_yield"]})
             snap = [s for s in snapshots(rows) if s["tick"] == 1][0]
             self.assertEqual(snap["hold"], ["bong_sung"] * G["node_yield"])
             self.assertEqual(snap["nodes"][0]["ready"], False)
@@ -139,7 +140,7 @@ class Catch(unittest.TestCase):
                                       "fish": [fish("F1", kind, [50, 11])]}, press(0, "catch"), 2)
                 ev = events(rows, "fish_caught")
                 self.assertEqual(len(ev), 1, kind)
-                self.assertEqual(ev[0]["data"], {"fish_id": "F1", "kind": kind, "count": G["fish_yield"][kind]})
+                self.assertEqual(ev[0]["data"], {"fish_id": "F1", "kind": kind, "yield": G["fish_yield"][kind]})
                 snap = [s for s in snapshots(rows) if s["tick"] == 1][0]
                 self.assertEqual(snap["hold"], [kind] * G["fish_yield"][kind])
                 self.assertEqual(snap["fish"], [])

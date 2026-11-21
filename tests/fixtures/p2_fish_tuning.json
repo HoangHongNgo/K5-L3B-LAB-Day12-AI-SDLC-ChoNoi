@@ -1,0 +1,22 @@
+{
+  "fish_initial": 8,
+  "fish_speed": 1.5,
+  "fish_turn_ticks": 120,
+  "fish_max": 12,
+  "fish_spawn_ticks": 360,
+  "fish_spawn_clearance": 1.0,
+  "fish_x": [4, 96],
+  "fish_depths": {"ca_linh": [3, 12], "ca_loc": [8, 20], "ca_keo": [22, 28]},
+  "fish_spawn_x": [15, 30, 45, 60, 75, 90],
+  "fish_spawn_depths": {"ca_linh": [5, 10], "ca_loc": [10, 16], "ca_keo": [24, 27]},
+  "fish_weights": {"ca_linh": 0.4, "ca_loc": 0.3, "ca_keo": 0.3},
+  "fish_yield": {"ca_linh": 3, "ca_loc": 1, "ca_keo": 2},
+  "nodes": [
+    {"id": "N1", "kind": "bong_dien_dien", "pos": [12, 0]},
+    {"id": "N2", "kind": "bong_dien_dien", "pos": [28, 0]},
+    {"id": "N3", "kind": "bong_sung", "pos": [44, 0]},
+    {"id": "N4", "kind": "bong_sung", "pos": [60, 0]},
+    {"id": "N5", "kind": "keo_neo", "pos": [76, 0]},
+    {"id": "N6", "kind": "keo_neo", "pos": [90, 0]}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "quan": {
+    "stock": {
+      "ca_loc": 5,
+      "ca_linh": 10,
+      "ca_keo": 10,
+      "bong_dien_dien": 10,
+      "bong_sung": 10,
+      "keo_neo": 10
+    },
+    "random_customers": true
+  }
+}

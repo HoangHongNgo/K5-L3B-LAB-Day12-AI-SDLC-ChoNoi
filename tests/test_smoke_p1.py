@@ -15,9 +15,13 @@ def last_pos(rows):
     return snapshots(rows)[-1]["player"]["pos"]
 
 
-def tuning_gather():
+def manifest():
     with open("game.contract.json", encoding="utf-8") as f:
-        return json.load(f)["tuning"]["gather"]
+        return json.load(f)
+
+
+def tuning_gather():
+    return manifest()["tuning"]["gather"]
 
 
 class Contract(unittest.TestCase):
@@ -32,9 +36,6 @@ class Contract(unittest.TestCase):
                 self.assertEqual(rows[-1]["type"], "end")
                 self.assertEqual(sum(r["type"] == "end" for r in rows), 1)
 
-    # v1.1: đầu ca có `fish_initial` = 8 đàn (thay cho 6). Đặt đàn ban đầu theo seed là việc của lát A
-    # (chonoi/sim/fish.py); gỡ skip khi lát A gộp.
-    @unittest.skip("chờ lát A: 8 đàn cá đầu ca theo seed (contract v1.1)")
     def test_gather_snapshot_has_gather_fields(self):
         with Workdir() as w:
             code, err = run_headless("--mode", "gather", "--seed", "1", "--ticks", "0", "--out", w.path("g.jsonl"))
@@ -45,7 +46,8 @@ class Contract(unittest.TestCase):
             for key in ("oxygen_ticks", "hp", "oxygen_max_ticks", "hp_max", "at_surface"):
                 self.assertIn(key, s["player"])
             self.assertEqual(s["hold_capacity"], tuning_gather()["hold_capacity"])
-            self.assertEqual(len(s["fish"]), tuning_gather()["fish_initial"])
+            initial = tuning_gather()["fish_initial"]
+            self.assertEqual(len(s["fish"]), initial if isinstance(initial, int) else len(initial))
             self.assertTrue(all(n["pos"][1] == 0 for n in s["nodes"]))
 
     def test_con_02_deterministic_bytes(self):
@@ -65,18 +67,21 @@ class Contract(unittest.TestCase):
             self.assertEqual(run_headless("--mode", "gather", "--seed", "1", "--ticks", "10", "--inputs", bad, "--out", out)[0], 2)
             self.assertFalse(os.path.exists(out), "lỗi đầu vào phải thoát TRƯỚC khi ghi đầu ra")
             self.assertEqual(run_headless("--mode", "gather", "--seed", "1", "--ticks", "-1", "--out", out)[0], 2)
-            # v1.1: attack/photo/pause/shop_done là nút hợp lệ (sai pha hoặc mở rộng chưa bật thì sim bỏ qua),
-            # nên chỉ còn nút thật sự lạ bị từ chối.
-            for button in ("jump", "fire"):  # nút lạ
+            unknown_buttons = ["jump"]
+            if manifest()["contract_version"] == "1.0":
+                unknown_buttons.append("attack")
+            for button in unknown_buttons:
                 unk = write_json(w.path("unk.json"), frames({"tick": 0, button: True}))
                 self.assertEqual(run_headless("--mode", "gather", "--seed", "1", "--ticks", "10", "--inputs", unk, "--out", out)[0], 2, button)
             self.assertFalse(os.path.exists(out))
 
-    def test_con_03_old_and_future_modes_rejected(self):
-        # v1.1: `day` là mode hợp lệ (xem tests/test_p2_cli_day.py); chỉ còn mode cũ/lạ bị từ chối.
+    def test_con_03_unknown_modes_rejected(self):
         with Workdir() as w:
             out = w.path("o.jsonl")
-            for mode in ("river", "night"):
+            unknown_modes = ["river", "shop"]
+            if manifest()["contract_version"] == "1.0":
+                unknown_modes.append("day")
+            for mode in unknown_modes:
                 self.assertEqual(run_headless("--mode", mode, "--seed", "1", "--ticks", "0", "--out", out)[0], 2, mode)
             self.assertFalse(os.path.exists(out))
             old = write_json(w.path("old.json"), {"river": {"hold": []}})
