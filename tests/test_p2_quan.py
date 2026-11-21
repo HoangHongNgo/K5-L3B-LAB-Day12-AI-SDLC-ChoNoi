@@ -159,7 +159,7 @@ class TestDayPlanMenuFiltering(unittest.TestCase):
         evs = sim._spawn_customer(sim.tables[0])
         self.assertEqual(len(evs), 1)
         self.assertEqual(evs[0][0], "no_dish")
-        self.assertEqual(evs[0][1]["table_id"], "T1")
+        self.assertEqual(evs[0][1], {})
         self.assertEqual(len(sim.customers), 0)
 
     def test_q12_sufficient_ingredients_allows_orders_beyond_plan_servings(self):

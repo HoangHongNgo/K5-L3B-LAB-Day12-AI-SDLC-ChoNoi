@@ -29,12 +29,14 @@ def _validate_day_plan_entry(plan, tuning, label="day_plan"):
     if not isinstance(plan, dict):
         raise BadInput(f"{label} phải là object")
     menu = tuning["menu"]
-    if "menu" in plan:
+    if "dishes" in plan:
+        menu_items = plan["dishes"]
+    elif "menu" in plan:
         menu_items = plan["menu"]
     else:
-        menu_items = {k: v for k, v in plan.items() if k not in ("ingredients", "menu")}
+        menu_items = {k: v for k, v in plan.items() if k not in ("ingredients", "menu", "dishes")}
     if not isinstance(menu_items, dict) or not menu_items:
-        raise BadInput(f"{label}.menu phải là object khác rỗng chứa dish_id: số suất")
+        raise BadInput(f"{label}.menu/dishes phải là object khác rỗng chứa dish_id: số suất")
     expected_ingredients = {}
     for did, servings in menu_items.items():
         if did not in menu:
@@ -84,7 +86,7 @@ def _validate_day(b, tuning):
         dp = b["day_plan"]
         if not isinstance(dp, dict):
             raise BadInput("day.day_plan phải là object")
-        if "menu" in dp:
+        if "dishes" in dp or "menu" in dp:
             _validate_day_plan_entry(dp, tuning, label="day_plan")
         elif all(isinstance(v, dict) for v in dp.values()) and not any(k in tuning["menu"] for k in dp):
             for day_key, day_entry in dp.items():
@@ -147,7 +149,7 @@ def load_scenario(path, mode: str, tuning: dict, *, active_upgrades=None) -> dic
             if isinstance(t, bool) or not isinstance(t, int) or not (1 <= t <= dur):
                 raise BadInput(f"time_left_ticks phải là số nguyên trong [1, {dur}]")
         if mode == "gather":
-            _validate_gather(block, tuning)
+            _validate_gather(block, tuning, active_upgrades=active_upgrades)
         else:
             _validate_quan(block, tuning)
         return block
@@ -536,7 +538,9 @@ def validate_quan_against_inventory(scenario_quan: dict, inventory: dict, tuning
         if isinstance(day_plan, (list, set)):
             plan_dishes = set(day_plan)
         elif isinstance(day_plan, dict):
-            if "menu" in day_plan:
+            if "dishes" in day_plan:
+                plan_dishes = set(day_plan["dishes"].keys())
+            elif "menu" in day_plan:
                 plan_dishes = set(day_plan["menu"].keys())
             else:
                 plan_dishes = {k for k in day_plan if k in menu}

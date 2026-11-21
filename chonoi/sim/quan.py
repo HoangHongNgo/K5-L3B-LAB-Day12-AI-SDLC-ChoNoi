@@ -85,6 +85,7 @@ class QuanSim:
         self.tables = self._merge(t["tables"], scenario.get("tables", []))
         self.customers = []
         self._init_customers(scenario.get("customers", []))
+        self._fill_payload_prices()
         self.money = money
         self.earned = earned
         self.shift_earned = 0
@@ -266,7 +267,7 @@ class QuanSim:
         self.hand = None
         c.update(state="eating", order_status="served", base_price=price, tip=tip,
                  eat_ticks_left=int(round(self.t.get("eat_s", 10.0) * self.tick_hz)))
-        return [("served", {"order_id": c["id"], "customer_id": c["id"], "table_id": c["table_id"],
+        return [("served", {"order_id": c["id"], "table_id": c["table_id"],
                             "dish_id": c["dish_id"], "patience_ticks_left": c["patience_ticks_left"],
                             "base_price": price, "tip": tip})]
 
@@ -300,7 +301,7 @@ class QuanSim:
         if tip > 0:
             self._add_reputation(self.t.get("tip_reputation", 0.2))
         self._remove_customer(c)
-        return [("paid", {"order_id": c["id"], "customer_id": c["id"], "table_id": c["table_id"],
+        return [("paid", {"order_id": c["id"], "table_id": c["table_id"],
                           "base_price": c["base_price"], "tip": tip, "amount": amount, "reason": reason})]
 
     def _add_reputation(self, delta):
