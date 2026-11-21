@@ -311,7 +311,7 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Máu 0 → `faint` (`cause:"monster"` hoặc `"choke"`, `lost`, `hp:0`) → `gather_end(fainted)` ngay, kho rỗng. Cùng tick: ngạt → hit → hết giờ; cập bến được ưu tiên nếu còn Máu.
 - [x] Scenario: `gather.monsters[]` (`target_idx`, `state`, `state_ticks_left`, `recoil_dir`), `player.invuln_ticks`; snapshot thêm `monsters[]`, `player.invuln_ticks`.
 - [x] Test `tests/test_p2_monster.py`.
-- [ ] Mở PR, nhờ haiquanng review.
+- [x] Mở PR, nhờ haiquanng review.
 
 ### minhphuong150505 — Lát Q
 - [ ] Hàm `validate_quan_against_inventory` để lát D gọi lúc mở quán: kiểm kho/khách/bếp/món thuộc kế hoạch trên kho thực.
