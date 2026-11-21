@@ -49,9 +49,10 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Tạo nhánh `p1/lat4-phuthaitran`.
 
 ### RachalHys — QA lead + HUD
-- [ ] Lập khung `docs/verification/phase-1.md` với 12 dòng AC-P1-01..12 (cột cách kiểm chứng).
-- [ ] Đọc `chonoi/web/index.html` và `chonoi/live.py`, liệt kê trường HUD còn thiếu so với PRD-0 mục 2.
-- [ ] Tạo nhánh `p1/hud-RachalHys`.
+- [x] Lập khung `docs/verification/phase-1.md` với 12 dòng AC-P1-01..12 (cột cách kiểm chứng).
+- [x] Đọc `chonoi/web/index.html` và `chonoi/live.py`, liệt kê trường HUD còn thiếu so với PRD-0 mục 2.
+  - Rà bằng fixture trên trình duyệt. HUD sáng đã hiện thời gian, oxy, Máu và giỏ. HUD tối hiện tồn vật lý thay cho kho khả dụng và tên món trên bếp bị hiện thành `[object Object]`.
+- [x] Tạo nhánh `p1/hud-RachalHys`.
 
 ---
 
