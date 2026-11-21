@@ -90,8 +90,8 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 
 ### HoangHongNgo
 - [ ] Standup phút 20: ai vướng → điều người dự phòng vào pair.
-- [ ] Kiểm dải hợp lệ tuning trong `chonoi/contract.py` (mục A "Dải hợp lệ"), sai → mã 2.
-- [ ] Commit: `contract: kiểm dải hợp lệ tuning`.
+- [x] Kiểm dải hợp lệ tuning trong `chonoi/contract.py` (mục A "Dải hợp lệ"), sai → mã 2.
+- [x] Commit: `contract: kiểm dải hợp lệ tuning`.
 
 ---
 
@@ -137,8 +137,8 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 ## 1.4 Tích hợp & kiểm chứng (phút 45–55)
 
 ### HoangHongNgo
-- [ ] Trên `main` sạch: chạy toàn bộ test + smoke hai tiến trình (dock.json, seed 42) → quán tick 0 có `stock:{"bong_sung":2,"ca_loc":1}`.
-- [ ] Chạy hai lần cùng seed, so `cmp` để kiểm giống từng byte.
+- [x] Trên `main` sạch: chạy toàn bộ test + smoke hai tiến trình (dock.json, seed 42) → quán tick 0 có `stock:{"bong_sung":2,"ca_loc":1}`.
+- [x] Chạy hai lần cùng seed, so `cmp` để kiểm giống từng byte.
 
 ### RachalHys
 - [ ] Lưu output thật vào `docs/proof/phase-1/` (log test, `gather.jsonl`, `catch.json`, `quan.jsonl`, ảnh HUD).
@@ -159,7 +159,7 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Tạo `docs/members/<handle>.md` theo `docs/members/TEMPLATE.md` (có thể hoàn thiện ở phase sau). — xong: ChuTungDuongg, haiquanng
 
 ### HoangHongNgo
-- [ ] Cập nhật `docs/clarify.md`, `docs/standup.md`, ghi nhanh vào `docs/retro.md`.
+- [x] Cập nhật `docs/clarify.md`, `docs/standup.md`, ghi nhanh vào `docs/retro.md`.
 - [ ] Gắn và đẩy tag trên commit bàn giao ở `main` **trước 1:00**:
 
 ```bash
