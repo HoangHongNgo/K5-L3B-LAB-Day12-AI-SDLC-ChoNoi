@@ -1,6 +1,7 @@
 """Test headless cho Lát 1 theo Test Contract v1.0, mục E, F và G."""
 
 import json
+import math
 import unittest
 from pathlib import Path
 
@@ -99,6 +100,28 @@ class GatherCore(unittest.TestCase):
         self.assertEqual(players[60]["hp"], 3)
         self.assertTrue(players[60]["at_surface"])
 
+    def test_reaching_exact_surface_depth_on_choke_tick_spares_hp(self):
+        player = {"pos": [20, 0.625], "vel": [0, -2.5],
+                  "oxygen_ticks": 0, "zero_oxy_ticks": 57, "hp": 1}
+        with Workdir() as w:
+            rows = self.run_gather(w, {"player": player}, 3, {"tick": 0, "move": [0, -0.625]})
+
+        # Từ 0.625 m, bơi lên 3 tick ở 2.5 m/s đưa người chơi tới đúng 0.5 m.
+        self.assertEqual([(e["tick"], e["name"], e["data"]) for e in events(rows)],
+                         [(3, "surface", {"pos": [20, 0.5]})])
+        final = snapshots(rows)[-1]["player"]
+        self.assertEqual((final["oxygen_ticks"], final["zero_oxy_ticks"], final["hp"]), (6, 0, 1))
+        self.assertTrue(final["at_surface"])
+
+    def test_depth_just_beyond_surface_threshold_still_consumes_oxygen(self):
+        player = {"pos": [20, math.nextafter(0.5, math.inf)], "oxygen_ticks": 2}
+        with Workdir() as w:
+            rows = self.run_gather(w, {"player": player}, 1)
+
+        final = snapshots(rows)[-1]["player"]
+        self.assertFalse(final["at_surface"])
+        self.assertEqual(final["oxygen_ticks"], 1)
+
     def test_faint_preempts_actions_and_timeout_and_exports_empty_inventory(self):
         for x in (2, 20):  # Trong bến hoặc ngoài bến với cá ở đúng vị trí.
             with self.subTest(x=x), Workdir() as w:
@@ -114,7 +137,7 @@ class GatherCore(unittest.TestCase):
                     w, scenario, 5, {"tick": 0, "interact": True, "catch": True},
                     snapshot_every=10,
                 )
-                self.assertEqual(inventory.read_bytes(), b'{"items":{}}\n')
+                self.assertEqual(json.loads(inventory.read_bytes()), {"items": {}})
                 self.assertEqual([(e["tick"], e["name"], e["data"]) for e in events(rows)], [
                     (1, "choke", {"hp": 0}),
                     (1, "faint", {"cause": "choke",

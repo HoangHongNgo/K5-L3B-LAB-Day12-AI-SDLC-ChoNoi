@@ -36,6 +36,7 @@ class GatherSim:
         self.ids = ids
         p = scenario.get("player", {})
         self.pos = [float(c) for c in p.get("pos", t["start_pos"])]
+        self._depth_rounding_error = 0.0
         self.vel = [float(c) for c in p.get("vel", [0.0, 0.0])]
         self._tgt = None
         self._ramp_left = 0
@@ -173,8 +174,18 @@ class GatherSim:
             self.heading = math.degrees(math.atan2(md, mx)) % 360
         b = self.t["bounds"]
         for i, axis in enumerate(AXES):
-            self.pos[i] += self.vel[i] / TICK
+            delta = self.vel[i] / TICK
             lo, hi = b[axis]
+            if axis == "d":
+                # Cộng bù sai số để đi tới đúng ngưỡng mặt nước sau nhiều bước.
+                delta -= self._depth_rounding_error
+                depth = self.pos[i] + delta
+                self._depth_rounding_error = (
+                    (depth - self.pos[i]) - delta if lo < depth < hi else 0.0
+                )
+                self.pos[i] = depth
+            else:
+                self.pos[i] += delta
             if self.pos[i] <= lo:
                 self.pos[i] = lo
                 self.vel[i] = max(0.0, self.vel[i])
