@@ -464,6 +464,50 @@ class TestP3ScenarioValidation(unittest.TestCase):
         with self.assertRaises(BadInput):
             validate_quan_against_inventory(sc_quan_excess, inv, TUNING_V12)
 
+    def test_validate_quan_against_inventory_with_item_id_reservations(self):
+        """validate_quan_against_inventory hỗ trợ đúng khách có reserved là danh sách item IDs."""
+        inv = {"items": [{"id": "I1", "kind": "ca_loc", "fresh": 90}]}
+        sc_quan = {"customers": [
+            {"id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui", "reserved": ["I1"]}
+        ]}
+        validate_quan_against_inventory(sc_quan, inv, TUNING_V12)
+
+    def test_validate_quan_against_inventory_rejects_spoiled_reserved_item(self):
+        """validate_quan_against_inventory từ chối khách giữ item có độ tươi < 30."""
+        inv = {"items": [{"id": "I1", "kind": "ca_loc", "fresh": 25}]}
+        sc_quan = {"customers": [
+            {"id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui", "reserved": ["I1"]}
+        ]}
+        with self.assertRaises(BadInput):
+            validate_quan_against_inventory(sc_quan, inv, TUNING_V12)
+
+    def test_validate_quan_against_inventory_rejects_shared_reserved_item(self):
+        """validate_quan_against_inventory từ chối hai khách cùng giữ một item ID."""
+        inv = {"items": [{"id": "I1", "kind": "ca_loc", "fresh": 95}]}
+        sc_quan = {"customers": [
+            {"id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui", "reserved": ["I1"]},
+            {"id": "C2", "table_id": "T2", "dish_id": "ca_loc_nuong_trui", "reserved": ["I1"]}
+        ]}
+        with self.assertRaises(BadInput):
+            validate_quan_against_inventory(sc_quan, inv, TUNING_V12)
+
+    def test_validate_quan_against_inventory_rejects_non_reserved_with_items(self):
+        """validate_quan_against_inventory từ chối khách không ở trạng thái reserved nhưng lại giữ đồ."""
+        inv = {"items": [{"id": "I1", "kind": "ca_loc", "fresh": 95}]}
+        sc_quan = {"customers": [
+            {"id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui", "state": "eating", "order_status": "served", "reserved": ["I1"]}
+        ]}
+        with self.assertRaises(BadInput):
+            validate_quan_against_inventory(sc_quan, inv, TUNING_V12)
+
+    def test_quansim_forward_compatible_with_contract_v13(self):
+        """QuanSim tự động kích hoạt kho cá thể khi tuning có contract_version v1.3."""
+        tuning_v13 = dict(TUNING_V12, contract_version="1.3")
+        streams = Streams(42)
+        sim = QuanSim(tuning_v13, {"stock": {"ca_loc": 2}}, streams)
+        self.assertTrue(sim.is_item_inventory)
+        self.assertEqual(len(sim.items), 2)
+
 
 class TestP3Determinism(unittest.TestCase):
     """Nhóm G: Kiểm tra tính tất định byte-by-byte khi chạy headless với Contract v1.2."""
