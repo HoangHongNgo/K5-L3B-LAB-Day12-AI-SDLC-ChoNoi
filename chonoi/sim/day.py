@@ -21,6 +21,7 @@ import inspect
 
 from ..errors import BadInput
 from ..ids import IdAllocator
+from . import reservations as res_mod
 
 MAX_DAYS = 5
 
@@ -40,10 +41,11 @@ def _gather_factory(tuning, scenario, streams, ids, *, day, active_upgrades):
     return _call_compatible(GatherSim, tuning, scenario, streams, ids, day=day, active_upgrades=active_upgrades)
 
 
-def _quan_factory(tuning, scenario, streams, ids, *, inventory, menu_ids, money, earned, reputation):
+def _quan_factory(tuning, scenario, streams, ids, *, inventory, menu_ids, money, earned, reputation,
+                  reservations=None):
     from .quan import QuanSim
     return _call_compatible(QuanSim, tuning, scenario, streams, ids, inventory=inventory, menu_ids=menu_ids,
-                            money=money, earned=earned, reputation=reputation)
+                            money=money, earned=earned, reputation=reputation, reservations=reservations)
 
 
 def _shop_factory(tuning, *, money, earned, upgrades, stock):
@@ -133,6 +135,7 @@ class DaySim:
         self.sim_tick = 0
         self.phase_tick = 0
         self.plan = None
+        self.reservations = None  # mở rộng `reservations`: đơn của Ngày (None khi tắt)
         self.cur = None
         self.done = False
         self.reason = None
@@ -173,6 +176,8 @@ class DaySim:
     def snapshot(self) -> dict:
         snap = dict(self.cur.snapshot())
         upgrades = getattr(self.cur, "upgrades", None) if self.cur.phase == "shop" else None
+        if self.reservations is not None and self.cur.phase == "gather":
+            snap["reservations"] = res_mod.snapshot_entries(self.reservations)
         snap.update(day=self.day, day_plan=self.plan,
                     upgrades=dict(upgrades if upgrades is not None else self.state.upgrades),
                     active_upgrades=dict(self.state.active_upgrades))
@@ -215,7 +220,24 @@ class DaySim:
                                   self.ids, day=self.day, active_upgrades=dict(self.state.active_upgrades))
         self.cur = gather
         evs = [self._ev("day_start", {}, "gather"), self._ev("day_plan", copy.deepcopy(self.plan), "gather")]
-        return evs + self._phase_start(gather)
+        evs += self._phase_start(gather)
+        return evs + self._announce_reservations()
+
+    def _announce_reservations(self):
+        """Đặt trước (mở rộng): công bố R1, R2 sau phase_start(gather), món trong kế hoạch Ngày."""
+        self.reservations = None
+        if not res_mod.enabled(self.tuning):
+            return []
+        q = self.scenario.get("quan", {})
+        if "reservations" in q:
+            res_mod.validate(q["reservations"], self.tuning)
+            entries = copy.deepcopy(q["reservations"])
+        elif q.get("random_reservations", True):
+            entries = res_mod.generate(self.tuning, self.streams, list(self.plan["dishes"]))
+        else:
+            entries = []
+        self.reservations = entries
+        return [self._ev(name, data, "gather") for name, data in res_mod.announced(entries)]
 
     def _result(self):
         # `dir` không gọi property: lỗi bên trong `result` phải nổi lên, không rơi vào nhánh dự phòng.
@@ -236,9 +258,10 @@ class DaySim:
             items, menu_ids = copy.deepcopy(res["inventory"]["items"]), list(self.plan["dishes"])
             if self.f["quan"] is _quan_factory:
                 _validate_quan_opening(self.tuning, block, items, menu_ids)
+            extra = {} if self.reservations is None else {"reservations": copy.deepcopy(self.reservations)}
             quan = self.f["quan"](self.tuning, block, self.streams, self.ids, inventory=items, menu_ids=menu_ids,
                                   money=self.state.money, earned=self.state.earned,
-                                  reputation=self.state.reputation)
+                                  reputation=self.state.reputation, **extra)
             return self._phase_start(quan)
         if phase == "quan":
             self.state.apply_quan_result(res)
