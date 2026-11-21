@@ -264,8 +264,8 @@ function icon(name) {
   use.setAttribute("href","#i-" + name); svg.append(use); return svg;
 }
 const journey = [
-  {time:"Buổi sáng", name:"Lặn & hái", icon:"sun", tips:["Dùng WASD hoặc phím mũi tên để bơi. Phím xuống giúp Út Sen lặn sâu, phím lên đưa Sen về mặt nước để lấy oxy.","Bấm E để hái bông trên mặt nước, Space để bắt đàn cá ở gần. Về bến rồi bấm E để chuyển nguyên liệu vào kho."]},
-  {time:"Buổi tối", name:"Mở quán", icon:"bowl", tips:["Đi đến bếp rồi bấm E để nấu đơn khách đã gọi. Khi chín, bấm E ở bếp lần nữa để bưng món.","Đến đúng bàn rồi bấm E để phục vụ khi khách còn kiên nhẫn."]},
+  {time:"Buổi sáng", name:"Lặn & hái", icon:"sun", tips:["Dùng WASD hoặc phím mũi tên để bơi. Phím xuống giúp Út Sen lặn sâu, phím lên đưa Sen về mặt nước để lấy oxy.","Bấm E để hái bông trên mặt nước, Space để bắt đàn cá ở gần. Về bến rồi bấm E để chuyển nguyên liệu vào kho. Mở Sổ tay để xem độ tươi của từng cá thể."]},
+  {time:"Buổi tối", name:"Mở quán", icon:"bowl", tips:["Đi đến bếp rồi bấm E để nấu đơn khách đã gọi. Khi chín, bấm E ở bếp lần nữa để bưng món.","Đến đúng bàn rồi bấm E để phục vụ khi khách còn kiên nhẫn. Bếp chọn nguyên liệu tươi nhất và chốt giá khi bắt đầu nấu."]},
   {time:"Cuối ngày", name:"Ghé tiệm", icon:"shop", tips:["Dùng tiền bán món để mua bình oxy hoặc áo phao. Nâng cấp có hiệu lực từ ngày kế tiếp.","Chọn Đóng tiệm để sang ngày mới."]},
 ];
 function showHelp(index) {
@@ -723,11 +723,11 @@ function renderHud() {
     const hold = {};
     for (const item of snap.hold || []) {
       const kind = item.kind || item;
-      hold[kind] = (hold[kind] || 0) + 1;
+      hold[kind] = (hold[kind] || 0) + (item.fresh < snap.freshness?.spoiled_below ? 0 : 1);
     }
     const goals = snap.day_plan?.ingredients || {};
     setText(ledTitle,"Giỏ " + (snap.hold_count ?? snap.hold?.length ?? 0) + "/" + snap.hold_capacity);
-    const items = Object.keys({...goals,...hold}).map(kind => (KIND_NAME[kind] || kind) + " · " + (hold[kind] || 0) + (goals[kind] ? "/" + goals[kind] + " cần" : ""));
+    const items = Object.keys({...goals,...hold}).map(kind => (KIND_NAME[kind] || kind) + " · " + (hold[kind] || 0) + (goals[kind] ? "/" + goals[kind] + " cần" : " dùng được"));
     rows(ledger,items.length ? items : ["Giỏ trống"]);
     warning = (snap.monsters || []).some(m => {
       const species=meta.monsters?.species?.[m.kind];

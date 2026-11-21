@@ -18,7 +18,7 @@ document.querySelector(".lobby-atlas").onclick = () => openAtlas("map");
 function mapTarget() {
   const morning = snap.phase === "gather";
   const guide = byId(morning ? "forage-guide" : "service-guide");
-  if (dayStarted && guide.dataset.targetId) return guide.dataset.targetId;
+  if (!["menu","atlas-lobby"].includes(screenName) && guide.dataset.targetId) return guide.dataset.targetId;
   return morning ? snap.nodes?.find(node => node.ready)?.id || "@dock" : null;
 }
 function paintCharts() {
@@ -75,7 +75,15 @@ function fillAtlas() {
     else body.append(element("p",byId("service-guide").innerText.trim() || "Đón khách, kiểm nguyên liệu, nấu ở bếp rồi bưng món đến bàn ghi trên phiếu."));
     const bag=morning?snap.hold:snap.stock;
     const items=Array.isArray(bag)?bag.filter(item=>typeof item==="object"):[];
-    body.append(listSection("Độ tươi từng nguyên liệu",items.map(item=>item.id+" · "+(KIND_NAME[item.kind]||item.kind)+" · "+freshLabel(item)),"Chưa có nguyên liệu."));
+    const reserved=new Map();
+    for (const order of snap.customers || []) {
+      if (Array.isArray(order.reserved)) for (const id of order.reserved) reserved.set(id, order.table_id);
+    }
+    const details=items.map(item => [
+      item.id, KIND_NAME[item.kind] || item.kind, freshLabel(item),
+      reserved.has(item.id) ? "Giữ cho bàn "+reserved.get(item.id) : ""
+    ].filter(Boolean).join(" · "));
+    body.append(listSection("Độ tươi từng nguyên liệu",details,"Chưa có nguyên liệu."));
     if(snap.reservations?.length) body.append(listSection("Khách đặt trước",snap.reservations.map(bookingLabel),""));
   }
 }

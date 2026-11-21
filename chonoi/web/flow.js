@@ -83,6 +83,9 @@ function actionReceipt(event) {
     case "gather": return "+" + d.amount + " " + (KIND_NAME[d.kind] || d.kind);
     case "fish_caught": return "+" + d.yield + " " + (KIND_NAME[d.kind] || d.kind);
     case "hold_full": return "Giỏ còn " + d.free + " chỗ, cần " + d.required + " chỗ. Hãy về bến.";
+    case "spoiled": return (KIND_NAME[d.kind] || d.kind) + " " + d.item_id + " đã ươn";
+    case "reservation_arrived": return "Khách đặt trước " + d.reservation_id + " đã đến";
+    case "reservation_failed": return "Lỡ đơn đặt trước " + d.reservation_id;
     case "monster_hit": return "Cá sấu vừa tấn công · còn " + d.hp + " máu";
     case "cook_started": return d.stove_id + " đang nấu " + dishName(d.dish_id);
     case "dish_ready": return dishName(d.dish_id) + " đã chín ở " + d.stove_id;
