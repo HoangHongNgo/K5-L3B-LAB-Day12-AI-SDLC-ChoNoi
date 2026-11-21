@@ -78,7 +78,9 @@ class QuanSim:
             raw_items = raw_inv["items"]
         else:
             custs = scenario.get("customers", [])
-            if (tuning.get("contract_version") == "1.2"
+            contract_ver = str(tuning.get("contract_version", ""))
+            if (contract_ver in ("1.2", "1.3")
+                or contract_ver >= "1.2"
                 or "freshness" in tuning
                 or any(isinstance(c.get("reserved"), list) for c in custs)):
                 self.is_item_inventory = True
@@ -329,6 +331,9 @@ class QuanSim:
                 else:
                     c["order_status"] = "unfulfillable"
                     c["reserved"] = []
+        if self.is_item_inventory:
+            self.stock = {k: sum(1 for it in self.items if it["kind"] == k and it["fresh"] >= Fraction(30))
+                          for k in sorted(set(it["kind"] for it in self.items))}
         return events
 
     def _start_cooking(self, stove) -> list:
@@ -348,6 +353,8 @@ class QuanSim:
                 avg_fresh = Fraction(100)
             base_price = math.floor(int(dish["price"]) * avg_fresh / 100)
             self.items = [it for it in self.items if it["id"] not in used_ids]
+            self.stock = {k: sum(1 for it in self.items if it["kind"] == k and it["fresh"] >= Fraction(30))
+                          for k in sorted(set(it["kind"] for it in self.items))}
             c["reserved"] = []
             c["order_status"] = "assigned"
             c["base_price"] = base_price
@@ -575,7 +582,7 @@ class QuanSim:
                 self.pos[i], self.vel[i] = hi, min(0.0, self.vel[i])
 
     def _init_customers(self, scenario_customers):
-        pat_ticks = int(round(self.t["patience_s"] * 60))
+        pat_ticks = int(round(self.t["patience_s"] * self.tick_hz))
         for c in scenario_customers:
             res = c.get("reserved")
             if isinstance(res, list):
