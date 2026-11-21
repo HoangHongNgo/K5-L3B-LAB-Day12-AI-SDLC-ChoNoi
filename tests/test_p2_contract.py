@@ -28,7 +28,7 @@ class TestStandardNumbers(unittest.TestCase):
     def test_manifest_v11(self):
         self.assertEqual(self.m["contract_version"], "1.1")
         self.assertEqual(self.m["team_size"], 6)
-        self.assertEqual(self.m["extensions"], [])
+        self.assertEqual(self.m["extensions"], ["net"])  # mở rộng net (haiquanng) đã bật
         load_contract()
 
     def test_gather_standard_numbers(self):

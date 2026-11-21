@@ -65,9 +65,9 @@ def ac01(w):
     stock = snapshots(read_jsonl(w.path("s.jsonl")))[0]["stock"] if code == 0 else None
     with open(sample, encoding="utf-8") as f:
         items = json.load(f)["items"]
-    ok = (req <= set(CONTRACT) and CONTRACT["contract_version"] == "1.0" and T["tick_hz"] == 60
+    ok = (req <= set(CONTRACT) and CONTRACT["contract_version"] in ("1.0", "1.1") and T["tick_hz"] == 60
           and CONTRACT["team_size"] == len(members) and stock == items)
-    check("AC-P1-01", ok, "khóa v1.0, team_size khớp TEAM.md, quán nạp kho mẫu",
+    check("AC-P1-01", ok, "khóa Test Contract (v1.0, regression ở v1.1), team_size khớp TEAM.md, quán nạp kho mẫu",
           {"version": CONTRACT["contract_version"], "team_size": CONTRACT["team_size"],
            "TEAM.md": len(members), "stock": stock})
 

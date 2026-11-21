@@ -96,6 +96,22 @@ class Net(unittest.TestCase):
         self.assertEqual([d["fish_id"] for _, d in s.step(CATCH)], ["F2"])
 
 
+class ContractEnablesNet(unittest.TestCase):
+    """Manifest khai mở rộng net (TICKET-02 mục 3, 4.1): extensions và shop.upgrades.net trong contract."""
+
+    def test_contract_declares_net(self):
+        from chonoi.contract import load_contract
+        c = load_contract()
+        self.assertIn("net", c["extensions"])
+        self.assertEqual(c["tuning"]["shop"]["upgrades"]["net"], NET)
+
+    def test_day_shop_sells_net_with_contract_numbers(self):
+        from chonoi.contract import load_contract
+        t = load_contract()["tuning"]
+        s = ShopSim(t, money=250, earned=250, upgrades={}, stock={})
+        self.assertEqual(s.step(inp("net")), [("bought", {"upgrade": "net", "level": 1, "price": 250, "money": 0})])
+
+
 class ShopNet(unittest.TestCase):
     def test_buy_net_levels(self):
         s = ShopSim(T, money=750, earned=750, upgrades={}, stock={})
