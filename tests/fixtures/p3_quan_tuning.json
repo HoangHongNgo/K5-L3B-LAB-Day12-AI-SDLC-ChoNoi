@@ -1,0 +1,50 @@
+{
+  "contract_version": "1.2",
+  "tick_hz": 60,
+  "freshness": {
+    "initial": 100,
+    "gather_decay_per_s": 0.5,
+    "quan_decay_per_s": 0.25,
+    "spoiled_below": 30
+  },
+  "quan": {
+    "duration_s": 180,
+    "bounds": {"x": [0, 16], "z": [0, 10]},
+    "start_pos": [8, 5],
+    "walk_speed": 4.0,
+    "ramp_max_ticks": 6,
+    "interact_radius": 1.5,
+    "stoves": [
+      {"id": "B1", "pos": [2, 8]},
+      {"id": "B2", "pos": [5, 8]}
+    ],
+    "tables": [
+      {"id": "T1", "pos": [9, 2]},
+      {"id": "T2", "pos": [13, 2]},
+      {"id": "T3", "pos": [9, 6]},
+      {"id": "T4", "pos": [13, 6]}
+    ],
+    "first_customer_tick": 120,
+    "customer_interval_s": 15,
+    "patience_s": 60,
+    "eat_s": 10,
+    "burn_s": null,
+    "carry_limit": 1,
+    "tip_rate": 0.2,
+    "tip_min_patience_ratio": 0.5,
+    "tip_reputation": 0.2,
+    "left_reputation_delta": -0.5,
+    "reputation_initial": 3.0,
+    "reputation_min": 0,
+    "reputation_max": 5
+  },
+  "menu": {
+    "ca_loc_nuong_trui": {"recipe": {"ca_loc": 1}, "cook_s": 6, "price": 60},
+    "goi_bong_sung": {"recipe": {"bong_sung": 2}, "cook_s": 4, "price": 40},
+    "lau_ca_linh_dien_dien": {"recipe": {"ca_linh": 3, "bong_dien_dien": 1}, "cook_s": 10, "price": 120},
+    "canh_chua_ca_loc": {"recipe": {"ca_loc": 1, "bong_dien_dien": 1}, "cook_s": 8, "price": 90},
+    "ca_keo_nuong": {"recipe": {"ca_keo": 2}, "cook_s": 6, "price": 70},
+    "lau_mam": {"recipe": {"ca_linh": 2, "ca_keo": 1, "keo_neo": 1, "bong_dien_dien": 1}, "cook_s": 12, "price": 200}
+  },
+  "score": {"reputation_multiplier": 100}
+}
