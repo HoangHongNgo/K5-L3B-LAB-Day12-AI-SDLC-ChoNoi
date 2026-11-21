@@ -1,10 +1,9 @@
-"""Buổi tối — Mở Quán. KHUNG: đi lại, chặn biên, đồng hồ, kho nạp từ file/scenario.
+"""Buổi tối — Mở Quán (PRD-0 mục F, Quán).
 
-Nhóm viết tiếp (PRD-0 mục F, Quán):
-  TODO(nhóm, lát 3): khách đến theo lịch, chọn món nấu được, giữ chỗ nguyên liệu, kiên nhẫn,
-                     bỏ đi (customer_left), no_dish, vòng đời khách.
-  TODO(nhóm, lát 4): interact tại bếp/bàn (cook_started, dish_ready, dish_picked, served),
-                     ăn xong trả tiền (paid), boa, uy tín, hết ca (quan_end).
+  Lát 3: khách đến theo lịch, chọn món nấu được, giữ chỗ nguyên liệu, kiên nhẫn,
+         bỏ đi (customer_left), no_dish, vòng đời khách.
+  Lát 4: interact tại bếp/bàn (cook_started, dish_ready, dish_picked, served),
+         ăn xong trả tiền (paid), boa, uy tín, hết ca (closing, quan_end).
 """
 
 import math
@@ -128,7 +127,9 @@ class QuanSim:
         }
 
     def step(self, inp):
+        """Một bước theo PRD-0 mục F "Quán" (1 đồng hồ → 2 bếp → 3 di chuyển + interact → 4 khách → 5 lịch)."""
         events = []
+        # 1. Đồng hồ, timer ca, nấu, ăn, kiên nhẫn.
         self.time_left_ticks = max(0, self.time_left_ticks - 1)
         self.phase_tick += 1
         # 1. Đồng hồ & timer
@@ -372,7 +373,7 @@ class QuanSim:
                 valid_dishes.append(did)
 
         if not valid_dishes:
-            events.append(("no_dish", {"table_id": table["id"]}))
+            events.append(("no_dish", {}))  # PRD-0 mục E: {} khi có bàn mà thiếu món
             return events
 
         rng = self.rng.get("customers")
@@ -397,7 +398,8 @@ class QuanSim:
         self.customers.append(new_customer)
         events.append((
             "customer_arrived",
-            {
+            {  # PRD-0 mục E: order_id, table_id, dish_id; giữ customer_id/reserved cho hợp đồng nhóm
+                "order_id": customer_id,
                 "customer_id": customer_id,
                 "table_id": table["id"],
                 "dish_id": chosen_dish,
