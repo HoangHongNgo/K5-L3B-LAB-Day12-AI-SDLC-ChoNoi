@@ -144,7 +144,7 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 
 ### RachalHys
 - [x] Lưu log test, `gather.jsonl`, `catch.json`, `quan.jsonl` và ảnh HUD trong `docs/proof/phase-1/`.
-- [x] Điền ma trận 12 AC theo lần chạy trên `main` tại `a1c94cb`. Chạy lại khi có commit bàn giao chính thức.
+- [x] Điền ma trận 12 AC, kiểm lại headless và chơi thử HUD hai ca trên `516e868`. [Kết quả](docs/verification/phase-1.md)
 
 ### ChuTungDuongg + haiquanng
 - [ ] Chơi thử `gather` trên `main`: lặn tới ngạt, hái, bắt cá, cập bến; ghi lỗi thấy được vào kênh nhóm, sửa nhanh nếu kịp.
@@ -531,7 +531,7 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 ### RachalHys
 - [x] Chạy toàn suite với manifest v1.1 trên nhánh U, 377 test đạt và 1 skip. Kiểm HUD v1.2 qua fixture. [Ảnh và kết quả của lát U](docs/proof/phase-3/ui/README.md) để haiquanng nối vào proof chung.
 - [x] Rà lại các mục HUD Phase 2 sau đợt đổi phong cách. Ghép thử lát D `853ce1b`, kiểm trình duyệt với đặt trước thật và chạy 22 test Day, reservations và live.
-- [ ] Chạy lại regression và chụp HUD trên `main` sau khi Contract v1.2, Gather/current và Day/reservations được tích hợp.
+- [x] Chạy lại hồi quy, smoke kho và chụp HUD độ tươi/đặt trước trên bản tích hợp v1.2 `6ce2505`. [Kết quả](docs/proof/phase-3/qa-recheck/README.md)
 
 ---
 

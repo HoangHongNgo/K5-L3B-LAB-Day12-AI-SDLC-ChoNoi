@@ -1,0 +1,51 @@
+{
+  "spoiled": {
+    "type": "event",
+    "tick": 1,
+    "phase": "gather",
+    "name": "spoiled",
+    "data": {
+      "item_id": "I1",
+      "kind": "ca_linh",
+      "location": "hold"
+    }
+  },
+  "gather_end": {
+    "type": "event",
+    "tick": 1,
+    "phase": "gather",
+    "name": "gather_end",
+    "data": {
+      "reason": "docked",
+      "inventory": {
+        "items": [
+          {
+            "id": "I1",
+            "kind": "ca_linh",
+            "fresh": 99.99166666666667
+          }
+        ]
+      }
+    }
+  },
+  "quan_tick_zero_stock": [
+    {
+      "id": "I1",
+      "kind": "ca_linh",
+      "fresh": 99.99166666666667
+    }
+  ],
+  "day_handoff": {
+    "tick": 1,
+    "phase_tick": 0,
+    "stock": [
+      {
+        "id": "I1",
+        "kind": "ca_linh",
+        "fresh": 99.99166666666667
+      }
+    ]
+  },
+  "partial_run_preserved_destination": true,
+  "count_inventory_exit": 2
+}

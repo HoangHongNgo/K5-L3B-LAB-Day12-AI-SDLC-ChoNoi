@@ -1,0 +1,14 @@
+{
+  "gather": {
+    "hold": [
+      {"id": "I1", "kind": "ca_loc", "fresh": 97.5},
+      {"id": "I2", "kind": "bong_sung", "fresh": 29.5}
+    ],
+    "random_fish": false,
+    "monsters": []
+  },
+  "quan": {
+    "random_customers": false,
+    "reservations": [{"id": "R1", "table_id": "T2", "dish_id": "ca_loc_nuong_trui", "arrival_tick": 1800}]
+  }
+}
