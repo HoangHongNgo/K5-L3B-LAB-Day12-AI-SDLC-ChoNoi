@@ -443,7 +443,7 @@ class DishSelectionAndReservation(unittest.TestCase):
             no_dish_ev = events(rows, "no_dish")
             self.assertEqual(len(no_dish_ev), 1)
             self.assertEqual(no_dish_ev[0]["tick"], 120)
-            self.assertEqual(no_dish_ev[0]["data"], {"table_id": "T1"})
+            self.assertEqual(no_dish_ev[0]["data"], {})  # PRD-0 mục E
             # Không có khách nào được tạo
             self.assertEqual(len(events(rows, "customer_arrived")), 0)
             last_snap = snapshots(rows)[-1]

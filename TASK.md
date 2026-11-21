@@ -48,9 +48,9 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Tạo nhánh `p1/lat3-minhphuong150505`.
 
 ### phuthaitran — Lát 4
-- [ ] Đọc PRD-0 mục F "Quán" (đoạn 1–3), event `cook_started`/`dish_ready`/`dish_picked`/`served`/`paid`/`quan_end`.
-- [ ] Viết 1 file scenario mẫu có sẵn khách `waiting` + kho để tự test lát 4 không cần chờ lát 3 (`tests/fixtures/quan_one_customer.json`).
-- [ ] Tạo nhánh `p1/lat4-phuthaitran`.
+- [x] Đọc PRD-0 mục F "Quán" (đoạn 1–3), event `cook_started`/`dish_ready`/`dish_picked`/`served`/`paid`/`quan_end`.
+- [x] Viết 1 file scenario mẫu có sẵn khách `waiting` + kho để tự test lát 4 không cần chờ lát 3 (`tests/fixtures/quan_one_customer.json`).
+- [x] Tạo nhánh `p1/lat4-phuthaitran`.
 
 ### RachalHys — QA lead + HUD
 - [x] Lập khung `docs/verification/phase-1.md` với 12 dòng AC-P1-01..12 (cột cách kiểm chứng).
@@ -80,9 +80,9 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Commit: `quan: lịch khách, chọn món, giữ chỗ`.
 
 ### phuthaitran — Lát 4
-- [ ] Chọn tối đa một interact theo (khoảng cách, bếp trước bàn, id) trong `interact_radius`; đối tượng không tương tác được → bỏ lượt.
-- [ ] Bếp idle lấy đơn `reserved` cũ nhất (order_tick, id bàn), tiêu nguyên liệu giữ, chốt giá → `cook_started` (`items` sắp theo kind, `base_price`); đếm `cook_ticks_left` → `dish_ready`.
-- [ ] Commit: `quan: chọn interact, nấu, dish_ready`.
+- [x] Chọn tối đa một interact theo (khoảng cách, bếp trước bàn, id) trong `interact_radius`; đối tượng không tương tác được → bỏ lượt.
+- [x] Bếp idle lấy đơn `reserved` cũ nhất (order_tick, id bàn), tiêu nguyên liệu giữ, chốt giá → `cook_started` (`items` sắp theo kind, `base_price`); đếm `cook_ticks_left` → `dish_ready`.
+- [x] Commit: `quan: chọn interact, nấu, dish_ready`.
 
 ### RachalHys — HUD
 - [x] HUD buổi sáng: thời gian còn lại, thanh oxy, Máu, giỏ (`hold_count/hold_capacity` + danh sách).
@@ -117,11 +117,11 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Mở PR, nhờ phuthaitran review.
 
 ### phuthaitran — Lát 4
-- [ ] Bếp ready → tay trống (`carry_limit` 1) → `dish_picked`, bếp về idle; `ready_ticks` chỉ tăng cho món đã ready đầu bước.
-- [ ] Bàn nhận đúng `order_id` → `served`, ăn `eat_s × 60`; boa `floor(giá × tip_rate)` nếu tỷ lệ kiên nhẫn ≥ `tip_min_patience_ratio`; ăn xong → `paid` (`finished_eating`), boa dương + `tip_reputation`.
-- [ ] Hết ca: khách đang ăn trả `closing`, khách chờ rời `closing` không trừ uy tín, rồi `quan_end`. Điểm = `earned + 100 × floor(reputation)`.
-- [ ] Test `tests/test_p1_lat4.py`: AC-P1-09, AC-P1-10.
-- [ ] Mở PR, nhờ minhphuong150505 review.
+- [x] Bếp ready → tay trống (`carry_limit` 1) → `dish_picked`, bếp về idle; `ready_ticks` chỉ tăng cho món đã ready đầu bước.
+- [x] Bàn nhận đúng `order_id` → `served`, ăn `eat_s × 60`; boa `floor(giá × tip_rate)` nếu tỷ lệ kiên nhẫn ≥ `tip_min_patience_ratio`; ăn xong → `paid` (`finished_eating`), boa dương + `tip_reputation`.
+- [x] Hết ca: khách đang ăn trả `closing`, khách chờ rời `closing` không trừ uy tín, rồi `quan_end`. Điểm = `earned + 100 × floor(reputation)`.
+- [x] Test `tests/test_p1_lat4.py`: AC-P1-09, AC-P1-10.
+- [x] Mở PR, nhờ minhphuong150505 review.
 
 ### RachalHys — HUD + QA
 - [x] HUD buổi tối: kho khả dụng, món gọi + kiên nhẫn từng khách, trạng thái bếp, món trên tay, tiền, uy tín.
@@ -150,15 +150,15 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Chơi thử `gather` trên `main`: lặn tới ngạt, hái, bắt cá, cập bến; ghi lỗi thấy được vào kênh nhóm, sửa nhanh nếu kịp.
 
 ### minhphuong150505 + phuthaitran
-- [ ] Chơi thử `quan` với kho vừa ghi (`--inventory kho.json`): đủ vòng nấu → bưng → phục vụ → trả tiền; để một khách hết kiên nhẫn; sửa nhanh nếu kịp.
+- [x] Chơi thử `quan` với kho vừa ghi (`--inventory kho.json`): đủ vòng nấu → bưng → phục vụ → trả tiền; để một khách hết kiên nhẫn; sửa nhanh nếu kịp. — bằng chứng: `docs/proof/phase-1/quan-playtest/`
 
 ---
 
 ## 1.5 Bàn giao (phút 55–60)
 
 ### Mọi người
-- [ ] Ghi phần của mình vào `docs/ai-usage-log.md` (công cụ, việc dùng AI, token/chi phí nếu đo được). — xong: ChuTungDuongg, haiquanng
-- [ ] Tạo `docs/members/<handle>.md` theo `docs/members/TEMPLATE.md` (có thể hoàn thiện ở phase sau). — xong: ChuTungDuongg, haiquanng
+- [ ] Ghi phần của mình vào `docs/ai-usage-log.md` (công cụ, việc dùng AI, token/chi phí nếu đo được). — xong: ChuTungDuongg, haiquanng, phuthaitran
+- [ ] Tạo `docs/members/<handle>.md` theo `docs/members/TEMPLATE.md` (có thể hoàn thiện ở phase sau). — xong: ChuTungDuongg, haiquanng, phuthaitran
 
 ### HoangHongNgo
 - [x] Cập nhật `docs/clarify.md`, `docs/standup.md`, ghi nhanh vào `docs/retro.md`.
