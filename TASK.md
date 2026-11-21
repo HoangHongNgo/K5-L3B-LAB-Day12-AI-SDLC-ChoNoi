@@ -328,10 +328,9 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Mở PR, nhờ minhphuong150505 review.
 
 ### RachalHys — Lát U
-- [ ] HUD sáng: Máu, oxy (< 25% đổi màu/nhấp nháy), thời gian (≤ 30 s đổi màu), độ sâu, giỏ theo loại, đã lấy/cần theo kế hoạch, hồi bắt; gợi ý hái/cập bến; "Thủy quái!" + viền tím; "Hết hơi!".
-- [ ] HUD quán: đồng hồ ca, tiền, uy tín, món + kiên nhẫn từng bàn (< 25% đổi màu), tiến độ bếp, món đang cầm, kho khả dụng. Chữ không chân ≥ 18 px ở 1280×720.
-- [ ] Menu pause (làm mờ nền, Tiếp tục / Về menu), DayResult, Shop UI, Summary sau Ngày 5.
-- [ ] Commit: `ui: HUD v1.1, pause, Shop, DayResult, Summary`.
+- [x] HUD sáng và quán theo TICKET-02, gồm cảnh báo, kế hoạch ngày, tiến độ bếp và kiên nhẫn từng bàn. Chromium kiểm font 18 px ở 1280×720, ngưỡng cảnh báo và phép trừ phần giữ chỗ.
+- [x] Menu pause, DayResult, Shop UI, Summary. Kiểm giao diện qua snapshot giả, gồm phím Esc/P, mua đủ hoặc thiếu tiền và hiển thị cấp mới. Cần kiểm pause với lớp bọc thật ở lát C.
+- [x] Commit: `ui: HUD v1.1, pause, Shop, DayResult, Summary`.
 
 ### Phút 35 — Standup
 - [ ] Mọi PR lát đã mở; lát nào trễ thì người đã xong vào pair.
