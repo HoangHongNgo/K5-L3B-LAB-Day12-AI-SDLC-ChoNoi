@@ -242,15 +242,15 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Commit: `headless: cờ --mode day, --days`.
 
 ### haiquanng — Lát A (cá & hái)
-- [ ] `chonoi/sim/fish.py`: đàn cá bơi 1.5 m/s trong `fish_x`, dải độ sâu theo loài; đổi hướng theo seed ở bước bơi thứ 120, 240… (theo `age_ticks`); phản xạ mép (chạm góc đảo cả hai thành phần).
-- [ ] Đầu ca 8 đàn ở 8 điểm khác nhau (36 cặp loài–vị trí); `fish_yield` linh 3, lóc 1, kèo 2.
-- [ ] Thêm nút N5/N6 (kèo nèo); catch dùng **vị trí cá trước khi bơi**.
-- [ ] Fixture `tests/fixtures/p2_fish_*.json` (`random_fish:false`).
-- [ ] Commit: `gather: cá bơi, phản xạ mép, đàn ban đầu`.
+- [x] `chonoi/sim/fish.py`: đàn cá bơi 1.5 m/s trong `fish_x`, dải độ sâu theo loài; đổi hướng theo seed ở bước bơi thứ 120, 240… (theo `age_ticks`); phản xạ mép (chạm góc đảo cả hai thành phần).
+- [x] Đầu ca 8 đàn ở 8 điểm khác nhau (36 cặp loài–vị trí); `fish_yield` linh 3, lóc 1, kèo 2.
+- [x] Thêm nút N5/N6 (kèo nèo); catch dùng **vị trí cá trước khi bơi**. — *N5/N6 có trong fixture `p2_fish_tuning.json`, scenario nhận `keo_neo`/`ca_keo`; contract v1.1 (PO) cần thêm N5/N6 vào `gather.nodes`*
+- [x] Fixture `tests/fixtures/p2_fish_*.json` (`random_fish:false`).
+- [x] Commit: `gather: cá bơi, phản xạ mép, đàn ban đầu`. — *commit 7bbb51f, nhánh `p2/A-haiquanng`*
 
 ### haiquanng — Lát S (Shop, khung)
-- [ ] `chonoi/sim/shop.py` theo giao diện `ShopSim` chốt sẵn: đọc `shop.upgrades.oxygen/hp` và `shop.max_ticks` từ contract (không hard-code giá/cấp); snapshot có `stock` dư và `time_left_ticks`.
-- [ ] Commit: `shop: khung ShopSim, đọc nâng cấp từ contract`.
+- [x] `chonoi/sim/shop.py` theo giao diện `ShopSim` chốt sẵn: đọc `shop.upgrades.oxygen/hp` và `shop.max_ticks` từ contract (không hard-code giá/cấp); snapshot có `stock` dư và `time_left_ticks`.
+- [x] Commit: `shop: khung ShopSim, đọc nâng cấp từ contract`. — *commit 7bdcfeb, nhánh `p2/S-haiquanng`*
 
 ### ChuTungDuongg — Lát B (Cá Sấu & Máu)
 - [x] Oxy số chuẩn: cơ sở 1.800 tick, +6/tick ở mặt nước; ngạt mất 1 Máu mỗi 60 tick **tính cả bước vừa chạm 0**, reset khi oxy > 0 hoặc lên mặt nước; ngạt xuyên bất tử, không làm rơi hàng.
@@ -292,17 +292,17 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Commit: `sim: pause cho gather/quan/day`.
 
 ### haiquanng — Lát A
-- [ ] Sinh cá tại `phase_tick = 360·k` **sau khi cá bơi**: dưới trần 12, điểm cách mọi đàn đang sống > 1 m, trọng số 40/30/30 chuẩn hóa theo loài còn điểm, chọn đều một điểm, hướng theo seed; cá mới bơi từ bước sau; phát `fish_spawned`.
-- [ ] Scenario: `fish[].age_ticks`; `random_fish:false` thì cá fixture đứng yên, không sinh.
-- [ ] Test `tests/test_p2_fish.py`: phản xạ mép/góc, đổi hướng ở bước 120, sinh đúng tick, bỏ lượt khi hết điểm, catch theo vị trí trước khi bơi.
+- [x] Sinh cá tại `phase_tick = 360·k` **sau khi cá bơi**: dưới trần 12, điểm cách mọi đàn đang sống > 1 m, trọng số 40/30/30 chuẩn hóa theo loài còn điểm, chọn đều một điểm, hướng theo seed; cá mới bơi từ bước sau; phát `fish_spawned`.
+- [x] Scenario: `fish[].age_ticks`; `random_fish:false` thì cá fixture đứng yên, không sinh.
+- [x] Test `tests/test_p2_fish.py`: phản xạ mép/góc, đổi hướng ở bước 120, sinh đúng tick, bỏ lượt khi hết điểm, catch theo vị trí trước khi bơi.
 - [ ] Mở PR lát A, nhờ ChuTungDuongg review.
 
 ### haiquanng — Lát S (Shop, luật)
-- [ ] `buy` (`oxygen`, `hp`) mua cấp kế tiếp, đủ đúng giá vẫn mua, trừ `money` giữ `earned`, phát `bought` (`upgrade,level,price,money`); thiếu tiền/đã tối đa/lệnh lạ thì `buy_failed` (`funds`/`max_level`/`unknown`), tiền và cấp giữ nguyên.
-- [ ] Đóng bằng `shop_done` → `shop_end(done)`, hoặc sau 600 tick hoạt động → `shop_end(time)`; buy xử lý trước `shop_done` trong cùng bước, kể cả bước cuối.
-- [ ] Test `tests/test_p2_shop.py`: đúng giá vẫn mua, mua 2 cấp liên tiếp, `max_level`, `funds`, lệnh lạ, buy + shop_done cùng bước, tự đóng ở tick 600.
-- [ ] `chonoi/sim/progress.py` (`DayState`, nhận từ phuthaitran): tiền/earned/uy tín/cấp giữ qua Ngày; `start_next_day` sao `upgrades → active_upgrades` (chỉ lúc dựng Ngày mới) và trả oxy/Máu tối đa theo cấp có hiệu lực; khởi tạo từ khối `day` của scenario (mặc định tiền/earned 0, uy tín theo tuning, cấp `{}`).
-- [ ] Test `tests/test_p2_progress.py`: mua oxygen cấp 1 ở Ngày 1 thì Ngày 2 có 2.700 tick, mua hp cấp 2 thì 5 Máu, cấp vừa mua chưa có hiệu lực trong cùng Ngày, uy tín kẹp [0,5].
+- [x] `buy` (`oxygen`, `hp`) mua cấp kế tiếp, đủ đúng giá vẫn mua, trừ `money` giữ `earned`, phát `bought` (`upgrade,level,price,money`); thiếu tiền/đã tối đa/lệnh lạ thì `buy_failed` (`funds`/`max_level`/`unknown`), tiền và cấp giữ nguyên.
+- [x] Đóng bằng `shop_done` → `shop_end(done)`, hoặc sau 600 tick hoạt động → `shop_end(time)`; buy xử lý trước `shop_done` trong cùng bước, kể cả bước cuối.
+- [x] Test `tests/test_p2_shop.py`: đúng giá vẫn mua, mua 2 cấp liên tiếp, `max_level`, `funds`, lệnh lạ, buy + shop_done cùng bước, tự đóng ở tick 600.
+- [x] `chonoi/sim/progress.py` (`DayState`, nhận từ phuthaitran): tiền/earned/uy tín/cấp giữ qua Ngày; `start_next_day` sao `upgrades → active_upgrades` (chỉ lúc dựng Ngày mới) và trả oxy/Máu tối đa theo cấp có hiệu lực; khởi tạo từ khối `day` của scenario (mặc định tiền/earned 0, uy tín theo tuning, cấp `{}`).
+- [x] Test `tests/test_p2_progress.py`: mua oxygen cấp 1 ở Ngày 1 thì Ngày 2 có 2.700 tick, mua hp cấp 2 thì 5 Máu, cấp vừa mua chưa có hiệu lực trong cùng Ngày, uy tín kẹp [0,5].
 - [ ] Mở PR lát S, nhờ phuthaitran review (người sẽ nối Shop và `DayState` vào day).
 
 ### ChuTungDuongg — Lát B
@@ -356,13 +356,13 @@ git tag phase-2 && git push origin phase-2
 - [ ] Chụp ảnh HUD/menu/pause và đo FPS ở 1280×720, gửi cho haiquanng để đưa vào `docs/proof/phase-2/`.
 
 ### haiquanng — Proof
-- [ ] Viết bằng chứng vào `docs/proof/phase-2/`: log test đầy đủ, `integration.*` (từ smoke phút 20), `day.jsonl` (`--days 1` và `--days 3`), kết quả `cmp` hai lần cùng seed, thời gian headless 1 Ngày, ảnh HUD/FPS của RachalHys. Mỗi file ghi commit đã chạy.
+- [ ] Viết bằng chứng vào `docs/proof/phase-2/`: log test đầy đủ, `integration.*` (từ smoke phút 20), `day.jsonl` (`--days 1` và `--days 3`), kết quả `cmp` hai lần cùng seed, thời gian headless 1 Ngày, ảnh HUD/FPS của RachalHys. Mỗi file ghi commit đã chạy. — *haiquanng: script `docs/proof/phase-2/run_proof.py` đã có (nhánh `p2/proof-haiquanng`); chạy lại trên commit gắn tag khi có contract v1.1 và cờ `--days`*
 - [ ] Gửi danh sách file cho HoangHongNgo để nối vào `docs/verification/phase-2.md`.
 - [ ] Commit: `docs: proof Phase 2`.
 
 ### haiquanng + ChuTungDuongg
 - [ ] Chơi thử `gather` số chuẩn: cá bơi/sinh, bị Cá Sấu đuổi và chạm, ngất, cập bến; sửa nhanh lỗi thấy được.
-- [ ] (Mở rộng, chỉ khi lõi đã xanh) ChuTungDuongg làm **snake** (dùng lại luật chạm/recoil); haiquanng làm **net** (mở rộng catch, mua trong Shop). Khai `extensions` và ghi README.
+- [ ] (Mở rộng, chỉ khi lõi đã xanh) ChuTungDuongg làm **snake** (dùng lại luật chạm/recoil); haiquanng làm **net** (mở rộng catch, mua trong Shop). Khai `extensions` và ghi README. — *haiquanng: `net` xong ở nhánh `p2/net-haiquanng` (`tests/test_p2_net.py`, README mục "Mở rộng đã làm"); PO cần khai `extensions` + `shop.upgrades.net` trong contract v1.1*
 
 ### minhphuong150505 + phuthaitran
 - [ ] Chơi thử `day` trọn 1 Ngày: DayIntro → gather → EveningIntro → quan → DayResult → Shop (mua oxygen) → Ngày 2.
