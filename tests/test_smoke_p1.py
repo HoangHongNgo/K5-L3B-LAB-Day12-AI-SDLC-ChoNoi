@@ -65,15 +65,18 @@ class Contract(unittest.TestCase):
             self.assertEqual(run_headless("--mode", "gather", "--seed", "1", "--ticks", "10", "--inputs", bad, "--out", out)[0], 2)
             self.assertFalse(os.path.exists(out), "lỗi đầu vào phải thoát TRƯỚC khi ghi đầu ra")
             self.assertEqual(run_headless("--mode", "gather", "--seed", "1", "--ticks", "-1", "--out", out)[0], 2)
-            for button in ("jump", "attack"):  # nút lạ / của phase sau
+            # v1.1: attack/photo/pause/shop_done là nút hợp lệ (sai pha hoặc mở rộng chưa bật thì sim bỏ qua),
+            # nên chỉ còn nút thật sự lạ bị từ chối.
+            for button in ("jump", "fire"):  # nút lạ
                 unk = write_json(w.path("unk.json"), frames({"tick": 0, button: True}))
                 self.assertEqual(run_headless("--mode", "gather", "--seed", "1", "--ticks", "10", "--inputs", unk, "--out", out)[0], 2, button)
             self.assertFalse(os.path.exists(out))
 
     def test_con_03_old_and_future_modes_rejected(self):
+        # v1.1: `day` là mode hợp lệ (xem tests/test_p2_cli_day.py); chỉ còn mode cũ/lạ bị từ chối.
         with Workdir() as w:
             out = w.path("o.jsonl")
-            for mode in ("river", "day"):
+            for mode in ("river", "night"):
                 self.assertEqual(run_headless("--mode", mode, "--seed", "1", "--ticks", "0", "--out", out)[0], 2, mode)
             self.assertFalse(os.path.exists(out))
             old = write_json(w.path("old.json"), {"river": {"hold": []}})
