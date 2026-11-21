@@ -18,8 +18,9 @@ import os
 import unittest
 from fractions import Fraction
 
-from helpers import Workdir, read_jsonl, run_headless, write_json
+from helpers import Workdir, events, frames, read_jsonl, run_headless, snapshots, write_json
 
+from chonoi.contract import load_contract
 from chonoi.errors import BadInput
 from chonoi.ids import IdAllocator
 from chonoi.inputs import InputState
@@ -507,6 +508,68 @@ class TestP3ScenarioValidation(unittest.TestCase):
         sim = QuanSim(tuning_v13, {"stock": {"ca_loc": 2}}, streams)
         self.assertTrue(sim.is_item_inventory)
         self.assertEqual(len(sim.items), 2)
+
+
+class TestP3QuanInventoryHandoff(unittest.TestCase):
+    def test_rejects_incompatible_reservations_before_writing_output(self):
+        fish = {"id": "I1", "kind": "ca_loc", "fresh": 100}
+        cases = (
+            ("giữ theo số lượng trên kho cá thể", [fish], {"ca_loc": 1}),
+            ("ID trên kho đếm", {"ca_loc": 1}, ["I1"]),
+            ("mảng rỗng trên kho đếm", {"ca_loc": 1}, []),
+            ("sai công thức", [dict(fish, kind="ca_linh")], ["I1"]),
+            ("ID không có trong kho", [fish], ["I2"]),
+            ("cá thể đã ươn", [dict(fish, fresh=29)], ["I1"]),
+        )
+        for description, stock, reserved in cases:
+            for external in (False, True):
+                with self.subTest(case=description, external=external), Workdir() as w:
+                    quan = {"customers": [{
+                        "id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
+                        "reserved": reserved,
+                    }]}
+                    inventory_args = []
+                    if external:
+                        inventory = write_json(w.path("kho.json"), {"items": stock})
+                        inventory_args = ["--inventory", inventory]
+                    else:
+                        quan["stock"] = stock
+                    scenario = write_json(w.path("scenario.json"), {"quan": quan})
+                    out = w.path("out.jsonl")
+                    code, stderr = run_headless(
+                        "--mode", "quan", "--seed", "42", "--ticks", "0",
+                        "--scenario", scenario, "--out", out, *inventory_args,
+                    )
+                    self.assertEqual(code, 2, stderr)
+                    self.assertFalse(os.path.exists(out))
+
+    def test_cooking_consumes_the_reserved_item_from_inventory_file(self):
+        tuning = load_contract()["tuning"]
+        stove = tuning["quan"]["stoves"][0]
+        fish = {"id": "I1", "kind": "ca_loc", "fresh": 100}
+        for reservation in ({"reserved": ["I1"]}, {}):
+            with self.subTest(reservation=reservation), Workdir() as w:
+                scenario = write_json(w.path("scenario.json"), {"quan": {
+                    "player": {"pos": stove["pos"]},
+                    "customers": [{
+                        "id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
+                        **reservation,
+                    }],
+                }})
+                inventory = write_json(w.path("kho.json"), {"items": [fish]})
+                inputs = write_json(w.path("inputs.json"), frames({"tick": 0, "interact": True}))
+                out = w.path("out.jsonl")
+                code, stderr = run_headless(
+                    "--mode", "quan", "--seed", "42", "--ticks", "1",
+                    "--scenario", scenario, "--inventory", inventory, "--inputs", inputs, "--out", out,
+                )
+                self.assertEqual(code, 0, stderr)
+                rows = read_jsonl(out)
+                cooked, = events(rows, "cook_started")
+                self.assertEqual([item["id"] for item in cooked["data"]["items"]], ["I1"])
+                initial, final = snapshots(rows)
+                self.assertEqual(initial["stock"], [fish])
+                self.assertEqual(final["stock"], [])
 
 
 class TestP3Determinism(unittest.TestCase):

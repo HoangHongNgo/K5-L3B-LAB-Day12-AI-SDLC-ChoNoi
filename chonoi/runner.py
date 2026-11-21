@@ -18,6 +18,7 @@ from .inputs import InputPlayer
 from .inventory import write_inventory
 from .jsonl import JsonlWriter
 from .rng import Streams
+from .scenario import validate_quan_against_inventory
 from .sim.gather import GatherSim
 from .sim.pause import PauseSim
 from .sim.quan import QuanSim
@@ -30,6 +31,9 @@ def build_sim(mode, tuning, scenario, seed, inventory, days=1):
         return DaySim(tuning, scenario, streams, ids, days=days)
     if mode == "gather":
         return GatherSim(tuning, scenario, streams, ids)
+    default_stock = [] if "freshness" in tuning or tuning.get("contract_version") in ("1.2", "1.3") else {}
+    stock = inventory if inventory is not None else scenario.get("stock", default_stock)
+    validate_quan_against_inventory(scenario, stock, tuning)
     return QuanSim(tuning, scenario, streams, ids, inventory=inventory)
 
 
