@@ -196,16 +196,30 @@ class DaySim:
         self.phase_tick = 0
         return [self._ev("phase_start", {})]
 
+    def _gather_template(self):
+        """Mẫu `gather` của Ngày (TICKET-03 Contract v1.2 › Scenario): Ngày đầu giữ nguyên id trong
+        `gather.hold`; các Ngày kế cấp id mới theo thứ tự mảng, giữ kind/fresh ban đầu của mẫu."""
+        block = copy.deepcopy(self.scenario.get("gather", {}))
+        hold = block.get("hold")
+        if self.days_completed > 0 and isinstance(hold, list):
+            block["hold"] = [dict(it, id=self.ids.new("I")) if isinstance(it, dict) else it for it in hold]
+        return block
+
     def _start_day(self):
         self.plan = plan_for(self.tuning, self.scenario.get("day"), self.day)
-        gather = self.f["gather"](self.tuning, copy.deepcopy(self.scenario.get("gather", {})), self.streams,
+        if self.days_completed == 0:  # id cá thể Ngày đầu đã dùng -> cấp tiếp sau hậu tố lớn nhất
+            for it in self.scenario.get("gather", {}).get("hold", []):
+                if isinstance(it, dict) and isinstance(it.get("id"), str):
+                    self.ids.reserve(it["id"])
+        gather = self.f["gather"](self.tuning, self._gather_template(), self.streams,
                                   self.ids, day=self.day, active_upgrades=dict(self.state.active_upgrades))
         self.cur = gather
         evs = [self._ev("day_start", {}, "gather"), self._ev("day_plan", copy.deepcopy(self.plan), "gather")]
         return evs + self._phase_start(gather)
 
     def _result(self):
-        res = getattr(self.cur, "result", None)
+        # `dir` không gọi property: lỗi bên trong `result` phải nổi lên, không rơi vào nhánh dự phòng.
+        res = self.cur.result if "result" in dir(self.cur) else None
         if res is None and self.cur.phase == "quan":
             # QuanSim trước khi gộp lát Q chưa có `result`: đọc trạng thái cuối theo cùng khóa.
             c = self.cur
@@ -217,7 +231,9 @@ class DaySim:
         res = self._result()
         if phase == "gather":
             block = copy.deepcopy(self.scenario.get("quan", {}))
-            items, menu_ids = dict(res["inventory"]["items"]), list(self.plan["dishes"])
+            # Bàn giao trong CÙNG tick đổi pha, nguyên id/kind/fresh (kho đếm v1.1 hoặc cá thể v1.2),
+            # không hao thêm; quán chạy từ bước sau.
+            items, menu_ids = copy.deepcopy(res["inventory"]["items"]), list(self.plan["dishes"])
             if self.f["quan"] is _quan_factory:
                 _validate_quan_opening(self.tuning, block, items, menu_ids)
             quan = self.f["quan"](self.tuning, block, self.streams, self.ids, inventory=items, menu_ids=menu_ids,
@@ -227,7 +243,7 @@ class DaySim:
         if phase == "quan":
             self.state.apply_quan_result(res)
             shop = self.f["shop"](self.tuning, money=self.state.money, earned=self.state.earned,
-                                  upgrades=dict(self.state.upgrades), stock=dict(res.get("stock", {})))
+                                  upgrades=dict(self.state.upgrades), stock=copy.deepcopy(res.get("stock", {})))
             return self._phase_start(shop)
         # shop đóng: Ngày hoàn tất; kho dư bị bỏ.
         self.state.apply_shop_result(res)

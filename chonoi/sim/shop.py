@@ -13,6 +13,8 @@ Một bước: giảm thời gian còn lại -> xử lý một `buy` (nếu fram
 Shop không giữ uy tín: DaySim đọc uy tín từ DayState trong pha Shop.
 """
 
+from ..ids import id_key
+
 EXTENSION_UPGRADES = ("weapon", "net")
 VENDOR_PREFIXES = ("buy:", "sell:")
 
@@ -27,18 +29,24 @@ class ShopSim:
         self.money = money
         self.earned = earned
         self.upgrades = dict(upgrades)
-        self.stock = {k: v for k, v in sorted(stock.items()) if v > 0}
+        if isinstance(stock, list):  # v1.2: kho cá thể {id,kind,fresh}; hàng thô ở Shop không hao tươi
+            self.stock = sorted((dict(it) for it in stock), key=lambda it: id_key(it["id"]))
+        else:
+            self.stock = {k: v for k, v in sorted(stock.items()) if v > 0}
         self.time_left_ticks = int(self.t["max_ticks"])
         self.done = False
         self.reason = None
 
+    def _stock_copy(self):
+        return [dict(it) for it in self.stock] if isinstance(self.stock, list) else dict(self.stock)
+
     @property
     def result(self) -> dict:
         return {"money": self.money, "earned": self.earned, "upgrades": dict(self.upgrades),
-                "stock": dict(self.stock)}
+                "stock": self._stock_copy()}
 
     def snapshot(self) -> dict:
-        return {"stock": dict(self.stock), "upgrades": dict(self.upgrades), "time_left_ticks": self.time_left_ticks}
+        return {"stock": self._stock_copy(), "upgrades": dict(self.upgrades), "time_left_ticks": self.time_left_ticks}
 
     def step(self, inp) -> list:
         if self.done:

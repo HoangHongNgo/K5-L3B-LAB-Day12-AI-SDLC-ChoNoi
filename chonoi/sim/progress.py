@@ -13,6 +13,8 @@ DayState là hàm thuần, không giữ sim. Lát D (day.py) chỉ gọi các h�
 - quan_kwargs() / shop_kwargs(stock): tham số dựng QuanSim / ShopSim của Ngày.
 """
 
+import copy
+
 from .gather import gather_limits
 
 
@@ -54,4 +56,5 @@ class DayState:
         return {"money": self.money, "earned": self.earned, "reputation": self.reputation}
 
     def shop_kwargs(self, stock) -> dict:
-        return {"money": self.money, "earned": self.earned, "upgrades": dict(self.upgrades), "stock": dict(stock)}
+        return {"money": self.money, "earned": self.earned, "upgrades": dict(self.upgrades),
+                "stock": copy.deepcopy(stock)}  # kho đếm (dict) hoặc cá thể (list)
