@@ -154,14 +154,15 @@ def _validate_quan(b, tuning):
     for arr in ("stoves", "tables", "customers"):
         if arr in b:
             _check_ids(arr, b[arr])
-    if "stock" in b:
-        validate_items(b["stock"])
-    if "random_customers" in b and not isinstance(b["random_customers"], bool):
-        raise BadInput("random_customers phải là boolean")
-
     q_tuning = tuning["quan"]
     menu = tuning["menu"]
     qb = q_tuning["bounds"]
+    all_kinds = set(KINDS_P1) | {k for dish in menu.values() for k in dish.get("recipe", {})}
+
+    if "stock" in b:
+        validate_items(b["stock"], kinds=all_kinds)
+    if "random_customers" in b and not isinstance(b["random_customers"], bool):
+        raise BadInput("random_customers phải là boolean")
 
     if "reputation" in b:
         rep = b["reputation"]
@@ -297,7 +298,7 @@ def _validate_quan(b, tuning):
             if not isinstance(res, dict):
                 raise BadInput(f"customers.{cid}.reserved phải là object")
             for rk, rv in res.items():
-                if rk not in KINDS_P1:
+                if rk not in all_kinds:
                     raise BadInput(f"customers.{cid}.reserved: nguyên liệu lạ {rk}")
                 if isinstance(rv, bool) or not isinstance(rv, int) or rv < 0:
                     raise BadInput(f"customers.{cid}.reserved: số lượng cho {rk} phải là số nguyên không âm")

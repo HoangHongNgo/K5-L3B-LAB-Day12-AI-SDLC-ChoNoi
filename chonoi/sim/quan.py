@@ -13,11 +13,29 @@ from .ramp import ramp_velocity
 TICK = 60.0
 
 
+def _order_ref(obj):
+    """Chuẩn hóa món trên bếp/tay về {"order_id","dish_id"} hoặc None."""
+    if obj is None:
+        return None
+    if isinstance(obj, str):
+        return {"order_id": None, "dish_id": obj}
+    dish = obj.get("dish_id") or obj.get("dish")
+    if isinstance(dish, dict):
+        return _order_ref(dish)
+    if dish is None:
+        return None
+    return {"order_id": obj.get("order_id") or obj.get("customer_id"), "dish_id": dish}
+
+
 class QuanSim:
     mode = "quan"
     phase = "quan"
 
-    def __init__(self, tuning, scenario, streams, ids, inventory=None):
+    def __init__(self, tuning, scenario, streams, ids=None, *, inventory=None, menu_ids=None,
+                 money=0, earned=0, reputation=None, ctx=None, **kwargs):
+        if ids is None:
+            from ..ids import IdAllocator
+            ids = IdAllocator()
         t = tuning["quan"]
         self.t = t
         self.menu = tuning["menu"]
@@ -33,20 +51,41 @@ class QuanSim:
         self._ramp_left = 0
         # kho: --inventory HOẶC scenario.stock (cả hai -> cli đã báo mã 2)
         self.stock = dict(inventory if inventory is not None else scenario.get("stock", {}))
-        self.hand = scenario.get("hand")
+        self.hand = _order_ref(scenario.get("hand"))
         self.time_left_ticks = scenario.get("time_left_ticks", int(round(t["duration_s"] * 60)))
-        self.reputation = scenario.get("reputation", t["reputation_initial"])
-        self.stoves = [dict(s, state=s.get("state", "idle"), dish=s.get("dish"),
-                            cook_ticks_left=s.get("cook_ticks_left", 0), ready_ticks=s.get("ready_ticks", 0))
-                       for s in self._merge(t["stoves"], scenario.get("stoves", []))]
+        if reputation is not None:
+            self.reputation = float(reputation)
+        else:
+            self.reputation = scenario.get("reputation", t["reputation_initial"])
+        self.start_reputation = self.reputation
+
+        self.stoves = []
+        for s in self._merge(t["stoves"], scenario.get("stoves", [])):
+            dish = _order_ref(s) if s.get("state", "idle") != "idle" else None
+            state = s.get("state", "idle") if dish is not None else "idle"
+            self.stoves.append({
+                "id": s["id"],
+                "pos": s["pos"],
+                "state": state,
+                "dish": dish,
+                "cook_ticks_left": s.get("cook_ticks_left", 0),
+                "ready_ticks": s.get("ready_ticks", 0),
+            })
         self.tables = self._merge(t["tables"], scenario.get("tables", []))
         self.customers = []
         self._init_customers(scenario.get("customers", []))
-        self.money = 0
-        self.earned = 0
+        self.money = money
+        self.earned = earned
         self.shift_earned = 0
+        self.tips = 0
+        self.menu_ids = menu_ids
+        self.ctx = ctx or {}
+        self.stats_served = 0
+        self.stats_left = 0
+        self.dish_served_counts = {}
         self.done = False
         self.reason = None
+        self.result = None
 
     @staticmethod
     def _merge(defaults, updates):
