@@ -4,7 +4,7 @@
 
 | Thành viên | GitHub handle | Module chính | Vai quy trình | Người dự phòng cho |
 |---|---|---|---|---|
-| (điền tên) | HoangHongNgo | `docs/contracts`, `contract.py` (dải hợp lệ), tích hợp | PO + Integrator + Scrum/Release | RachalHys |
+| Ngô Hồng Hoàng | HoangHongNgo | `docs/contracts`, `contract.py` (dải hợp lệ), tích hợp | PO + Integrator + Scrum/Release | RachalHys |
 | Chu Nguyen Tung Duong | ChuTungDuongg | `sim/gather`, lát 1 (bơi, oxy, ngạt, Máu, giỏ) | Dev | haiquanng |
 | Quan | haiquanng | `sim/gather`, lát 2 (hái, bắt cá, cập bến, file kho) | Dev | ChuTungDuongg |
 | Nguyễn Minh Phương | minhphuong150505 | `sim/quan`, lát 3 (khách, giữ chỗ, kiên nhẫn) + `scenario.py` | Dev | phuthaitran |
