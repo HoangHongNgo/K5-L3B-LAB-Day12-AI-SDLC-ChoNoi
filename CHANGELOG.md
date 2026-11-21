@@ -1,5 +1,9 @@
 # Changelog
 
+## Phase 4 · v1.0.0 · contract 1.3
+
+Bổ sung lệnh đo cảnh lặn có render và soak nhiều Ngày. Bản đồ ở màn hình đầu, bản đồ nhỏ trong lúc chơi và Sổ tay hỗ trợ bàn phím lẫn cảm ứng. Ba cảnh báo có chữ, chế độ tương phản cao lưu theo trình duyệt. Gói ZIP chứa mã chạy, Three.js và giấy phép đi kèm.
+
 ## Phase 3 · Mùa Nước Nổi · contract 1.2
 
 **Breaking change.** Kho đếm theo loại được thay bằng danh sách cá thể. File kho rỗng là `{"items":[]}`. Mỗi cá thể có id riêng, loại nguyên liệu và độ tươi. Đổi fixture cũ bằng cách tạo một phần tử cho từng đơn vị trong giỏ hoặc kho. Giữ thứ tự nhặt trong giỏ, điền id cá thể vào `customers[].reserved`. File kho đếm trả mã 2.

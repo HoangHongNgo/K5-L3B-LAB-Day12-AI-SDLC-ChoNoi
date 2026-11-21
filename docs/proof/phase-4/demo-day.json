@@ -1,0 +1,11 @@
+{
+  "day": {"money": 300, "earned": 300},
+  "gather": {
+    "hold": [
+      {"id": "I1", "kind": "ca_loc", "fresh": 100},
+      {"id": "I2", "kind": "bong_sung", "fresh": 100},
+      {"id": "I3", "kind": "bong_sung", "fresh": 100}
+    ]
+  },
+  "quan": {"time_left_ticks": 150, "random_customers": false, "random_reservations": false}
+}

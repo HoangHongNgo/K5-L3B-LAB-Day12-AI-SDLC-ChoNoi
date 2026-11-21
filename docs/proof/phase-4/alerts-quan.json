@@ -1,0 +1,1 @@
+{"quan":{"stock":[],"random_reservations":false,"random_customers":false,"customers":[{"id":"C1","table_id":"T1","dish_id":"ca_loc_nuong_trui","order_status":"unfulfillable","state":"waiting","patience_ticks_left":780}]}}
