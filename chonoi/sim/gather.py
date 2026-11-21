@@ -3,14 +3,11 @@
 Mặt cắt dòng sông nhìn NGANG: vị trí `[x, d]` (x sang phải, `d` độ sâu hướng xuống, d = 0 là mặt nước).
 `move = [x, d]`: thành phần thứ hai DƯƠNG = bơi xuống. Hướng mặt là góc từ +x, dương = xuống.
 
-Đã làm sẵn để smoke test chạy được: bơi + tăng/giảm tốc, chặn mép (d không âm), đồng hồ và hết giờ,
-cập bến (`interact` trong vùng bến -> `gather_end` reason `docked`), xuất kho, snapshot đầy đủ trường gather.
+Đã có: bơi + tăng/giảm tốc, chặn mép (d không âm), oxy, ngạt, ngất và bỏ giỏ theo LIFO,
+đồng hồ và hết giờ, cập bến (`interact` trong vùng bến -> `gather_end` reason `docked`),
+xuất kho, snapshot đầy đủ trường gather.
 
 Nhóm viết tiếp (đúng thứ tự một bước trong PRD mục 13.8, "Gather"):
-  TODO(nhóm, lát 1): bơi + oxy + biên + giỏ
-      - ngạt: oxy = 0 và đang dưới nước -> đếm zero_oxy_ticks, đủ choke_interval_ticks thì -1 Máu (choke)
-      - Máu về 0 -> ngất (faint, gather_end reason `fainted`, mất toàn bộ giỏ, kho rỗng)
-      - giỏ: thứ tự nhặt (LIFO), sức chứa hold_capacity
   TODO(nhóm, lát 2): hái + bắt cá + cập bến + kho
       - hái nút ở mặt nước (gather, hold_full), nút mọc lại (node_regrown đã có phần đếm ngược)
       - bắt đàn cá bằng `catch` (fish_caught, hold_full, hồi chiêu catch_cd_ticks, chỉ khi dưới nước)
@@ -105,11 +102,12 @@ class GatherSim:
                 n["regrow_ticks"] -= 1
                 if n["regrow_ticks"] == 0:
                     events.append(("node_regrown", {"node_id": n["id"]}))
-        # 2. bơi, chặn mép và tính oxy theo độ sâu cuối bước
+        # 2. bơi, chặn mép, tính oxy và ngạt theo độ sâu cuối bước
         was_surface = self._at_surface()
         self._move(inp)
         self._update_oxygen(events, was_surface)
-        # TODO(nhóm, lát 1): đếm ngạt, choke (-1 Máu) và dừng bước nếu ngất.
+        if self.done:
+            return events
         # 3. interact: bến trước, rồi hái
         if inp.pressed("interact"):
             if self._in_dock():
@@ -139,10 +137,25 @@ class GatherSim:
             self.zero_oxy_ticks = 0
             return
 
+        had_oxygen = self.oxygen_ticks > 0
+        self.oxygen_ticks = max(0, self.oxygen_ticks - 1)
         if self.oxygen_ticks > 0:
-            self.oxygen_ticks -= 1
-            if self.oxygen_ticks == 0:
-                events.append(("oxygen_empty", {"oxygen_ticks": 0}))
+            return
+        if had_oxygen:
+            events.append(("oxygen_empty", {"oxygen_ticks": 0}))
+
+        self.zero_oxy_ticks += 1
+        if self.zero_oxy_ticks < self.t["choke_interval_ticks"]:
+            return
+
+        self.zero_oxy_ticks = 0
+        self.hp -= 1
+        events.append(("choke", {"hp": self.hp}))
+        if self.hp == 0:
+            lost = list(reversed(self.hold))
+            self.hold.clear()
+            events.append(("faint", {"cause": "choke", "lost": lost, "hp": 0}))
+            self._finish("fainted", events)
 
     def _in_dock(self) -> bool:
         return math.dist(self.pos, self.t["dock_pos"]) <= self.t["dock_radius"]
