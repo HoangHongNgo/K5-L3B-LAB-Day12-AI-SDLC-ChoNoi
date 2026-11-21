@@ -1,11 +1,12 @@
 """Cửa sổ chơi trực tiếp bằng TRÌNH DUYỆT, chỉ dùng thư viện chuẩn Python.
 
-    python3 -m chonoi.live --mode gather|quan [--seed N] [--port 8000]
+    python3 -m chonoi.live --mode gather|quan|day [--seed N] [--port 8000]
 
-Máy chủ HTTP nhỏ (ThreadingHTTPServer) phục vụ `chonoi/web/index.html` và hai API:
+Máy chủ HTTP nhỏ (ThreadingHTTPServer) phục vụ `chonoi/web/index.html` và các API:
     GET  /state  -> snapshot JSON hiện tại (cùng trường như dòng snapshot của headless) + `meta` + `events`
     POST /input  -> {"move": [a, b], "interact": bool, "catch": bool}   (trạng thái phím đang giữ)
     POST /restart -> chơi lại từ đầu (cùng seed, cùng scenario)
+    POST /continue -> vào pha mới trong bản trình duyệt sau màn giới thiệu/kết quả
 
 Mô phỏng chạy 60 tick/s trong một luồng nền, dùng CÙNG lớp sim như headless (qua `runner.Session`).
 Client chỉ ĐỌC snapshot và tự bỏ qua trường chưa có, nên luật do nhóm viết thêm trường nào cũng không vỡ.
@@ -19,6 +20,7 @@ import sys
 import threading
 import time
 import traceback
+from collections import Counter, deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from .contract import load_contract
@@ -32,6 +34,7 @@ WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 TICK_S = 1.0 / 60.0
 MAX_BODY = 4096
 RECENT_EVENTS = 40
+DAY_BUTTONS = ("interact", "catch", "pause", "shop_done", "attack", "photo")
 
 
 class LiveGame:
@@ -48,11 +51,52 @@ class LiveGame:
         self._reset()
 
     def _reset(self):
-        self.session = Session(*self._args)
-        self.inputs = LiveInputs()
-        self.events = []
+        day_mode = self.mode == "day"
+        self.session = Session(*self._args, days=5) if day_mode else Session(*self._args)
+        self.inputs = LiveInputs(DAY_BUTTONS) if day_mode else LiveInputs()
+        self.events = self.session.initial_rows() if day_mode else []
+        self.intro_pending = day_mode
+        self._buys = deque()
+        self._order_dishes = {}
+        self._sold = Counter()
+        self._shift = self._empty_shift()
+        self._reputation_at_open = None
+        self._day_result = None
         self._saved = False
         self.error = None
+
+    @staticmethod
+    def _empty_shift():
+        return {"served": 0, "left": 0, "shift_earned": 0, "tips": 0, "reputation_delta": 0}
+
+    def _record_day_event(self, row):
+        name, data = row["name"], row["data"]
+        if name == "phase_start":
+            self.intro_pending = True
+            self.inputs = LiveInputs(DAY_BUTTONS)
+            self._buys.clear()
+            if row["phase"] == "quan":
+                opening = self.session.snapshot()
+                self._reputation_at_open = opening["reputation"]
+                self._shift = self._empty_shift()
+                self._order_dishes = {c["id"]: c["dish_id"] for c in opening["customers"]}
+        elif name == "served":
+            self._order_dishes[data["order_id"]] = data["dish_id"]
+        elif name == "paid":
+            dish = self._order_dishes.pop(data["order_id"], None)
+            if dish is not None:
+                self._sold[dish] += 1
+            self._shift["served"] += 1
+            self._shift["tips"] += data["tip"]
+            self._shift["shift_earned"] += data["amount"]
+        elif name == "customer_left":
+            self._order_dishes.pop(data["order_id"], None)
+            self._shift["left"] += 1
+        elif name == "quan_end":
+            self._day_result = {
+                **self._shift, "day": row["day"],
+                "reputation_delta": round(data["reputation"] - self._reputation_at_open, 2),
+            }
 
     # --- luồng nền ----------------------------------------------------------------
     def start(self):
@@ -84,10 +128,15 @@ class LiveGame:
 
     def _tick_once(self):
         s = self.session
-        if s.done:
+        if s.done or self.intro_pending:
             return
-        for row in s.step(self.inputs.advance()):
+        inp = self.inputs.advance()
+        if self._buys:
+            inp.buy = self._buys.popleft()
+        for row in s.step(inp):
             self.events.append(row)
+            if self.mode == "day":
+                self._record_day_event(row)
         del self.events[:-RECENT_EVENTS]
         if s.done and not self._saved:
             self._saved = True
@@ -101,7 +150,15 @@ class LiveGame:
     def state_json(self) -> bytes:
         with self._lock:
             snap = self.session.snapshot()
-            snap["meta"] = self.tuning[self.mode]
+            snap["meta"] = self.tuning[snap["phase"]]
+            snap["menu"] = self.tuning["menu"]
+            if self.mode == "day":
+                best_count = max(self._sold.values(), default=0)
+                snap.update(
+                    intro_pending=self.intro_pending, day_result=self._day_result,
+                    shift_earned=self._shift["shift_earned"],
+                    best_sellers={k: v for k, v in sorted(self._sold.items()) if v == best_count},
+                )
             snap["events"] = list(self.events)
             snap["finished"] = self.session.done
             snap["reason"] = self.session.sim.reason if self.session.done else None
@@ -116,13 +173,29 @@ class LiveGame:
             if not ok:
                 raise ValueError("move phải là [a, b] trong [-1, 1]")
         buttons = {}
-        for b in ("interact", "catch"):
+        allowed = DAY_BUTTONS if self.mode == "day" else ("interact", "catch")
+        for b in allowed:
             if b in body:
                 if not isinstance(body[b], bool):
                     raise ValueError(f"{b} phải là boolean")
                 buttons[b] = body[b]
+        buy = body.get("buy")
+        if "buy" in body and (self.mode != "day" or not isinstance(buy, str) or not buy):
+            raise ValueError("buy phải là chuỗi khác rỗng trong mode day")
         with self._lock:
-            self.inputs.set(move, **buttons)
+            if not self.intro_pending:
+                self.inputs.set(move, **buttons)
+                if buy and self.session.sim.phase == "shop":
+                    self._buys.append(buy)
+
+    def continue_intro(self, body):
+        with self._lock:
+            if self.mode != "day":
+                raise ValueError("chỉ mode day có màn giới thiệu")
+            state = self.session.snapshot()
+            if any(body.get(k) != state[k] for k in ("day", "phase", "tick")):
+                raise ValueError("màn giới thiệu đã thay đổi")
+            self.intro_pending = False
 
     def restart(self):
         with self._lock:
@@ -168,11 +241,14 @@ class _Handler(BaseHTTPRequestHandler):
             return
         raw = self.rfile.read(n) if n else b""
         try:
-            if path == "/input":
+            if path in ("/input", "/continue"):
                 body = json.loads(raw.decode("utf-8") or "{}")
                 if not isinstance(body, dict):
                     raise ValueError("body phải là object")
-                self.game.set_input(body)
+                if path == "/continue":
+                    self.game.continue_intro(body)
+                else:
+                    self.game.set_input(body)
             elif path == "/restart":
                 self.game.restart()
             else:
@@ -215,7 +291,7 @@ class LiveServer:
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="chonoi.live", description="Chơi trực tiếp trên trình duyệt (starter).")
-    p.add_argument("--mode", required=True, choices=["gather", "quan"])
+    p.add_argument("--mode", required=True, choices=["gather", "quan", "day"])
     p.add_argument("--seed", type=int, default=1)
     p.add_argument("--port", type=int, default=8000, help="0 = cổng ngẫu nhiên")
     p.add_argument("--host", default="127.0.0.1")
@@ -228,7 +304,10 @@ def main(argv=None) -> int:
             raise BadInput("--inventory chỉ dùng với quan")
         if a.inventory_out and a.mode != "gather":
             raise BadInput("--inventory-out chỉ dùng với gather")
-        tuning = load_contract()["tuning"]
+        contract = load_contract()
+        if a.mode == "day" and contract["contract_version"] != "1.1":
+            raise BadInput("--mode day cần Test Contract v1.1")
+        tuning = contract["tuning"]
         scenario = load_scenario(a.scenario, a.mode, tuning)
         inventory = read_inventory(a.inventory) if a.inventory else None
         if inventory is not None and "stock" in scenario:

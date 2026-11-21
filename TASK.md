@@ -273,8 +273,8 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [x] Commit: `day: máy pha gather→quan→shop, --mode day`.
 
 ### RachalHys — Lát U (UI)
-- [ ] Màn hình menu chính (Chơi/Thoát), DayIntro (Ngày + danh sách Má Tư, tự chuyển sau 4 s hoặc khi nhấn phím), EveningIntro (số nhập kho + món nấu được), dùng snapshot giả trước.
-- [ ] Commit: `ui: menu chính, DayIntro, EveningIntro`.
+- [x] Menu chính, DayIntro và EveningIntro. Playwright kiểm trên Chromium với snapshot giả ở 320 px và 1280×720, gồm bỏ qua DayIntro bằng phím, tự chuyển sau 4 giây và lọc món EveningIntro theo kho/kế hoạch.
+- [x] Commit: `ui: menu chính, DayIntro, EveningIntro`.
 
 ### Phút 20 — Smoke tích hợp (HoangHongNgo dẫn, cả nhóm)
 - [ ] Trên nhánh tích hợp tạm: `gather --inventory-out kho.json` → `quan --inventory kho.json`, đối chiếu snapshot kho ở tick 0, lưu `docs/proof/phase-2/integration.*`.
@@ -328,10 +328,9 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Mở PR, nhờ minhphuong150505 review.
 
 ### RachalHys — Lát U
-- [ ] HUD sáng: Máu, oxy (< 25% đổi màu/nhấp nháy), thời gian (≤ 30 s đổi màu), độ sâu, giỏ theo loại, đã lấy/cần theo kế hoạch, hồi bắt; gợi ý hái/cập bến; "Thủy quái!" + viền tím; "Hết hơi!".
-- [ ] HUD quán: đồng hồ ca, tiền, uy tín, món + kiên nhẫn từng bàn (< 25% đổi màu), tiến độ bếp, món đang cầm, kho khả dụng. Chữ không chân ≥ 18 px ở 1280×720.
-- [ ] Menu pause (làm mờ nền, Tiếp tục / Về menu), DayResult, Shop UI, Summary sau Ngày 5.
-- [ ] Commit: `ui: HUD v1.1, pause, Shop, DayResult, Summary`.
+- [x] HUD sáng và quán theo TICKET-02, gồm cảnh báo, kế hoạch ngày, tiến độ bếp và kiên nhẫn từng bàn. Chromium kiểm font 18 px ở 1280×720, ngưỡng cảnh báo và phép trừ phần giữ chỗ.
+- [x] Menu pause, DayResult, Shop UI, Summary. Kiểm giao diện qua snapshot giả, gồm phím Esc/P, mua đủ hoặc thiếu tiền và hiển thị cấp mới. Cần kiểm pause với lớp bọc thật ở lát C.
+- [x] Commit: `ui: HUD v1.1, pause, Shop, DayResult, Summary`.
 
 ### Phút 35 — Standup
 - [ ] Mọi PR lát đã mở; lát nào trễ thì người đã xong vào pair.
@@ -352,8 +351,9 @@ git tag phase-2 && git push origin phase-2
 ```
 
 ### RachalHys
-- [ ] Chạy regression P1 với số chuẩn; test nào đổi phải có lý do trong commit.
-- [ ] Chụp ảnh HUD/menu/pause và đo FPS ở 1280×720, gửi cho haiquanng để đưa vào `docs/proof/phase-2/`.
+- [x] Chạy regression P1 với fixture số chuẩn v1.1 trên bản ghép thử. Giữ test kiểm đủ bàn theo danh sách thực, tắt cá/khách ngẫu nhiên trong fixture cần vị trí hoặc đơn cố định.
+- [x] Chụp HUD/menu/pause và đo FPS ở 1280×720. Ảnh và giới hạn kiểm chứng ở [proof lát U](docs/proof/phase-2/ui/README.md), để haiquanng nối vào proof chung.
+- [ ] Kiểm pause thật trong Shop và chạy lại regression trên manifest v1.1 chính thức sau khi lát C được gộp.
 
 ### haiquanng — Proof
 - [ ] Viết bằng chứng vào `docs/proof/phase-2/`: log test đầy đủ, `integration.*` (từ smoke phút 20), `day.jsonl` (`--days 1` và `--days 3`), kết quả `cmp` hai lần cùng seed, thời gian headless 1 Ngày, ảnh HUD/FPS của RachalHys. Mỗi file ghi commit đã chạy. — *haiquanng: script `docs/proof/phase-2/run_proof.py` đã có (nhánh `p2/proof-haiquanng`); chạy lại trên commit gắn tag khi có contract v1.1 và cờ `--days`*

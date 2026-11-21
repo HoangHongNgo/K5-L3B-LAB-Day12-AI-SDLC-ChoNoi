@@ -24,7 +24,8 @@ FAR = [80, 0]  # mặt nước, xa bến
 
 
 def run_gather(w, scenario, input_frames, ticks, inventory_out=None):
-    sc = write_json(w.path("sc.json"), {"gather": scenario})
+    # Phase 2 bơi và sinh cá khi random_fish bật. Các ca này dựng vị trí cá cố định.
+    sc = write_json(w.path("sc.json"), {"gather": {"random_fish": False, **scenario}})
     inp = write_json(w.path("in.json"), frames(*input_frames))
     args = ["--mode", "gather", "--seed", "1", "--ticks", str(ticks), "--scenario", sc, "--inputs", inp,
             "--out", w.path("o.jsonl"), "--snapshot-every", "1"]
