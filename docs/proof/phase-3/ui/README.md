@@ -22,4 +22,4 @@ python3 -m chonoi.live --mode day --seed 42
 
 Trên bản ghép lát D, chạy `PYTHONPATH=tests:. python3 -m unittest test_p3_day test_p3_reservations test_live -v`.
 
-Kiểm live trọn vòng v1.2, regression trên manifest v1.2 chính thức và ảnh khớp commit bàn giao cần thực hiện sau khi các lát Contract, Gather/current và Day/reservations đã tích hợp.
+Xem [lần kiểm lại trên commit tích hợp v1.2](../qa-recheck/README.md) để đối chiếu hồi quy, HUD và đoạn chơi từ ca sáng sang quán.

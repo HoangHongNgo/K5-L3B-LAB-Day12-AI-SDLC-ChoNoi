@@ -2,7 +2,7 @@
 
 Đối chiếu TICKET-02 và Test Contract v1.1 ([`docs/plan/phase-2.md`](../plan/phase-2.md)). Danh sách AC-P2-xx do nhóm suy ra từ ticket (ticket không đánh số), định nghĩa ở phụ lục của file kế hoạch.
 
-> **Trạng thái: KHUNG (phút 2.1).** Cột *Bằng chứng* và *Kết quả* điền ở 2.3 theo lần chạy trên `main` tại commit gắn tag `phase-2`; trước đó mọi dòng là **Chưa kiểm**. Ghi trung thực, không điền "Đạt" khi chưa chạy.
+> **Lát U đã chốt kết quả kiểm AC-P2-17 và AC-P2-18.** Các dòng còn lại giữ trạng thái của ma trận chung. GitHub chưa có tag `phase-2`. Bằng chứng dưới đây ghi commit đã kiểm.
 
 Lệnh test toàn bộ:
 
@@ -30,14 +30,14 @@ Quy ước: **Test cần viết** là file test mà lát chịu trách nhiệm; 
 | AC-P2-14 | D | `tests/test_p2_day.py` (snapshot mọi pha có `day, day_plan, upgrades, active_upgrades`; Shop có `stock`, `time_left_ticks`). | _chưa có_ | Chưa kiểm |
 | AC-P2-15 | C | Smoke phút 20 và lặp ở 2.3: `python3 -m chonoi.headless --mode gather --seed 42 --scenario dock.json --inputs dock-inputs.json --ticks 3000 --inventory-out kho.json --out g.jsonl` rồi `--mode quan --seed 42 --inventory kho.json --ticks 0 --out q.jsonl`; đối chiếu `stock` tick 0 với `items`; chạy lại cùng seed, `cmp` hai bản. | `integration.*` | Chưa kiểm |
 | AC-P2-16 | C, S, D | `python3 -m chonoi.headless --mode day --days 1 --seed 42 --ticks 22200 --out day1.jsonl` và `--days 3` (cấp nâng cấp có hiệu lực từ Ngày kế, M2 xuất hiện ở Ngày 3); chạy 2 lần cùng seed, `cmp`; đo thời gian 1 Ngày ≤ 20 s (`time python3 -m chonoi.headless …`). | `day.jsonl`, `cmp`, thời gian | Chưa kiểm |
-| AC-P2-17 | U | Chơi `python3 -m chonoi.live --mode day` ở 1280×720: menu, DayIntro (4 s hoặc phím), EveningIntro, DayResult, Shop, Summary, pause; HUD chữ ≥ 18 px; đo FPS trung bình ≥ 30. | ảnh HUD/menu/pause, FPS | Chưa kiểm |
-| AC-P2-18 | U | Chạy lại toàn bộ `tests/test_p1_*.py` với số chuẩn; test nào đổi phải ghi lý do trong commit (danh sách đã đổi ở [`docs/contracts/README.md` mục 6.8](../contracts/README.md)). | log test | Chưa kiểm |
+| AC-P2-17 | U | Chơi vòng ngày ở 1280×720, kiểm menu, màn chuyển pha, pause, Shop, Summary, HUD và đo FPS. | [Ảnh và kết quả trên `89e2437`](../proof/phase-2/ui/README.md) | **Đạt trên v1.1**. Pause giữ nguyên tick gameplay ở cả 3 pha, HUD 18 px và hai ca đo 60 FPS. |
+| AC-P2-18 | U | Chạy các test Phase 1 còn hiệu lực với số chuẩn v1.1. | [Hồi quy P1 trên `89e2437`](../proof/phase-2/ui/regression-v11.log) · [Chạy lại trên `0fd2d7f`](../proof/phase-2/qa-regression.log) | **Đạt trên v1.1**. P1 đạt 119/119 trên `89e2437`. Suite trên `0fd2d7f` đạt 371, bỏ qua 1 ca dành cho v1.0. |
 | AC-P2-19 | mọi người | Nếu làm mở rộng: `extensions` ở gốc `game.contract.json`, mục trong `README.md` kèm test/bằng chứng; nhóm 6 người cần ≥ 2 mục. | _chưa có_ | Chưa kiểm |
 
 ## Test P1 đã đổi vì số chuẩn
 
-Xem [`docs/contracts/README.md` mục 6.8](../contracts/README.md#68-test-p1-đã-đổi-vì-số-chuẩn-v11). Ghi thêm tại đây khi RachalHys chạy regression ở 2.3.
+Xem [`docs/contracts/README.md` mục 6.8](../contracts/README.md#68-test-p1-đã-đổi-vì-số-chuẩn-v11).
 
 ## Đánh giá ngắn
 
-_Điền ở 2.3: số AC đạt/chưa đạt, commit gắn tag, lệnh đã chạy._
+Lát U đạt 2/2 AC đã kiểm. [Kết quả chạy lại từ `0fd2d7f`](../proof/phase-2/qa-recheck.md) có log kiểm thử, smoke hai tiến trình và thời gian chạy vòng 1/3 Ngày để đối chiếu ma trận chung.
