@@ -45,8 +45,8 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 
 ### phuthaitran — Lát 4
 - [ ] Đọc PRD-0 mục F "Quán" (đoạn 1–3), event `cook_started`/`dish_ready`/`dish_picked`/`served`/`paid`/`quan_end`.
-- [ ] Viết 1 file scenario mẫu có sẵn khách `waiting` + kho để tự test lát 4 không cần chờ lát 3 (`tests/fixtures/quan_one_customer.json`).
-- [ ] Tạo nhánh `p1/lat4-phuthaitran`.
+- [x] Viết 1 file scenario mẫu có sẵn khách `waiting` + kho để tự test lát 4 không cần chờ lát 3 (`tests/fixtures/quan_one_customer.json`).
+- [x] Tạo nhánh `p1/lat4-phuthaitran`.
 
 ### RachalHys — QA lead + HUD
 - [ ] Lập khung `docs/verification/phase-1.md` với 12 dòng AC-P1-01..12 (cột cách kiểm chứng).
