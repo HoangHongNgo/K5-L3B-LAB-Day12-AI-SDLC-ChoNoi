@@ -157,8 +157,10 @@ test_unfulfillable_waits_and_is_not_cooked (test_p1_prd_fixture.AcceptPrdFixture
 test_assigned_with_reserved (test_p1_prd_fixture.RejectContradictions.test_assigned_with_reserved) ... ok
 test_assigned_without_dish (test_p1_prd_fixture.RejectContradictions.test_assigned_without_dish) ... ok
 test_cooking_stove_needs_positive_timer (test_p1_prd_fixture.RejectContradictions.test_cooking_stove_needs_positive_timer) ... ok
+test_eating_timer_wrong_type_is_exit_2_not_crash (test_p1_prd_fixture.RejectContradictions.test_eating_timer_wrong_type_is_exit_2_not_crash) ... ok
 test_eating_without_timer_or_price (test_p1_prd_fixture.RejectContradictions.test_eating_without_timer_or_price) ... ok
 test_hand_dish_not_matching_order (test_p1_prd_fixture.RejectContradictions.test_hand_dish_not_matching_order) ... ok
+test_idle_stove_with_dish (test_p1_prd_fixture.RejectContradictions.test_idle_stove_with_dish) ... ok
 test_payload_unknown_field (test_p1_prd_fixture.RejectContradictions.test_payload_unknown_field) ... ok
 test_stove_dish_not_matching_order (test_p1_prd_fixture.RejectContradictions.test_stove_dish_not_matching_order) ... ok
 test_unfulfillable_with_dish (test_p1_prd_fixture.RejectContradictions.test_unfulfillable_with_dish) ... ok
@@ -202,6 +204,6 @@ test_too_few_members (test_team_check.TeamCheck.test_too_few_members) ... ok
 test_wrong_size_duplicate_and_outsider (test_team_check.TeamCheck.test_wrong_size_duplicate_and_outsider) ... ok
 
 ----------------------------------------------------------------------
-Ran 151 tests in 4.366s
+Ran 153 tests in 4.410s
 
 OK

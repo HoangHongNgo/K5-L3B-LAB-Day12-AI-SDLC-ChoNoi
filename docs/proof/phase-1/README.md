@@ -1,6 +1,6 @@
 # Bằng chứng kiểm chứng Phase 1
 
-Chạy lại tại `fd2f295` (nhánh `p1/close-haiquanng`, sau khi gộp lát 4 và sửa payload/fixture theo PRD-0 mục D–E). [Revision đầy đủ](revision.txt) · [Log 151 test](tests.log) · [Log kiểm chứng 12 AC](contract.log)
+Chạy lại tại `aa18d1b` (nhánh `p1/close-haiquanng`, sau khi gộp lát 4 và sửa payload/fixture theo PRD-0 mục D–E). [Revision đầy đủ](revision.txt) · [Log 153 test](tests.log) · [Log kiểm chứng 12 AC](contract.log)
 
 Tái lập toàn bộ từ gốc repo (ghi lại `contract.log` và ba file smoke bên dưới):
 
@@ -24,4 +24,4 @@ Kho xuất và snapshot quán đều có 2 bông súng, 1 cá lóc. Lặp hai ti
 
 ## HUD
 
-Ảnh chụp Chromium ở 320 px trên bản ghép thử lát 4 (chưa chụp lại sau `fd2f295`), nguồn dữ liệu từ `chonoi.live --scenario`. Fixture quán có 3 bông súng trong kho và khách giữ 2 để đối chiếu lượng khả dụng. [Fixture sáng](hud-gather-fixture.json) · [Ảnh HUD sáng](hud-gather.png) · [Fixture tối](hud-quan-fixture.json) · [Ảnh HUD tối](hud-quan.png)
+Ảnh chụp Chromium ở 320 px trên bản ghép thử lát 4 (chưa chụp lại sau `aa18d1b`), nguồn dữ liệu từ `chonoi.live --scenario`. Fixture quán có 3 bông súng trong kho và khách giữ 2 để đối chiếu lượng khả dụng. [Fixture sáng](hud-gather-fixture.json) · [Ảnh HUD sáng](hud-gather.png) · [Fixture tối](hud-quan-fixture.json) · [Ảnh HUD tối](hud-quan.png)

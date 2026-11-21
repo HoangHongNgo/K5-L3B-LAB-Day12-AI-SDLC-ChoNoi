@@ -1,4 +1,4 @@
-Revision: fd2f2953b1778c2c0f9dc5f51e3bac00618c55bf
+Revision: aa18d1bdb4c8bb6e77d5e13582ae8347a2d5405a
 AC-P1-01 PASS khóa v1.0, team_size khớp TEAM.md, quán nạp kho mẫu: {'version': '1.0', 'team_size': 6, 'TEAM.md': 6, 'stock': {'bong_sung': 2, 'ca_loc': 1}}
 AC-P1-02 PASS chạm oxy 0 ở t=1, ngạt ở t+59: {'oxygen_empty': [(1, {'oxygen_ticks': 0})], 'choke': [(60, {'hp': 2})]}
 AC-P1-02 PASS nổi lên đúng bước đáng lẽ ngạt thì hồi oxy, không ngạt: {'surface': [(1, {'pos': [20.0, 0.443]})], 'oxygen': 6, 'hp': 3}
@@ -21,6 +21,6 @@ AC-P1-09 PASS boa ở đúng ngưỡng 50% và 0 ngay dưới ngưỡng (fixture
 AC-P1-10 PASS hết ca: khách đang ăn trả closing, dọn bàn trước quan_end: [('paid', 'closing'), ('quan_end', 'time')]
 AC-P1-10 PASS hết ca: khách chờ rời closing, không trừ uy tín: {'customer_left': [(1, {'order_id': 'C1', 'customer_id': 'C1', 'table_id': 'T1', 'reason': 'closing', 'reputation': 3.0})], 'reputation': 3.0}
 AC-P1-10 PASS giao đúng món ở bước cuối -> served rồi paid closing: [('served', None), ('paid', 'closing'), ('quan_end', 'time')]
-AC-P1-11 PASS HUD đọc đủ trường PRD mục 2 từ snapshot (kiểm tĩnh; ảnh chụp xem hud-*.png): {'index.html thiếu': [], 'snapshot đủ trường': True}
-AC-P1-12 PASS README ≤ 3 lệnh, phím, công thức điểm; test 1 lệnh chạy xanh trên clone sạch: {'lệnh khởi động': 3, 'test clone sạch': (0, '151')}
+AC-P1-11 PASS [chỉ kiểm tĩnh, dò chuỗi] index.html tham chiếu trường PRD mục 2, snapshot có dữ liệu; cần chơi thử + ảnh để kết luận: {'index.html thiếu': [], 'snapshot đủ trường': True}
+AC-P1-12 PASS README ≤ 3 lệnh, phím, công thức điểm; test 1 lệnh chạy xanh trên clone sạch: {'lệnh khởi động': 3, 'test clone sạch': (0, '153')}
 Tổng: tất cả PASS

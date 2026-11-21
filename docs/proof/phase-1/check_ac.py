@@ -304,7 +304,7 @@ def ac11(w):
     snap_ok = all(k in g or k in g["player"] for k in gather_fields) and \
         all(k in q for k in ("stock", "hand", "stoves", "customers", "money", "reputation"))
     check("AC-P1-11", not missing and snap_ok,
-          "HUD đọc đủ trường PRD mục 2 từ snapshot (kiểm tĩnh; ảnh chụp xem hud-*.png)",
+          "[chỉ kiểm tĩnh, dò chuỗi] index.html tham chiếu trường PRD mục 2, snapshot có dữ liệu; cần chơi thử + ảnh để kết luận",
           {"index.html thiếu": missing, "snapshot đủ trường": snap_ok})
 
 
