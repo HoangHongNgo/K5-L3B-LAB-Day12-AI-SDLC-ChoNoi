@@ -93,6 +93,7 @@
     const counts = new Map();
     for (const item of snap.hold || []) {
       const kind = item.kind || item;
+      if (item.fresh < snap.freshness?.spoiled_below) continue;
       counts.set(kind, (counts.get(kind) || 0) + 1);
     }
     const nodes = snap.nodes || [], fish = snap.fish || [];

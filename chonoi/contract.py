@@ -8,7 +8,7 @@ from .errors import BadInput
 DEFAULT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "game.contract.json")
 
 
-CONTRACT_VERSION = "1.1"
+CONTRACT_VERSION = "1.2"
 NODE_KINDS = ("bong_dien_dien", "bong_sung", "keo_neo")
 FISH_KINDS = ("ca_linh", "ca_loc", "ca_keo")
 INGREDIENTS = tuple(sorted(NODE_KINDS + FISH_KINDS))
@@ -33,6 +33,13 @@ def load_contract(path=DEFAULT_PATH) -> dict:
     if c.get("contract_version") != CONTRACT_VERSION:
         raise BadInput(f"contract_version phải là {CONTRACT_VERSION!r}, đang là {c.get('contract_version')!r}")
     validate_tuning(c.get("tuning"))
+    t = c["tuning"]
+    fresh = t.get("freshness")
+    if not isinstance(fresh, dict):
+        raise BadInput("thiếu tuning.freshness")
+    for key in ("initial", "gather_decay_per_s", "quan_decay_per_s", "spoiled_below"):
+        _between("freshness." + key, fresh.get(key), 0, 100)
+    t["extensions"] = list(c["extensions"])
     return c
 
 

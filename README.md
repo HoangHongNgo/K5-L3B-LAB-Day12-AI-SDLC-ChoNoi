@@ -36,6 +36,12 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 
 Chấm tự động qua chế độ **headless** của Test Contract. Chi tiết lệnh và starter xem trong [hướng dẫn kỹ thuật](docs/STARTER.md).
 
+## Bản đồ, Sổ tay và Mùa Nước Nổi
+
+Mở **Bản đồ phiên chợ** ngay ở màn hình đầu. Trong lúc chơi, nhấn **M** hoặc chạm bản đồ nhỏ để xem vị trí Út Sen và đường tới mục tiêu. **Sổ tay** ở góc phải có ba mục. **Bản đồ** hiển thị luồng sông hoặc mặt bằng quán. **Nhiệm vụ** cho biết nguyên liệu cần gom, độ tươi từng id và đơn đặt trước. **Điều khiển** có công tắc **Tương phản cao**. Đồng hồ ca dừng trong lúc mở Sổ tay.
+
+Hàng mới đạt 100 điểm tươi. Cá thể dưới 30 điểm có nhãn **Ươn** và vẫn chiếm chỗ. Khi khách đặt trước đến, họ cần bàn và nguyên liệu đúng món. Chốt giá theo độ tươi lúc bắt đầu nấu. Hai mở rộng của nhóm là **net** và **reservations**. Xem [kết quả bàn giao kho](docs/proof/phase-3/handoff.json) và [bản đồ trong game](docs/proof/phase-4/atlas.jpg).
+
 ## Tự do sáng tạo
 
 Ngoài phần đề yêu cầu, nhóm được **thêm** nhân vật, loài cá/cây, sinh vật, món, bản đồ, cơ chế, câu chuyện, đồ họa, âm nhạc… với ba điều kiện: **không phá phần cố định** (tắt ở headless), ghi mục **"Sáng tạo của nhóm"** trong README của nhóm, và **làm lõi đúng trước**.
@@ -46,7 +52,7 @@ Ngoài phần đề yêu cầu, nhóm được **thêm** nhân vật, loài cá/
 
 Bản chơi trên trình duyệt dựng chợ nổi bằng Three.js. Lúc lặn, camera bám theo Út Sen để thấy mực nước, đàn cá và các cụm rau. Buổi tối, người chơi đi giữa bếp và bàn trên sàn gỗ của quán nổi. Trang chơi có nút cảm ứng và dùng cùng các phím trong mục Bắt đầu nhanh.
 
-Chơi trọn vòng lặn, mở quán, mua nâng cấp và sang ngày tiếp theo bằng `python3 -m chonoi.live --mode day --port 8012`. Mở địa chỉ được in ra và chọn **Bắt đầu chơi**. Nhấn **P** hoặc **Esc** để tạm dừng.
+Chơi trọn vòng lặn, mở quán, mua nâng cấp và sang ngày tiếp theo bằng `python3 -m chonoi.live --mode day --port 8002`. Mở địa chỉ được in ra và chọn **Bắt đầu chơi**. Nhấn **P** hoặc **Esc** để tạm dừng.
 
 Buổi sáng, chọn nguyên liệu trong **Theo dõi thực đơn** để xem hướng bơi, khoảng cách và độ sâu. Khi giỏ đủ mục tiêu, hướng dẫn chuyển sang nguyên liệu còn thiếu hoặc bến. Trước giờ mở quán, chọn các món muốn bán từ số nguyên liệu đang có. Trong ca, phiếu phục vụ chỉ tới bếp có đơn hoặc đúng bàn đang chờ món trên tay. Lúc quán trống, có thể chờ nhanh tới khách kế tiếp hoặc thu dọn khi không còn đơn nào có thể đến.
 

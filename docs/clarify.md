@@ -12,3 +12,16 @@
 | 8 | 2026-11-21 P2 0:05 | `pause` khi sim đã `done` (cùng bước với `gather_end`)? Và `pause` ở bước đổi pha trong `day`? | Giả định: sim đã `done` thì bỏ qua cạnh `pause` (runner dừng). Pause bọc cả `DaySim` nên đổi pha bên trong day không đổi trạng thái pause; cạnh `pause` vẫn xét trước mọi pha (kể cả Shop). | PO (tạm) |
 | 9 | 2026-11-21 P2 0:05 | `buy` hợp lệ ngoài Shop (trong gather/quan) hay đã tính "sai pha, bỏ qua"? Có làm lệnh `buy` rỗng/không phải chuỗi thành mã 2 không? | Giả định theo ticket 4.2: `buy` đúng kiểu (chuỗi khác rỗng) nhưng sai pha thì bỏ qua; rỗng/không phải chuỗi → mã 2 ngay lúc nạp inputs. | PO (tạm) |
 | 10 | 2026-11-21 P2 0:05 | Ticket không đánh số AC-P2-xx dù nhắc tới. | Nhóm tự đặt AC-P2-01..19 ở phụ lục `docs/plan/phase-2.md`, dùng làm khóa cho `docs/verification/phase-2.md`. Có bản đánh số chính thức thì đổi theo. | PO (tạm) |
+
+## Quyết định tích hợp TICKET-03 và TICKET-04
+
+Từ v1.2, mọi file kho công khai dùng mảng cá thể; một file đếm cũ cần chuyển từng đơn vị thành một id duy nhất. V1.3 giữ nguyên luật và định dạng này. Giỏ dùng thứ tự nhặt để bỏ LIFO; lúc xuất file mới sắp theo id. Adapter tách hiển thị số thập phân khỏi so sánh chính xác ở ngưỡng 30.
+
+| Lát | Tác động | Bằng chứng / người phụ trách theo TEAM.md |
+|---|---|---|
+| Adapter và Lặn | inventory, runner, gather, JSONL và fixture cũ | haiquanng, ChuTungDuongg; smoke hai tiến trình, test LIFO |
+| Quán và vòng ngày | scenario, quan, reservations, day và shop | minhphuong150505, phuthaitran; test giữ chỗ, thanh toán, bàn giao |
+| HUD và QA | live, web; dữ liệu từng id, cảnh báo, khả năng đọc trên điện thoại | RachalHys; ảnh và kết quả trong docs/proof |
+| Tích hợp / phát hành | manifest, regression, tag, gói chạy | HoangHongNgo theo TEAM.md; đối chiếu ma trận Phase 3–4 |
+
+Tích hợp từ main, lấy các commit Quán/vòng ngày/HUD của từng lát, bổ sung adapter và luồng Lặn, rồi chạy smoke cả file lẫn day trước khi nâng lệnh công cụ sang v1.3. Phạm vi mở rộng bàn giao gồm vợt hút cá và khách đặt trước. Điểm bắt đầu và kết thúc phép đo của benchmark ghi tại docs/proof/phase-4/bench.md.

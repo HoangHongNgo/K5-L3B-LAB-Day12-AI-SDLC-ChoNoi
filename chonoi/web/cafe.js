@@ -432,7 +432,14 @@ export function createCafe(THREE) {
     const root=group(scene), steel='#4d5b5b', brick='#ae6248';
     const fixed=group(root);
     shadow(fixed,.05,.10,2.25,1.75);
-    box(fixed,dark,0,.14,0,1.75,.26,1.21);
+    // A tiled hearth and the woven table mats identify the two kinds of station from afar.
+    box(fixed,'#985b43',0,.038,0,2.34,.061,1.86);
+    for(let row=0;row<5;row++) for(let col=0;col<6;col++) {
+      const tx=(col-2.5)*.377,tz=(row-2)*.361;
+      box(fixed,'#dfbc87',tx,.078,tz,.361,.028,.345);
+      box(fixed,(row+col)%2?'#ad7050':'#728d7b',tx,.096,tz,.13,.018,.13,0,Math.PI/4);
+    }
+    box(fixed,dark,0,.15,0,1.75,.26,1.21);
     box(fixed,brick,0,.56,0,1.67,.70,1.19);
     for(const side of [-1,1]) box(fixed,'#c77c59',side*.56,.53,.604,.36,.095,.025);
     box(fixed,'#e4bf8c',0,.96,0,1.83,.16,1.33);
@@ -465,7 +472,12 @@ export function createCafe(THREE) {
     const root=group(scene), fixed=group(root);
     shadow(fixed,.06,.08,2.33,1.93);
     // A woven chiếu defines the seat and makes the serving location legible.
-    box(fixed,'#aa8156',0,.032,0,1.91,.039,2.35);
+    box(fixed,'#9eac7d',0,.032,0,1.91,.039,2.35);
+    for (let i=0;i<9;i++) {
+      const x=(i-4)*.194;
+      box(fixed,'#d7b77f',x,.054,0,.028,.006,2.29);
+      for (const z of [-1.17,1.17]) box(fixed,'#dcc491',x,.05,z,.047,.018,.14);
+    }
     for(const x of [-.85,.85]) box(fixed,'#506e61',x,.054,0,.085,.009,2.27);
     for(const z of [-1.08,1.08]) box(fixed,'#506e61',0,.054,z,1.79,.009,.055);
     for(const x of [-.48,.48]) for(const z of [-.34,.34]) {
@@ -495,6 +507,44 @@ export function createCafe(THREE) {
     const tag=label(root,0,1.34,.74);
     return {root,seat,guest,meal,tag};
   }
+  // Painted boards at the edge of the actual kitchen and dining clusters face incoming players.
+  function zoneBoard(kitchen) {
+    const bg=kitchen?'#81483b':'#345e52', fg=kitchen?'#ffdaa0':'#f4e3ad';
+    const map=ink(640,160,(ctx,w,h)=>{
+      ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+      ctx.strokeStyle=fg;ctx.fillStyle=fg;ctx.lineWidth=4;ctx.strokeRect(9,9,w-18,h-18);
+      ctx.lineWidth=7;ctx.lineCap='round';ctx.lineJoin='round';
+      ctx.beginPath();
+      if(kitchen) {
+        ctx.moveTo(51,79);ctx.lineTo(61,111);ctx.lineTo(112,111);ctx.lineTo(123,79);ctx.closePath();
+        ctx.moveTo(45,71);ctx.lineTo(129,71);ctx.moveTo(65,62);ctx.quadraticCurveTo(88,38,111,62);
+        ctx.moveTo(83,49);ctx.lineTo(90,49);
+      } else {
+        ctx.moveTo(48,76);ctx.bezierCurveTo(53,123,112,126,125,76);ctx.closePath();
+        ctx.moveTo(72,120);ctx.lineTo(101,120);
+        ctx.moveTo(92,76);ctx.lineTo(125,36);ctx.moveTo(104,76);ctx.lineTo(140,46);
+      }
+      ctx.stroke();
+      ctx.font='bold 82px Georgia, serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(kitchen?'BẾP LỬA':'BÀN ĂN',386,84,435);
+    });
+    const root=group(scene);
+    box(root,'#815d48',0,.052,0,3.39,.074,1.03);
+    const face=new THREE.Mesh(new THREE.PlaneGeometry(3.29,.94),new THREE.MeshBasicMaterial({map}));
+    face.rotation.x=-Math.PI/2;face.position.y=.094;root.add(face);
+    return root;
+  }
+  const kitchenBoard=zoneBoard(true), diningBoard=zoneBoard(false);
+  function positionBoard(board, stations, bounds, clearance) {
+    board.visible=!!stations?.length;
+    if(!board.visible) return;
+    let minX=Infinity,maxX=-Infinity,front=-Infinity;
+    for(const station of stations) {
+      const [x,z]=position(station.pos,bounds);
+      minX=Math.min(minX,x);maxX=Math.max(maxX,x);front=Math.max(front,z);
+    }
+    board.position.set(Math.max(-6.42,Math.min(6.42,(minX+maxX)/2)),0,Math.min(4.76,front+clearance));
+  }
   let lastX,lastZ,prevTime,walk=0,angle=0;
   function position(pos,bounds) {
     const [x0,x1]=bounds.x, [z0,z1]=bounds.z;
@@ -515,6 +565,8 @@ export function createCafe(THREE) {
     camera.position.set(3.6+offset,20.5,23);
     camera.lookAt(center.x+offset,center.y,center.z);
     camera.updateProjectionMatrix();
+    positionBoard(kitchenBoard,state.stoves,bounds,1.60);
+    positionBoard(diningBoard,state.tables,bounds,1.78);
     playerRoot.visible = Boolean(state.player?.pos);
     if(playerRoot.visible) {
       const [x,z]=position(state.player.pos,bounds);

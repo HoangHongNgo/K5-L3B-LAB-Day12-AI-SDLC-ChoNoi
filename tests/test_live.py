@@ -105,6 +105,7 @@ class LiveServerTest(unittest.TestCase):
 class LiveServiceTest(unittest.TestCase):
     def setUp(self):
         self.tuning = load_contract()["tuning"]
+        self.tuning["extensions"].remove("reservations")  # This one-second fixture isolates regular walk-ins.
         self.tuning["quan"]["first_customer_tick"] = 4
         self.tuning["quan"]["duration_s"] = 1
         self.fish = "ca_loc_nuong_trui"
@@ -115,7 +116,8 @@ class LiveServiceTest(unittest.TestCase):
         return json.loads(game.state_json())
 
     def open_day(self, hold):
-        game = LiveGame("day", self.tuning, {"gather": {"hold": hold}}, 1)
+        items = [{"kind": kind, "fresh": 100, "id": f"I{i}"} for i, kind in enumerate(hold, 1)]
+        game = LiveGame("day", self.tuning, {"gather": {"hold": items}}, 1)
         game.continue_intro(self.state(game))
         game.set_input({"interact": True})
         game._tick_once()
@@ -170,7 +172,7 @@ class LiveServiceTest(unittest.TestCase):
         self.assertEqual(by_table["T2"]["dish_id"], self.salad)
 
     def test_wait_runs_normal_ticks_to_arrival_and_discards_pending_inputs(self):
-        scenario = {"stock": {"ca_loc": 2}}
+        scenario = {"stock": [{"id": f"I{i}", "kind": "ca_loc", "fresh": 100} for i in (1, 2)]}
         game = LiveGame("quan", self.tuning, scenario, 42, start_in_menu=True)
         control = LiveGame("quan", self.tuning, scenario, 42, start_in_menu=True)
         for session in (game, control):
@@ -233,7 +235,7 @@ class LiveServiceTest(unittest.TestCase):
 
     def test_wait_label_accounts_for_schedule_and_items_spoiling_before_arrival(self):
         for scenario in [
-            {"stock": {"ca_loc": 1}, "random_customers": False},
+            {"stock": [{"id": "I1", "kind": "ca_loc", "fresh": 100}], "random_customers": False},
             {"stock": [{"kind": "ca_loc", "id": "I1", "fresh": 30.01}]},
         ]:
             with self.subTest(scenario=scenario):
@@ -245,7 +247,7 @@ class LiveServiceTest(unittest.TestCase):
                 game.wait_for_customer(opening)
                 self.assertTrue(self.state(game)["finished"])
         self.tuning["quan"]["first_customer_tick"] = self.tuning["quan"]["duration_s"] * 60
-        game = LiveGame("quan", self.tuning, {"stock": {"ca_loc": 1}}, 1)
+        game = LiveGame("quan", self.tuning, {"stock": [{"id": "I1", "kind": "ca_loc", "fresh": 100}]}, 1)
         self.assertTrue(self.state(game)["wait_to_close"])
 
     def test_gather_net_metadata_matches_active_tier(self):

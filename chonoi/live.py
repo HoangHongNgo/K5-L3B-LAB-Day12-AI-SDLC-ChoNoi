@@ -1,6 +1,6 @@
 """Cửa sổ chơi trực tiếp bằng TRÌNH DUYỆT, chỉ dùng thư viện chuẩn Python.
 
-    python3 -m chonoi.live --mode gather|quan|day [--seed N] [--port 8000]
+    python3 -m chonoi.live --mode gather|quan|day [--seed N] [--port 8002]
 
 Máy chủ HTTP nhỏ (ThreadingHTTPServer) phục vụ `chonoi/web/index.html` và các API:
     GET  /state  -> snapshot JSON hiện tại (cùng trường như dòng snapshot của headless) + `meta` + `events`
@@ -186,6 +186,10 @@ class LiveGame:
                 and all(stove["state"] == "idle" for stove in state["stoves"]))
 
     def _wait_to_close(self, room):
+        if room.book and any(r["state"] in ("scheduled", "holding")
+                             and room.phase_tick < r["arrival_tick"] < room.phase_tick + room.time_left_ticks
+                             for r in room.book.items):
+            return False
         if not room.random_customers or not self._cookable(room, room._available_stock()):
             return True
         first = room.t["first_customer_tick"]
@@ -382,7 +386,7 @@ class _Handler(BaseHTTPRequestHandler):
 class LiveServer:
     """Máy chủ + mô phỏng. port=0 -> cổng ngẫu nhiên (đọc `.port`)."""
 
-    def __init__(self, game: LiveGame, host="127.0.0.1", port=8000):
+    def __init__(self, game: LiveGame, host="127.0.0.1", port=8002):
         handler = type("Handler", (_Handler,), {"game": game})
         self.game = game
         self.httpd = ThreadingHTTPServer((host, port), handler)
@@ -412,7 +416,7 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="chonoi.live", description="Chơi trực tiếp trên trình duyệt (starter).")
     p.add_argument("--mode", required=True, choices=["gather", "quan", "day"])
     p.add_argument("--seed", type=int, default=1)
-    p.add_argument("--port", type=int, default=8000, help="0 = cổng ngẫu nhiên")
+    p.add_argument("--port", type=int, default=8002, help="0 = cổng ngẫu nhiên")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--scenario")
     p.add_argument("--inventory", help="chỉ với quan: nạp kho từ file")

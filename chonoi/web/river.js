@@ -390,6 +390,79 @@ export function createRiver(THREE) {
   person(pier,-.95,.77,-2.3,0xa04e47);
   const dock=place(pier,0,0,0);
 
+  // Lettered timber boards are meshes fixed to the dock and to the plants' fishing stakes.
+  function paintedBoard(words, w, h, background, accent) {
+    const canvas=document.createElement("canvas");
+    canvas.width=512; canvas.height=140;
+    const ctx=canvas.getContext("2d");
+    ctx.fillStyle=background; ctx.fillRect(0,0,512,140);
+    ctx.lineWidth=4; ctx.strokeStyle=accent; ctx.strokeRect(8,8,496,124);
+    ctx.fillStyle=accent;
+    for(const pin of [20,492]) for(const y of [20,120]) {
+      ctx.beginPath();ctx.arc(pin,y,3,0,Math.PI*2);ctx.fill();
+    }
+    ctx.textAlign="center";ctx.textBaseline="middle";ctx.font="bold 77px Georgia, serif";
+    ctx.fillText(words,256,73,460);
+    const map=new T.CanvasTexture(canvas);map.colorSpace=T.SRGBColorSpace;
+    return new T.Mesh(new T.PlaneGeometry(w,h),new T.MeshBasicMaterial({map}));
+  }
+  const gateway=new Model();
+  // A short landing with a ladder marks the drop-off at the actual dock coordinate.
+  for(const x of [-.55,2.28]) {
+    gateway.rod(0x77593c,[x,-2.3,-.86],[x,3.82,-.86],.082);
+    for(const y of [.79,2.62,3.65]) gateway.shape(barrel,0xe5b977,x,y,-.86,.092,.14,.092);
+    gateway.rod(0x9b784d,[x,2.58,-.86],[x+(x<0?.64:-.64),3.52,-.86],.059);
+  }
+  gateway.box(0x8d6549,.85,3.56,-.87,3.62,.15,.18);
+  gateway.box(0x624c37,.85,3.14,-.83,3.15,.81,.12);
+  for(const x of [.22,1.29]) {
+    gateway.rod(0xbc9160,[x,-1.42,-.45],[x,.81,-.80],.048);
+  }
+  for(let i=0;i<5;i++) gateway.box(0xcaac73,.755,.62-i*.42,-.76+i*.068,1.11,.069,.085);
+  const lifeRing=new T.Mesh(new T.TorusGeometry(.30,.08,7,24),new T.MeshLambertMaterial({color:0xde6d43}));
+  lifeRing.position.set(2.27,1.20,-.75); gateway.box(0xc9ad78,2.25,1.65,-.84,.07,.31,.07);
+  const dockName=paintedBoard("Bến Út Sen",3.05,.75,"#29594f","#ffe5ad");
+  dockName.position.set(.85,3.14,-.755);
+  dock.add(gateway.mesh(),dockName,lifeRing);
+
+  // Mooring line under the landing. Depth knots help locate the way home underwater.
+  const sounding=new T.Group(), tether=new Model(), depthKnots=[];
+  tether.rod(0x9b9869,[0,0,0],[0,-1,0],.037);
+  const rope=tether.mesh(flat);
+  sounding.add(rope);
+  for(let d=5;d<=30;d+=5){
+    const knot=new Model();
+    knot.oval(d%10===0?0xf4c46c:0xcab180,0,0,0,.12,.17,.09);
+    for(const side of [-1,1]) knot.rod(0xd6bd81,[side*.06,-.04,0],[side*.22,-.19,.04],.03);
+    const mesh=knot.mesh(flat);mesh.position.y=-d;
+    sounding.add(mesh);depthKnots.push(mesh);
+  }
+  sounding.position.set(.24,0,-.54);
+  dock.add(sounding);
+  const anchor=new Model();
+  anchor.rod(0x798880,[0,.52,0],[0,-.09,0],.07);
+  anchor.rod(0x87978d,[-.42,.24,0],[0,-.09,0],.065);
+  anchor.rod(0x87978d,[0,-.09,0],[.42,.24,0],.065);
+  const mooringWeight=anchor.mesh();sounding.add(mooringWeight);
+
+  const plantSigns={
+    bong_dien_dien:["Điên điển", "#664833", "#ffda74", 0xf2bb48],
+    bong_sung:["Bông súng", "#71455a", "#ffe0d9", 0xec93ab],
+    keo_neo:["Kèo nèo", "#345e54", "#e5efbb", 0xb1c46d],
+  };
+  function fishingStake(kind) {
+    const [text,bg,ink,flag]=plantSigns[kind] || ["Bãi hái","#335c50","#f5dcab",0xead18a];
+    const frame=new Model();
+    frame.rod(0x967345,[0,-.75,0],[0,1.69,0],.048);
+    frame.shape(barrel,0xe2bb7b,0,.53,0,.075,.20,.075);
+    frame.tri([0,1.59,.014],[.50,1.48,.014],[0,1.26,.014],flag);
+    frame.box(0x765941,.66,.98,0,2.15,.60,.09);
+    const stake=frame.mesh(), board=paintedBoard(text,2.08,.54,bg,ink);
+    board.position.set(.66,.98,.051);stake.add(board);
+    stake.position.set(1.00,0,-.62);
+    return stake;
+  }
+
   function ingredient(kind) {
     const m=new Model(), flowers=new Model();
     for(let i=0;i<8;i++) {
@@ -412,7 +485,7 @@ export function createRiver(THREE) {
       }
     }
     const group=new T.Group();
-    group.add(m.mesh(),flowers.mesh());
+    group.add(m.mesh(),flowers.mesh(),fishingStake(kind));
     return group;
   }
   function school(kind) {
@@ -541,6 +614,9 @@ export function createRiver(THREE) {
       skyObjects.position.x=centerX*.90+6;
     }
     dock.position.set(dp[0],-dp[1],0);
+    const soundDepth=Math.max(0,(meta.bounds?.d?.[1] ?? 30)-dp[1]);
+    rope.scale.y=soundDepth; mooringWeight.position.y=-soundDepth;
+    for(const knot of depthKnots) knot.visible=-knot.position.y<soundDepth;
     targetFlag.visible = targetId === "@dock" && !screen;
     if (targetFlag.visible) targetFlag.position.set(dp[0], 1.7 - dp[1], .85);
     for(let i=0;i<boats.length;i++) {
@@ -579,7 +655,8 @@ export function createRiver(THREE) {
         }
         if(type==="node") {
           model.children[1].visible=item.ready!==false;
-          model.scale.setScalar(item.ready===false?.65:1);
+          model.children[0].scale.setScalar(item.ready===false?.65:1);
+          model.children[2].visible=!title;
           model.rotation.z=Math.sin(seconds*1.4+item.pos[0])*.04;
         } else if(type==="fish") {
           const a=(item.heading_deg || 0)*Math.PI/180, sign=Math.cos(a)>=0?1:-1;
