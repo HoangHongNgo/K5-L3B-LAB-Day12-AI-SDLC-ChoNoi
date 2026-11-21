@@ -237,6 +237,8 @@ def _validate_quan(b, tuning):
                 _nonneg_int(f"stoves.{s['id']}.{key}", s[key])
         if state == "cooking" and s.get("cook_ticks_left", 0) <= 0 and isinstance(s.get("dish"), dict):
             raise BadInput(f"stoves.{s['id']}: bếp cooking phải có cook_ticks_left dương")
+        if state == "idle" and (dish is not None or oid is not None):
+            raise BadInput(f"stoves.{s['id']}: bếp idle không được giữ món hay đơn")
         if state != "idle" and dish is None:
             raise BadInput(f"stoves.{s['id']}: bếp {state} phải có món")
         if dish is not None:
@@ -307,6 +309,10 @@ def _validate_quan(b, tuning):
         if status not in ORDER_STATUSES:
             raise BadInput(f"customers.{cid}: order_status không hợp lệ: {status}")
 
+        for timer in ("order_tick", "patience_ticks_left", "eat_ticks_left"):
+            if timer in c:
+                _nonneg_int(f"customers.{cid}.{timer}", c[timer])
+
         if state == "eating" and status != "served":
             raise BadInput(f"customers.{cid}: khách đang ăn phải có order_status là 'served'")
         if state == "eating" and (c.get("eat_ticks_left", 0) <= 0 or c.get("base_price") is None):
@@ -322,10 +328,6 @@ def _validate_quan(b, tuning):
                 raise BadInput(f"customers.{cid}: món ở bếp/tay không khớp đơn ({refs[0]} ≠ {did})")
         elif refs:
             raise BadInput(f"customers.{cid}: đơn {status} không được có món ở bếp hoặc tay")
-
-        for timer in ("order_tick", "patience_ticks_left", "eat_ticks_left"):
-            if timer in c:
-                _nonneg_int(f"customers.{cid}.{timer}", c[timer])
 
         if "tip" in c:
             tip = c["tip"]

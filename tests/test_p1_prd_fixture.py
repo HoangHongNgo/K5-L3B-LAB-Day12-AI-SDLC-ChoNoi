@@ -175,6 +175,15 @@ class RejectContradictions(unittest.TestCase):
         self.assertExit2({"stock": {}, "hand": payload(),
                           "customers": [customer(order_status="unfulfillable", reserved={})]})
 
+    def test_eating_timer_wrong_type_is_exit_2_not_crash(self):
+        for bad in ("5", None):
+            self.assertExit2({"stock": {}, "customers": [customer(state="eating", order_status="served",
+                                                                  eat_ticks_left=bad, base_price=PRICE, tip=0)]})
+
+    def test_idle_stove_with_dish(self):
+        self.assertExit2({"stock": {}, "stoves": [{"id": STOVE["id"], "state": "idle", "dish": payload()}],
+                          "customers": [customer(order_status="assigned")]})
+
     def test_eating_without_timer_or_price(self):
         self.assertExit2({"stock": {}, "customers": [customer(state="eating", order_status="served",
                                                               eat_ticks_left=0, base_price=PRICE, tip=0)]})

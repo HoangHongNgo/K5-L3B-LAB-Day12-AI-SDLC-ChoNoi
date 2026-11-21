@@ -150,7 +150,6 @@ class QuanSim:
             if s["state"] == "cooking" and s["cook_ticks_left"] <= 0:
                 s["state"] = "ready"
                 s["ready_ticks"] = 0
-                c = self._customer(s["dish"]["order_id"])
                 events.append(("dish_ready", self._stove_data(s)))
         return events
 
