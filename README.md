@@ -42,6 +42,14 @@ Ngoài phần đề yêu cầu, nhóm được **thêm** nhân vật, loài cá/
 
 ## Mở rộng đã làm
 
+### Sáng tạo của nhóm
+
+Bản chơi trên trình duyệt dựng chợ nổi bằng Three.js. Lúc lặn, camera bám theo Út Sen để thấy mực nước, đàn cá và các cụm rau. Buổi tối, người chơi đi giữa bếp và bàn trên sàn gỗ của quán nổi. Trang chơi có nút cảm ứng và dùng cùng các phím trong mục Bắt đầu nhanh.
+
+Chơi trọn vòng lặn, mở quán, mua nâng cấp và sang ngày tiếp theo bằng `python3 -m chonoi.live --mode day --port 8012`. Mở địa chỉ được in ra và chọn **Bắt đầu chơi**. Nhấn **P** hoặc **Esc** để tạm dừng.
+
+`chonoi.live` phục vụ cả thư viện đồ họa từ máy chạy game. Trình duyệt hỗ trợ WebGL 2 hiển thị cảnh 3D, các trình duyệt khác dùng bản Canvas 2D. Hai giao diện đọc cùng snapshot của mô phỏng Python. Lệnh headless chỉ chạy mô phỏng.
+
 ### `net` — Vợt hút cá (haiquanng)
 
 Mua trong Shop (`buy: "net"`), có hiệu lực từ Ngày kế. Cấp 1 giá 250: bán kính 4.0 m, tối đa 2 đàn mỗi lần `catch`. Cấp 2 giá 500: 6.0 m, tối đa 3 đàn. Từ cấp 1, duyệt đàn trong bán kính theo id và bắt tới đủ số đàn; đàn thiếu chỗ phát `hold_full`, được giữ lại và xét đàn kế; chỉ đặt hồi bắt khi có ít nhất một đàn bắt thành công. Cấp 0 dùng luật lõi (đàn gần nhất).

@@ -29,6 +29,35 @@ def _post(url, obj):
 
 
 class LiveServerTest(unittest.TestCase):
+    def test_standalone_menu_pause_and_restart_keep_game_time(self):
+        game = LiveGame("gather", load_contract()["tuning"], {}, 1, start_in_menu=True)
+        def read():
+            return json.loads(game.state_json())
+
+        game.set_input({"interact": True})
+        game._tick_once()
+        menu = read()
+        self.assertTrue(menu["menu_pending"])
+        self.assertEqual(menu["tick"], 0)
+        game.continue_intro(menu)
+        game._tick_once()
+        playing = read()
+        self.assertFalse(playing["finished"])
+        self.assertLess(playing["time_left_ticks"], menu["time_left_ticks"])
+        game.set_input({"pause": True})
+        game._tick_once()
+        game.set_input({"pause": False})
+        game._tick_once()
+        paused = read()
+        self.assertEqual(paused["state"], "paused")
+        self.assertEqual(paused["time_left_ticks"], playing["time_left_ticks"])
+        game.set_input({"pause": True})
+        game._tick_once()
+        self.assertLess(read()["time_left_ticks"], paused["time_left_ticks"])
+        game.restart()
+        self.assertTrue(read()["menu_pending"])
+        self.assertEqual(read()["tick"], 0)
+
     def test_state_input_and_clean_stop(self):
         tuning = load_contract()["tuning"]
         server = LiveServer(LiveGame("gather", tuning, {}, 1), port=0)  # cổng ngẫu nhiên

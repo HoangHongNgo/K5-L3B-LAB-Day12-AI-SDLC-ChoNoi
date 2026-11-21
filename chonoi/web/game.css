@@ -1,0 +1,149 @@
+:root {
+  --ivory:#fff3d5; --gold:#f2bc67; --teal:#133e3e; --dark:#112e30;
+  --serif:"Baskervville","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --sans:"DM Sans","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --pad:clamp(22px,5vw,84px); color-scheme:dark;
+  font:16px/1.45 var(--sans); color:var(--ivory); background:var(--dark);
+}
+* {box-sizing:border-box}
+html,body {height:100%; width:100%; overflow:hidden; margin:0}
+body {position:relative}
+[hidden],.symbols {display:none!important}
+#c,#world3d {position:absolute; inset:0; display:block; width:100%; height:100%; pointer-events:none}
+#world3d {opacity:0}
+.has-3d #world3d {opacity:1}
+.has-3d #c {display:none}
+.icon {display:inline-block; flex:none; width:1.15em; height:1.15em; fill:none; stroke:currentColor; stroke-width:1.65; stroke-linecap:round; stroke-linejoin:round; vertical-align:middle}
+button {font:inherit; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent}
+button:disabled {opacity:.5; cursor:default}
+button:focus-visible {outline:3px solid #fff3ce; outline-offset:4px}
+button:active:not(:disabled) {transform:translateY(1px)}
+button.secondary,.lobby-header button,.journey-step,.icon-button,.touch-controls button {border:1px solid #ffedc95c; background:#173b3b9c; color:var(--ivory)}
+.screen {position:fixed; inset:0; z-index:3; display:grid; place-items:safe center; padding:20px; overflow:auto; background:rgba(14,39,40,.66); backdrop-filter:blur(5px)}
+#shop {z-index:2}
+.card {position:relative; width:min(100%,580px); padding:clamp(22px,3.5vw,48px); background:#153e3df5; border:1px solid #dcc69a65; border-radius:14px; box-shadow:0 18px 90px #011b2580; font-size:18px}
+.card h1 {font:500 clamp(38px,4.2vw,64px)/1.09 var(--serif); margin:0 0 15px; letter-spacing:-.045em; color:var(--ivory)}
+.card h1:focus {outline:none}
+.card h2 {font:650 1em/1.3 var(--sans); margin:16px 0 5px; color:var(--gold)}
+.card p,.card ul {margin:8px 0}
+.card ul {padding:0; list-style:none}
+.card li {margin:3px 0}
+.card section + section {margin-top:14px; padding-top:4px; border-top:1px solid #d8d6bc2e}
+.actions {display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-top:24px}
+.actions button,.upgrade button {display:inline-flex; gap:10px; align-items:center; justify-content:center; min-height:46px; padding:12px 20px; border:1px solid transparent; border-radius:7px; background:var(--gold); color:#19332d; font:700 16px/1.15 var(--sans)}
+.actions button:hover,.upgrade button:hover {filter:brightness(1.08)}
+.actions button.secondary {background:#ffffff09; border-color:#efe6c95c; color:var(--ivory)}
+.panel-kicker,.menu-location {display:flex; gap:10px; align-items:center; margin-bottom:14px; font:700 11px/1.35 var(--sans); text-transform:uppercase; letter-spacing:.17em; color:var(--gold)}
+.panel-kicker:empty {display:none}
+#screen-message,#connection {color:#ffbca6}
+#connection {position:fixed; top:12px; left:50%; transform:translateX(-50%); background:#202e30; border-radius:6px; padding:8px 15px; z-index:5}
+#shop .card {width:min(100%,650px)}
+.upgrade {display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 0; border-bottom:1px solid #e4e6c932}
+.upgrade strong {display:block}
+.upgrade span {font-size:.88em; color:#bfd1c7}
+#shop-feedback {color:var(--gold)}
+#shop-feedback:empty {display:none}
+.lobby-header,.lobby-footer,.menu-location {display:none}
+#screen[data-page="menu"] {
+  display:flex; flex-direction:column; align-items:stretch; justify-content:space-between; padding:0 var(--pad);
+  background:linear-gradient(90deg,#0b272cf2 0%,#0b272ccf 20%,#0b272c78 38%,#0b272c12 62%,transparent 82%),
+             linear-gradient(0deg,#0c282eea 0%,#0c282e35 24%,transparent 56%,#102e3159 100%);
+  backdrop-filter:none;
+}
+#screen[data-page="menu"] .lobby-header {display:flex}
+.lobby-header {align-items:center; justify-content:space-between; gap:20px; padding:clamp(16px,3.6vh,40px) 0}
+.brand {display:flex; align-items:center; gap:13px; font:600 26px/1 var(--serif); letter-spacing:-.04em; text-shadow:0 2px 8px #0a282b80}
+.brand-mark {display:grid; place-items:center; color:#ffdc9a; width:43px; height:43px; border:1px solid #f4dab28a; border-radius:50%; background:#17434165}
+.brand-mark .icon {width:31px; height:31px; stroke-width:1.3}
+.lobby-header nav {display:flex; gap:8px}
+.lobby-header button {display:flex; align-items:center; justify-content:center; gap:8px; padding:9px 14px; min-height:40px; border-radius:24px; background:#183d3fb8; font:600 13px/1 var(--sans); backdrop-filter:blur(7px)}
+.lobby-header button:hover,.journey-step:hover {background:#294e48}
+#screen[data-page="menu"] .card {width:auto; box-shadow:none; background:none; border:0; border-radius:0; padding:16px 0 28px; align-self:flex-start; max-width:min(530px,55vw)}
+#screen[data-page="menu"] .menu-location {display:flex; gap:12px; margin-bottom:clamp(12px,2.2vh,22px); color:#ffda93; text-shadow:0 1px 5px #103330; font-size:clamp(10px,.9vw,13px); letter-spacing:.19em}
+.menu-location span,.journey-label .line {height:1px; width:32px; background:var(--gold)}
+#screen[data-page="menu"] h1 {font-size:clamp(78px,min(9vw,13.4vh),158px); letter-spacing:-.068em; line-height:.99; text-shadow:0 2px 24px #0d2b2b65; margin:0 0 clamp(14px,2.8vh,30px)}
+#screen[data-page="menu"] h1 em {display:block; font-weight:500; color:var(--gold); line-height:1.04; padding-right:.12em}
+#screen[data-page="menu"] #screen-content {max-width:350px; font-size:clamp(16px,1.25vw,21px); line-height:1.6; color:#fff2dcee; text-shadow:0 1px 8px #092e30}
+#screen[data-page="menu"] .actions {margin-top:clamp(18px,3vh,32px)}
+#screen[data-page="menu"] .actions button {min-height:49px; padding:13px 21px; gap:10px}
+#screen[data-page="menu"] .actions .secondary {background:#1a3c3bb5; backdrop-filter:blur(4px)}
+#screen[data-page="menu"] .lobby-footer {display:flex}
+.lobby-footer {align-items:center; gap:clamp(12px,3vw,55px); border-top:1px solid #f2debb50; padding:clamp(14px,2.7vh,35px) 0 max(clamp(18px,3.6vh,45px),env(safe-area-inset-bottom))}
+.journey-label {font:500 22px/1.1 var(--serif); letter-spacing:-.03em; flex-shrink:0}
+.journey-label em {color:var(--gold)}
+.journey-label .line {display:none}
+#journey {display:flex; align-items:center}
+.journey-step {min-width:clamp(120px,14vw,210px); padding:4px clamp(11px,1.9vw,32px); display:flex; align-items:center; gap:12px; border:0; border-left:1px solid #f2debb44; background:transparent; text-align:left; border-radius:0}
+.journey-step>.icon {color:var(--gold); width:25px; height:25px; stroke-width:1.4}
+.journey-step small,.journey-step b {display:block}
+.journey-step small {font:650 10px/1.3 var(--sans); text-transform:uppercase; letter-spacing:.14em; color:#eed7ac}
+.journey-step b {font:550 15px/1.5 var(--sans); margin-top:2px}
+#play-hud {position:fixed; inset:0; z-index:1; pointer-events:none; font:500 18px/1.4 var(--sans); --edge:clamp(10px,2vw,30px); color:#fff4dc; text-shadow:0 1px 3px #0d262899}
+.hud-top {position:absolute; top:var(--edge); left:var(--edge); right:var(--edge); display:flex; align-items:stretch; gap:8px}
+.phase-block,.clock-block,.hud-stats,.ledger,.hud-bottom>*,.touch-controls button,.hud-top .icon-button {background:#103637e8; border:1px solid #f0daa459; border-radius:8px; box-shadow:0 3px 16px #082b2b36}
+.phase-block,.clock-block,.hud-top .icon-button {display:flex; gap:9px; align-items:center; padding:8px 13px}
+.phase-block .icon,.ledger .icon,.clock-block .icon {color:var(--gold)}
+.clock-block {margin-left:auto; font-variant-numeric:tabular-nums}
+.warn,#hud-stats .warn,.ledger .warn {color:#ffad94}
+.urgent {color:#ffa882}
+.hud-top .icon-button {pointer-events:auto; min-width:43px; justify-content:center}
+.hud-stats {position:absolute; top:calc(var(--edge) + 57px); left:var(--edge); padding:10px 14px; display:grid; gap:3px; max-width:min(360px,48vw)}
+.hud-stats span,.ledger .row {display:block}
+.oxygen {height:5px; background:#567374; border-radius:8px; overflow:hidden; margin:1px 0 5px}
+.oxygen i {display:block; height:100%; background:#92e1d1}
+.oxygen.low i {background:#ff9d82; animation:blink .75s steps(2,start) infinite}
+@keyframes blink {50% {opacity:.45}}
+.ledger {position:absolute; top:calc(var(--edge) + 57px); right:var(--edge); padding:10px 14px; max-width:min(430px,42vw); max-height:55%; overflow:auto; pointer-events:auto}
+.ledger h2 {display:flex; align-items:center; gap:8px; margin:0 0 6px; font:650 1em/1.4 var(--sans); color:#ffdda4}
+.ledger .row + .row {margin-top:2px}
+.hud-bottom {position:absolute; bottom:var(--edge); left:50%; transform:translateX(-50%); display:grid; justify-items:center; gap:8px; white-space:nowrap}
+.hud-bottom>* {margin:0; padding:7px 14px}
+#hud-prompt {color:#ffdea1; font-weight:650}
+#hud-prompt:empty {display:none}
+#key-hints {display:flex; align-items:center; gap:14px}
+kbd {display:inline-block; font:650 .83em/1.25 var(--sans); padding:2px 5px; margin-right:4px; border:1px solid #ecddbd70; border-bottom-width:2px; border-radius:4px; color:#ffe4ae}
+#play-hud.danger {box-shadow:inset 0 0 0 5px #ca9ae4}
+.touch-controls {display:none}
+@media (pointer:coarse), (max-width:680px) {
+  #key-hints {display:none}
+  .touch-controls {display:flex; justify-content:space-between; align-items:end; position:absolute; bottom:max(12px,env(safe-area-inset-bottom)); left:var(--edge); right:var(--edge)}
+  .touch-controls button {pointer-events:auto; touch-action:none; user-select:none; -webkit-user-select:none; border-radius:8px; min-width:43px; min-height:43px; font-weight:650}
+  .touch-controls button:active,.touch-controls button.held {background:#efc377; color:#19302d}
+  .dpad {display:grid; grid-template-columns:repeat(3,43px); gap:3px}
+  .dpad button:first-child {grid-column:2}.dpad button:nth-child(2){grid-column:1}
+  .touch-actions {display:flex; flex-direction:column; gap:5px}
+  .touch-actions button {padding:5px 12px;font-size:15px}
+  .hud-bottom {bottom:115px; max-width:95vw; white-space:normal; text-align:center}
+}
+@media(max-width:680px) {
+  :root {--pad:22px}
+  .hud-stats,.ledger,#play-hud {font-size:13px}
+  .hud-stats,.ledger {padding:7px 9px; top:calc(var(--edge) + 47px)}
+  .phase-block,.clock-block,.hud-top .icon-button {padding:7px 9px}
+  .card {font-size:16px}
+  #screen[data-page="menu"] {background:linear-gradient(0deg,#0a262bf5 0%,#0d292dc9 28%,#0a292b22 65%,#0f2a3030 100%); justify-content:flex-end}
+  #screen[data-page="menu"] .lobby-header {position:absolute; top:0; left:var(--pad); right:var(--pad); padding-top:max(16px,env(safe-area-inset-top))}
+  #screen[data-page="menu"] .card {max-width:100%; width:100%; padding:0 0 22px}
+  #screen[data-page="menu"] h1 {font-size:clamp(58px,13vw,85px); letter-spacing:-.065em; margin-bottom:13px}
+  #screen[data-page="menu"] h1 em {display:inline-block;white-space:nowrap}
+  #screen[data-page="menu"] #screen-content {font-size:15px; max-width:335px}
+  #screen[data-page="menu"] .actions {margin-top:15px; gap:8px}
+  #screen[data-page="menu"] .actions button {min-height:44px; padding:10px 15px; font-size:15px}
+  .brand {font-size:22px; gap:8px}.brand-mark {width:35px;height:35px}.brand-mark .icon {width:26px;height:26px}
+  #full-screen span {display:none}.lobby-header button {padding:7px 10px}
+  .journey-label {display:none}
+  .lobby-footer {padding:12px 0 max(16px,env(safe-area-inset-bottom))}
+  #journey {width:100%; justify-content:space-between}
+  .journey-step {padding:2px 8px; min-width:0; gap:6px}
+  .journey-step:first-child {padding-left:0;border:0}.journey-step:last-child{padding-right:0}
+  .journey-step>.icon {width:19px;height:19px}.journey-step small{font-size:9px;letter-spacing:.07em}.journey-step b{font-size:12px}
+}
+@media(max-height:540px) and (min-width:681px) {
+  #screen[data-page="menu"] h1 {font-size:58px;margin-bottom:8px}
+  #screen[data-page="menu"] h1 em {display:inline-block;white-space:nowrap}
+  #screen[data-page="menu"] .card {padding:0 0 10px}
+  #screen[data-page="menu"] .menu-location {margin-bottom:6px}
+  #screen[data-page="menu"] .actions {margin-top:12px}
+  .lobby-header {padding:12px 0}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}}

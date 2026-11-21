@@ -35,16 +35,26 @@ TICK_S = 1.0 / 60.0
 MAX_BODY = 4096
 RECENT_EVENTS = 40
 DAY_BUTTONS = ("interact", "catch", "pause", "shop_done", "attack", "photo")
+PLAY_BUTTONS = ("interact", "catch", "pause")
+WEB_ASSETS = {
+    "/": ("index.html", "text/html"),
+    "/index.html": ("index.html", "text/html"),
+    "/assets/game.css": ("game.css", "text/css"),
+    **{"/assets/" + name: (name, "text/javascript") for name in (
+        "scene.js", "river.js", "cafe.js", "vendor/three.module.min.js", "vendor/three.core.min.js",
+    )},
+}
 
 
 class LiveGame:
     """Một lượt chơi + luồng nền bước 60 tick/s. Mọi truy cập trạng thái đi qua khóa."""
 
-    def __init__(self, mode, tuning, scenario, seed, inventory=None, inventory_out=None):
+    def __init__(self, mode, tuning, scenario, seed, inventory=None, inventory_out=None, *, start_in_menu=False):
         self._args = (mode, tuning, scenario, seed, inventory)
         self.mode = mode
         self.tuning = tuning
         self.inventory_out = inventory_out
+        self.start_in_menu = start_in_menu
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._thread = None
@@ -53,7 +63,8 @@ class LiveGame:
     def _reset(self):
         day_mode = self.mode == "day"
         self.session = Session(*self._args, days=5) if day_mode else Session(*self._args)
-        self.inputs = LiveInputs(DAY_BUTTONS) if day_mode else LiveInputs()
+        self.inputs = LiveInputs(DAY_BUTTONS if day_mode else PLAY_BUTTONS)
+        self.menu_pending = self.start_in_menu and not day_mode
         self.events = self.session.initial_rows() if day_mode else []
         self.intro_pending = day_mode
         self._buys = deque()
@@ -128,7 +139,7 @@ class LiveGame:
 
     def _tick_once(self):
         s = self.session
-        if s.done or self.intro_pending:
+        if s.done or self.intro_pending or self.menu_pending:
             return
         inp = self.inputs.advance()
         if self._buys:
@@ -150,8 +161,12 @@ class LiveGame:
     def state_json(self) -> bytes:
         with self._lock:
             snap = self.session.snapshot()
+            snap["menu_pending"] = self.menu_pending
             snap["meta"] = self.tuning[snap["phase"]]
             snap["menu"] = self.tuning["menu"]
+            if snap["phase"] == "shop":
+                room = self.tuning["quan"]
+                snap["shop_room"] = {key: room[key] for key in ("bounds", "stoves", "tables")}
             if self.mode == "day":
                 best_count = max(self._sold.values(), default=0)
                 snap.update(
@@ -173,7 +188,7 @@ class LiveGame:
             if not ok:
                 raise ValueError("move phải là [a, b] trong [-1, 1]")
         buttons = {}
-        allowed = DAY_BUTTONS if self.mode == "day" else ("interact", "catch")
+        allowed = DAY_BUTTONS if self.mode == "day" else PLAY_BUTTONS
         for b in allowed:
             if b in body:
                 if not isinstance(body[b], bool):
@@ -183,19 +198,20 @@ class LiveGame:
         if "buy" in body and (self.mode != "day" or not isinstance(buy, str) or not buy):
             raise ValueError("buy phải là chuỗi khác rỗng trong mode day")
         with self._lock:
-            if not self.intro_pending:
+            if not self.intro_pending and not self.menu_pending:
                 self.inputs.set(move, **buttons)
                 if buy and self.session.sim.phase == "shop":
                     self._buys.append(buy)
 
     def continue_intro(self, body):
         with self._lock:
-            if self.mode != "day":
-                raise ValueError("chỉ mode day có màn giới thiệu")
+            if not (self.menu_pending or self.intro_pending):
+                raise ValueError("màn giới thiệu đã thay đổi")
             state = self.session.snapshot()
-            if any(body.get(k) != state[k] for k in ("day", "phase", "tick")):
+            if any(body.get(k) != state.get(k) for k in ("day", "phase", "tick")):
                 raise ValueError("màn giới thiệu đã thay đổi")
             self.intro_pending = False
+            self.menu_pending = False
 
     def restart(self):
         with self._lock:
@@ -221,12 +237,13 @@ class _Handler(BaseHTTPRequestHandler):
         path = self.path.split("?", 1)[0]
         if path == "/state":
             self._send(200, self.game.state_json())
-        elif path in ("/", "/index.html"):
+        elif path in WEB_ASSETS:
+            name, content_type = WEB_ASSETS[path]
             try:
-                with open(os.path.join(WEB_DIR, "index.html"), "rb") as f:
-                    self._send(200, f.read(), "text/html; charset=utf-8")
+                with open(os.path.join(WEB_DIR, name), "rb") as f:
+                    self._send(200, f.read(), content_type + "; charset=utf-8")
             except OSError:
-                self._send(404, b'{"error":"thieu index.html"}')
+                self._send(404, b'{"error":"thieu tai nguyen web"}')
         else:
             self._send(404, b'{"error":"khong co"}')
 
@@ -312,7 +329,7 @@ def main(argv=None) -> int:
         inventory = read_inventory(a.inventory) if a.inventory else None
         if inventory is not None and "stock" in scenario:
             raise BadInput("vừa có quan.stock vừa có --inventory")
-        game = LiveGame(a.mode, tuning, scenario, a.seed, inventory, a.inventory_out)
+        game = LiveGame(a.mode, tuning, scenario, a.seed, inventory, a.inventory_out, start_in_menu=True)
         server = LiveServer(game, a.host, a.port)
     except BadInput as e:
         sys.stderr.write(f"đầu vào sai: {e}\n")
