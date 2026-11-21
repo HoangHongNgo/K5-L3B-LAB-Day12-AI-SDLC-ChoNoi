@@ -1,0 +1,16 @@
+{
+  "gather": {
+    "random_fish": false,
+    "player": {"pos": [20, 12]},
+    "hold": [
+      {"id": "I50", "kind": "ca_loc", "fresh": 100},
+      {"id": "I7", "kind": "bong_sung", "fresh": 0},
+      {"id": "I91", "kind": "ca_linh", "fresh": 70},
+      {"id": "I13", "kind": "bong_dien_dien", "fresh": 30},
+      {"id": "I3", "kind": "ca_keo", "fresh": 29}
+    ],
+    "monsters": [
+      {"id": "M1", "kind": "ca_sau", "pos": [20, 12], "waypoints": [[20, 12], [24, 12]]}
+    ]
+  }
+}

@@ -10,3 +10,9 @@
 - **Phần thực hiện** — Cá Sấu tuần tra và truy đuổi theo tuning, xuất hiện theo Ngày. Va chạm làm mất Máu, rơi hàng LIFO, kích hoạt bất tử và recoil. Gather áp dụng cấp oxy/Máu đang có hiệu lực khi dựng ca.
 - **Kiểm chứng** — Smoke hai tiến trình xác nhận `choke → monster_hit → faint → gather_end` trong cùng tick và quán nhận kho rỗng. Hai lượt cùng seed cho JSONL và file kho giống từng byte. Test bổ sung kiểm sát các ngưỡng phát hiện, rời truy đuổi và va chạm bằng tọa độ thập phân.
 - **Điều rút ra** — Fixture chỉ còn một tick recoil giúp xác nhận rằng Cá Sấu chưa được gây hit ở bước chuyển về patrol. Fixture cuối ca có cả ngạt và va chạm giúp kiểm tra thứ tự xử lý trước khi xuất kho.
+
+## Phase 3 — Lát B
+
+- **Phần thực hiện** — Dùng thứ tự vào giỏ để chọn cá thể bị mất khi va chạm hoặc ngất. Dùng cùng biểu diễn `id`, `kind`, `fresh` với kho bàn giao. Đặt `faint` sau việc dọn dòng lũ và ngay trước `gather_end`.
+- **Kiểm chứng** — Fixture giỏ cá thể kiểm ID không liền nhau, hàng ươn vẫn chiếm ô, ngất do ngạt hoặc do chạm, và runner xuất `{"items":[]}`. Ca va chạm ở bước cuối xác nhận không bắt cá tiếp.
+- **Điều rút ra** — Thứ tự giỏ quyết định món nào rơi. Thứ tự id của kho bàn giao chỉ dùng khi xuất.
