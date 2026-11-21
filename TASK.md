@@ -253,11 +253,11 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Commit: `shop: khung ShopSim, đọc nâng cấp từ contract`.
 
 ### ChuTungDuongg — Lát B (Cá Sấu & Máu)
-- [ ] Oxy số chuẩn: cơ sở 1.800 tick, +6/tick ở mặt nước; ngạt mất 1 Máu mỗi 60 tick **tính cả bước vừa chạm 0**, reset khi oxy > 0 hoặc lên mặt nước; ngạt xuyên bất tử, không làm rơi hàng.
-- [ ] Máu cơ sở 3 (lấy `hp_max` theo `active_upgrades` nếu có).
-- [ ] `chonoi/sim/monsters.py`: M1 (Ngày 1) và M2 (`from_day:3`); trạng thái `patrol` 1.0 m/s ↔ `chase` 3.0 m/s (phát hiện khi người chơi d ≥ 10 và cách ≤ 10 m; rời khi > 16 m hoặc d < 10); chặn theo biên và `depths` của loài.
-- [ ] Fixture `tests/fixtures/p2_monster_*.json` (`monsters[]` cố định).
-- [ ] Commit: `gather: oxy/ngạt số chuẩn, Cá Sấu patrol/chase`.
+- [x] Oxy số chuẩn: cơ sở 1.800 tick, +6/tick ở mặt nước; ngạt mất 1 Máu mỗi 60 tick **tính cả bước vừa chạm 0**, reset khi oxy > 0 hoặc lên mặt nước; ngạt xuyên bất tử, không làm rơi hàng.
+- [x] Máu cơ sở 3 (lấy `hp_max` theo `active_upgrades` nếu có).
+- [x] `chonoi/sim/monsters.py`: M1 (Ngày 1) và M2 (`from_day:3`); trạng thái `patrol` 1.0 m/s ↔ `chase` 3.0 m/s (phát hiện khi người chơi d ≥ 10 và cách ≤ 10 m; rời khi > 16 m hoặc d < 10); chặn theo biên và `depths` của loài.
+- [x] Fixture `tests/fixtures/p2_monster_*.json` (`monsters[]` cố định).
+- [x] Commit: `gather: oxy/ngạt số chuẩn, Cá Sấu patrol/chase`.
 
 ### minhphuong150505 — Lát Q (quán)
 - [ ] Quán đọc bếp B1/B2, bàn T1–T4, 6 món từ contract (không hard-code); **cả 2 bếp** idle lấy đơn `reserved` cũ nhất (order_tick, id bàn), duyệt bếp theo id.
@@ -306,12 +306,12 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Mở PR lát S, nhờ phuthaitran review (người sẽ nối Shop và `DayState` vào day).
 
 ### ChuTungDuongg — Lát B
-- [ ] Hit sau khi cả hai di chuyển: ≤ 1.5 m, d ≥ 10, hết bất tử thì −1 Máu, bỏ `floor(n/2)` hàng theo LIFO, bất tử 90 tick, `monster_hit`; tối đa 1 hit/bước, chọn con gần nhất, hòa theo id.
-- [ ] Recoil 60 bước từ bước sau, lùi 2/60 m/bước theo hướng chốt lúc chạm (trùng tâm dùng +x), không gây hit; hết recoil về patrol.
-- [ ] Máu 0 → `faint` (`cause:"monster"` hoặc `"choke"`, `lost`, `hp:0`) → `gather_end(fainted)` ngay, kho rỗng. Cùng tick: ngạt → hit → hết giờ; cập bến được ưu tiên nếu còn Máu.
-- [ ] Scenario: `gather.monsters[]` (`target_idx`, `state`, `state_ticks_left`, `recoil_dir`), `player.invuln_ticks`; snapshot thêm `monsters[]`, `player.invuln_ticks`.
-- [ ] Test `tests/test_p2_monster.py`.
-- [ ] Mở PR, nhờ haiquanng review.
+- [x] Hit sau khi cả hai di chuyển: ≤ 1.5 m, d ≥ 10, hết bất tử thì −1 Máu, bỏ `floor(n/2)` hàng theo LIFO, bất tử 90 tick, `monster_hit`; tối đa 1 hit/bước, chọn con gần nhất, hòa theo id.
+- [x] Recoil 60 bước từ bước sau, lùi 2/60 m/bước theo hướng chốt lúc chạm (trùng tâm dùng +x), không gây hit; hết recoil về patrol.
+- [x] Máu 0 → `faint` (`cause:"monster"` hoặc `"choke"`, `lost`, `hp:0`) → `gather_end(fainted)` ngay, kho rỗng. Cùng tick: ngạt → hit → hết giờ; cập bến được ưu tiên nếu còn Máu.
+- [x] Scenario: `gather.monsters[]` (`target_idx`, `state`, `state_ticks_left`, `recoil_dir`), `player.invuln_ticks`; snapshot thêm `monsters[]`, `player.invuln_ticks`.
+- [x] Test `tests/test_p2_monster.py`.
+- [x] Mở PR, nhờ haiquanng review.
 
 ### minhphuong150505 — Lát Q
 - [ ] Hàm `validate_quan_against_inventory` để lát D gọi lúc mở quán: kiểm kho/khách/bếp/món thuộc kế hoạch trên kho thực.
@@ -370,7 +370,7 @@ git tag phase-2 && git push origin phase-2
 > Nhóm 6 người cần **≥ 2 mục mở rộng** trong cả buổi lab. Chỉ làm sau khi lõi Phase 2 đã gộp và xanh.
 
 ### Mọi người
-- [ ] Ghi phần của mình vào `docs/ai-usage-log.md`; cập nhật `docs/members/<handle>.md`.
+- [ ] Ghi phần của mình vào `docs/ai-usage-log.md`; cập nhật `docs/members/<handle>.md`. — xong: ChuTungDuongg
 
 ---
 

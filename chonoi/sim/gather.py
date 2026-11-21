@@ -3,7 +3,7 @@
 Mặt cắt dòng sông nhìn NGANG: vị trí `[x, d]` (x sang phải, `d` độ sâu hướng xuống, d = 0 là mặt nước).
 `move = [x, d]`: thành phần thứ hai DƯƠNG = bơi xuống. Hướng mặt là góc từ +x, dương = xuống.
 
-Đã có: bơi + tăng/giảm tốc, chặn mép (d không âm), oxy, ngạt, ngất và bỏ giỏ theo LIFO,
+Đã có: bơi + tăng/giảm tốc, chặn mép (d không âm), oxy, ngạt, Cá Sấu, ngất và bỏ giỏ theo LIFO,
 đồng hồ và hết giờ, cập bến (`interact` trong vùng bến -> `gather_end` reason `docked`, xét TRƯỚC hái),
 hái nút ở mặt nước (gather, hold_full, mọc lại sau regrow_s), bắt đàn cá dưới nước (fish_caught,
 hold_full, hồi chiêu catch_cd_ticks), giỏ dùng chung `_add_to_hold`, xuất kho (ghi đúng một lần do runner lo),
@@ -14,23 +14,44 @@ Các tính năng của phase sau chưa nằm trong khung này.
 
 import math
 
-from ..ids import sort_by_id
+from ..errors import BadInput
+from ..ids import IdAllocator, sort_by_id
 from ..inventory import hold_to_items
+from .monsters import MonsterSim
 from .ramp import ramp_velocity
 
 TICK = 60.0
 AXES = ("x", "d")
 
 
+def _active_limit(tuning, active_upgrades, upgrade, field):
+    level = active_upgrades.get(upgrade, 0)
+    if level == 0:
+        return tuning["gather"][field]
+    levels = tuning.get("shop", {}).get("upgrades", {}).get(upgrade, ())
+    for entry in levels:
+        if entry["level"] == level:
+            return entry[field]
+    raise BadInput(f"cấp nâng cấp {upgrade} không hợp lệ: {level}")
+
+
+def gather_limits(tuning, active_upgrades=None):
+    """Giới hạn oxy (tick) và Máu của ca theo cấp đang áp dụng."""
+    active_upgrades = active_upgrades or {}
+    oxygen_max_s = _active_limit(tuning, active_upgrades, "oxygen", "oxygen_max_s")
+    hp_max = _active_limit(tuning, active_upgrades, "hp", "hp_max")
+    return int(round(oxygen_max_s * TICK)), hp_max
+
+
 class GatherSim:
     mode = "gather"
     phase = "gather"
 
-    def __init__(self, tuning, scenario, streams, ids):
+    def __init__(self, tuning, scenario, streams, ids=None, *, day=1, active_upgrades=None):
         t = tuning["gather"]
         self.t = t
         self.rng = streams
-        self.ids = ids
+        self.ids = IdAllocator() if ids is None else ids
         p = scenario.get("player", {})
         self.pos = [float(c) for c in p.get("pos", t["start_pos"])]
         self._depth_rounding_error = 0.0
@@ -38,9 +59,9 @@ class GatherSim:
         self._tgt = None
         self._ramp_left = 0
         self.heading = float(p.get("heading_deg", t["start_heading_deg"]))
-        self.oxygen_max = int(round(t["oxygen_max_s"] * TICK))
+        self.oxygen_max, self.hp_max = gather_limits(tuning, active_upgrades)
         self.oxygen_ticks = p.get("oxygen_ticks", self.oxygen_max)
-        self.hp = p.get("hp", t["hp_max"])
+        self.hp = p.get("hp", self.hp_max)
         self.zero_oxy_ticks = p.get("zero_oxy_ticks", 0)
         self.invuln_ticks = p.get("invuln_ticks", 0)
         self.catch_cd_ticks = p.get("catch_cd_ticks", 0)
@@ -61,7 +82,9 @@ class GatherSim:
                       "heading_deg": f.get("heading_deg", 0)} for f in src_fish]
         for coll in (self.nodes, self.fish):
             for e in coll:
-                ids.reserve(e["id"])
+                self.ids.reserve(e["id"])
+        self.monsters = (MonsterSim(t["monsters"], t["bounds"], scenario.get("monsters"),
+                                    day, tuning["tick_hz"]) if "monsters" in t else None)
         self.money = 0
         self.earned = 0
         self.reputation = tuning["quan"]["reputation_initial"]
@@ -72,11 +95,16 @@ class GatherSim:
     def inventory_items(self) -> dict:
         return hold_to_items(self.hold)
 
+    @property
+    def result(self) -> dict:
+        return {"reason": self.reason, "inventory": {"items": self.inventory_items()},
+                "money": self.money, "earned": self.earned, "reputation": self.reputation}
+
     def snapshot(self) -> dict:
-        return {
+        snapshot = {
             "player": {"pos": self.pos, "vel": self.vel, "heading_deg": self.heading,
                        "oxygen_ticks": self.oxygen_ticks, "oxygen_max_ticks": self.oxygen_max,
-                       "hp": self.hp, "hp_max": self.t["hp_max"], "zero_oxy_ticks": self.zero_oxy_ticks,
+                       "hp": self.hp, "hp_max": self.hp_max, "zero_oxy_ticks": self.zero_oxy_ticks,
                        "invuln_ticks": self.invuln_ticks, "catch_cd_ticks": self.catch_cd_ticks,
                        "at_surface": self._at_surface()},
             "hold": self.hold, "hold_count": len(self.hold),
@@ -87,6 +115,9 @@ class GatherSim:
             "fish": [{"id": f["id"], "pos": f["pos"], "kind": f["kind"], "heading_deg": f["heading_deg"]}
                      for f in sort_by_id(self.fish)],
         }
+        if self.monsters is not None:
+            snapshot["monsters"] = self.monsters.snapshot()
+        return snapshot
 
     # --- một bước ---------------------------------------------------------------
     def step(self, inp):
@@ -104,6 +135,8 @@ class GatherSim:
         was_surface = self._at_surface()
         self._move(inp)
         self._update_oxygen(events, was_surface)
+        if not self.done:
+            self._update_monsters(events)
         if self.done:
             return events
         # 3. interact: bến trước, rồi hái
@@ -185,6 +218,7 @@ class GatherSim:
         had_oxygen = self.oxygen_ticks > 0
         self.oxygen_ticks = max(0, self.oxygen_ticks - 1)
         if self.oxygen_ticks > 0:
+            self.zero_oxy_ticks = 0
             return
         if had_oxygen:
             events.append(("oxygen_empty", {"oxygen_ticks": 0}))
@@ -197,10 +231,32 @@ class GatherSim:
         self.hp -= 1
         events.append(("choke", {"hp": self.hp}))
         if self.hp == 0:
-            lost = list(reversed(self.hold))
-            self.hold.clear()
-            events.append(("faint", {"cause": "choke", "lost": lost, "hp": 0}))
-            self._finish("fainted", events)
+            self._faint(events, "choke")
+
+    def _update_monsters(self, events):
+        if self.monsters is None:
+            return
+        monster_id = self.monsters.step(self.pos, can_hit=self.invuln_ticks == 0)
+        if monster_id is None:
+            return
+        self.hp -= 1
+        self.invuln_ticks = self.monsters.invuln_ticks
+        lost = self._drop_hold(math.floor(len(self.hold) * self.monsters.loss_ratio))
+        events.append(("monster_hit", {"monster_id": monster_id, "hp": self.hp,
+                                       "lost": lost, "pos": self.pos.copy()}))
+        if self.hp == 0:
+            self._faint(events, "monster")
+
+    def _drop_hold(self, count):
+        cutoff = len(self.hold) - count
+        lost = self.hold[cutoff:][::-1]
+        del self.hold[cutoff:]
+        return lost
+
+    def _faint(self, events, cause):
+        lost = self._drop_hold(len(self.hold))
+        events.append(("faint", {"cause": cause, "lost": lost, "hp": 0}))
+        self._finish("fainted", events)
 
     def _in_dock(self) -> bool:
         return math.dist(self.pos, self.t["dock_pos"]) <= self.t["dock_radius"]
@@ -208,7 +264,7 @@ class GatherSim:
     def _finish(self, reason, events):
         self.done = True
         self.reason = reason
-        events.append(("gather_end", {"reason": reason, "inventory": {"items": self.inventory_items()}}))
+        events.append(("gather_end", {"reason": reason, "inventory": self.result["inventory"]}))
 
     def _move(self, inp):
         speed = self.t["swim_speed"]
