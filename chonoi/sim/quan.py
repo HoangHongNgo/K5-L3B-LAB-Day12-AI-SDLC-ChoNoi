@@ -74,7 +74,9 @@ class QuanSim:
         events = []
         self.time_left_ticks = max(0, self.time_left_ticks - 1)
         self.phase_tick += 1
-        # TODO(nhóm): giảm kiên nhẫn / nấu / ăn; bếp chín -> ready; xử lý khách theo thứ tự PRD-0 mục F.
+        # Giảm kiên nhẫn khách đang chờ
+        events.extend(self._update_customer_patience())
+        # Di chuyển người chơi
         self._move(inp)
         # TODO(nhóm): tối đa MỘT interact, chọn đối tượng theo (khoảng cách, bếp trước bàn, id).
         # Khách mới theo lịch (first_customer_tick, customer_interval_s)
@@ -88,6 +90,45 @@ class QuanSim:
             events.append(("quan_end", {"reason": "time", "money": self.money, "earned": self.earned,
                                         "shift_earned": self.shift_earned, "reputation": self.reputation}))
         return events
+
+    def _update_customer_patience(self) -> list:
+        events = []
+        remaining = []
+        for c in self.customers:
+            if c.get("state") == "waiting":
+                if c.get("order_tick") == self.phase_tick:
+                    remaining.append(c)
+                    continue
+                c["patience_ticks_left"] -= 1
+                if c["patience_ticks_left"] <= 0:
+                    events.extend(self._expire_customer(c, reason="patience"))
+                    continue
+            remaining.append(c)
+        self.customers = remaining
+        return events
+
+    def _expire_customer(self, customer, reason="patience") -> list:
+        events = []
+        cid = customer["id"]
+        tid = customer["table_id"]
+        self._release_reserved(customer)
+        if reason == "patience":
+            delta = self.t.get("left_reputation_delta", -0.5)
+            rmin = self.t.get("reputation_min", 0)
+            rmax = self.t.get("reputation_max", 5)
+            self.reputation = max(rmin, min(rmax, round(self.reputation + delta, 3)))
+        events.append((
+            "customer_left",
+            {
+                "customer_id": cid,
+                "table_id": tid,
+                "reason": reason,
+            }
+        ))
+        return events
+
+    def _release_reserved(self, customer):
+        customer["reserved"] = {}
 
     def _should_spawn_customer(self) -> bool:
         if not self.random_customers:

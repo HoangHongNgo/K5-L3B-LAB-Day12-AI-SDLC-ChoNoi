@@ -488,5 +488,141 @@ class DishSelectionAndReservation(unittest.TestCase):
                 self.assertEqual(f1.read(), f2.read())
 
 
+class CustomerPatienceAndLeft(unittest.TestCase):
+    def test_t14_patience_not_reduced_on_arrival_tick(self):
+        """T14: Kiên nhẫn không giảm ngay tại tick đến (120: 3600, 121: 3599)."""
+        with Workdir() as w:
+            sc = write_json(w.path("sc.json"), {
+                "quan": {"stock": {"ca_loc": 1}}
+            })
+            out = w.path("o.jsonl")
+            code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "122",
+                                     "--snapshot-every", "1", "--scenario", sc, "--out", out)
+            self.assertEqual(code, 0, err)
+            snaps = {r["tick"]: r for r in snapshots(read_jsonl(out))}
+            c_120 = snaps[120]["customers"][0]
+            self.assertEqual(c_120["patience_ticks_left"], 3600)
+            c_121 = snaps[121]["customers"][0]
+            self.assertEqual(c_121["patience_ticks_left"], 3599)
+            c_122 = snaps[122]["customers"][0]
+            self.assertEqual(c_122["patience_ticks_left"], 3598)
+
+    def test_t15_customer_left_when_patience_zero(self):
+        """T15: Khách hết kiên nhẫn rời quán (customer_left, reason=patience)."""
+        with Workdir() as w:
+            sc = write_json(w.path("sc.json"), {
+                "quan": {
+                    "stock": {"ca_loc": 1},
+                    "customers": [{
+                        "id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
+                        "patience_ticks_left": 3, "reserved": {"ca_loc": 1}
+                    }]
+                }
+            })
+            out = w.path("o.jsonl")
+            code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "5",
+                                     "--snapshot-every", "1", "--scenario", sc, "--out", out)
+            self.assertEqual(code, 0, err)
+            rows = read_jsonl(out)
+            left_evs = events(rows, "customer_left")
+            self.assertEqual(len(left_evs), 1)
+            ev = left_evs[0]
+            self.assertEqual(ev["tick"], 3)
+            self.assertEqual(ev["data"]["customer_id"], "C1")
+            self.assertEqual(ev["data"]["table_id"], "T1")
+            self.assertEqual(ev["data"]["reason"], "patience")
+            # Snapshot sau tick 3 không còn khách
+            snaps = {r["tick"]: r for r in snapshots(rows)}
+            self.assertEqual(len(snaps[3]["customers"]), 0)
+            self.assertEqual(len(snaps[4]["customers"]), 0)
+
+    def test_t16_customer_left_releases_reserved(self):
+        """T16: Rời quán giải phóng reserved, kho khả dụng được phục hồi."""
+        from chonoi.contract import load_contract
+        from chonoi.ids import IdAllocator
+        from chonoi.rng import Streams
+        from chonoi.sim.quan import QuanSim
+        tuning = load_contract()["tuning"]
+        sim = QuanSim(tuning, {
+            "stock": {"ca_loc": 1},
+            "customers": [{
+                "id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
+                "patience_ticks_left": 1, "reserved": {"ca_loc": 1}
+            }]
+        }, Streams(1), IdAllocator())
+
+        self.assertEqual(sim._available_stock()["ca_loc"], 0)
+        from chonoi.inputs import InputState
+        dummy_input = InputState((0.0, 0.0), {}, set())
+        evs = sim.step(dummy_input)
+        self.assertEqual(len(sim.customers), 0)
+        self.assertEqual(sim._available_stock()["ca_loc"], 1)
+
+    def test_t17_customer_left_decreases_reputation(self):
+        """T17: Khách rời quán do hết kiên nhẫn làm giảm đúng 0.5 uy tín."""
+        with Workdir() as w:
+            sc = write_json(w.path("sc.json"), {
+                "quan": {
+                    "reputation": 3.0,
+                    "stock": {"ca_loc": 1},
+                    "customers": [{
+                        "id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
+                        "patience_ticks_left": 2, "reserved": {"ca_loc": 1}
+                    }]
+                }
+            })
+            out = w.path("o.jsonl")
+            code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "4",
+                                     "--snapshot-every", "1", "--scenario", sc, "--out", out)
+            self.assertEqual(code, 0, err)
+            snaps = {r["tick"]: r for r in snapshots(read_jsonl(out))}
+            self.assertEqual(snaps[0]["reputation"], 3.0)
+            self.assertEqual(snaps[2]["reputation"], 2.5)
+
+    def test_t18_reputation_clamped_to_minimum(self):
+        """T18: Uy tín được kẹp không thấp hơn reputation_min (0)."""
+        with Workdir() as w:
+            sc = write_json(w.path("sc.json"), {
+                "quan": {
+                    "reputation": 0.2,
+                    "stock": {"ca_loc": 1},
+                    "customers": [{
+                        "id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
+                        "patience_ticks_left": 1, "reserved": {"ca_loc": 1}
+                    }]
+                }
+            })
+            out = w.path("o.jsonl")
+            code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "2",
+                                     "--snapshot-every", "1", "--scenario", sc, "--out", out)
+            self.assertEqual(code, 0, err)
+            snaps = {r["tick"]: r for r in snapshots(read_jsonl(out))}
+            self.assertEqual(snaps[1]["reputation"], 0.0)
+
+    def test_eating_customer_not_expired_by_patience(self):
+        """Khách đang ăn (eating) không bị trừ kiên nhẫn và không rời quán do patience."""
+        from chonoi.contract import load_contract
+        from chonoi.ids import IdAllocator
+        from chonoi.rng import Streams
+        from chonoi.sim.quan import QuanSim
+        from chonoi.inputs import InputState
+        tuning = load_contract()["tuning"]
+        sim = QuanSim(tuning, {
+            "stock": {},
+            "customers": [{
+                "id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui",
+                "state": "eating", "order_status": "served", "eat_ticks_left": 600,
+                "patience_ticks_left": 100
+            }]
+        }, Streams(1), IdAllocator())
+
+        dummy_input = InputState((0.0, 0.0), {}, set())
+        for _ in range(5):
+            sim.step(dummy_input)
+        self.assertEqual(len(sim.customers), 1)
+        self.assertEqual(sim.customers[0]["patience_ticks_left"], 100)
+        self.assertEqual(sim.reputation, 3.0)
+
+
 if __name__ == "__main__":
     unittest.main()
