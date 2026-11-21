@@ -85,8 +85,9 @@ PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 - [ ] Commit: `quan: chọn interact, nấu, dish_ready`.
 
 ### RachalHys — HUD
-- [ ] HUD buổi sáng: thời gian còn lại, thanh oxy, Máu, giỏ (`hold_count/hold_capacity` + danh sách).
-- [ ] Commit: `ui: HUD buổi sáng`.
+- [x] HUD buổi sáng: thời gian còn lại, thanh oxy, Máu, giỏ (`hold_count/hold_capacity` + danh sách).
+  - Đã đối chiếu HUD với snapshot live và chạy lại các ca tương ứng qua headless. Kiểm trên trình duyệt ở chiều rộng 320 và 1024 px.
+- [x] Commit: `ui: HUD buổi sáng`.
 
 ### HoangHongNgo
 - [ ] Standup phút 20: ai vướng → điều người dự phòng vào pair.
