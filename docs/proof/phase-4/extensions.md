@@ -21,7 +21,7 @@ python3 -m chonoi.live --mode gather --leaderboard lb.json --export-leaderboard 
 - Mã: `chonoi/web/sfx.js`, nút ở Sổ tay → Điều khiển (Âm thanh, Phụ đề âm thanh), lưu theo trình duyệt.
 - Các hiệu ứng đã triển khai là tiếng tổng hợp bằng WebAudio, gắn với event của sim: nhặt đồ, bắt cá, cá sấu táp, ngạt, hết oxy, ngất, hàng ươn, nấu, món chín, giao món, trả tiền, khách bỏ đi, khách đặt trước đến, mua nâng cấp.
 - Mỗi tiếng hiện một dòng phụ đề dạng `[tiếng ...]` trong 2,5 giây, kể cả khi tắt âm thanh. Client chỉ đọc snapshot nên headless và JSONL không đổi.
-- Chưa chạy thử trong trình duyệt ở bản này. Cần chơi thử với âm thanh tắt để xác nhận phụ đề hiện đúng lúc.
+- Đã chơi thử trên trình duyệt (21/11/2026, ca lặn Ngày 2) với "Âm thanh" tắt: hái bông điên điển làm dòng `[tiếng nhặt đồ]` hiện cạnh thông báo "+1 điên điển" và tự ẩn sau khoảng 2,5 giây. Chưa thử các tiếng khác và nút "Phụ đề âm thanh".
 
 ## Hồi quy
 
