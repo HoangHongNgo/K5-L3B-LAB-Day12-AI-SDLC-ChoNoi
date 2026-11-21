@@ -13,6 +13,14 @@ from .errors import BadInput
 KINDS_P1 = ("ca_loc", "ca_linh", "bong_dien_dien", "bong_sung")
 
 
+def ingredient_kinds(tuning) -> tuple:
+    """Nguyên liệu hợp lệ theo dữ liệu (v1.1 thêm ca_keo, keo_neo): P1 ∪ nút ∪ cá ∪ công thức."""
+    g = tuning["gather"]
+    kinds = set(KINDS_P1) | {n["kind"] for n in g["nodes"]} | set(g["fish_yield"])
+    kinds |= {k for dish in tuning["menu"].values() for k in dish["recipe"]}
+    return tuple(sorted(kinds))
+
+
 def validate_items(items, kinds=KINDS_P1):
     if not isinstance(items, dict):
         raise BadInput("items phải là object")
