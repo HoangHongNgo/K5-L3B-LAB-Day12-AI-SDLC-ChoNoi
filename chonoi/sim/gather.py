@@ -44,6 +44,18 @@ def gather_limits(tuning, active_upgrades=None):
     return int(round(oxygen_max_s * TICK)), hp_max
 
 
+def _net_level(tuning, active_upgrades):
+    """Cấp vợt đang áp dụng (mở rộng `net`); None nếu cấp 0 hoặc contract chưa khai shop.upgrades.net."""
+    level = (active_upgrades or {}).get("net", 0)
+    levels = tuning.get("shop", {}).get("upgrades", {}).get("net")
+    if not level or not levels:
+        return None
+    for entry in levels:
+        if entry["level"] == level:
+            return entry
+    raise BadInput(f"cấp nâng cấp net không hợp lệ: {level}")
+
+
 class GatherSim:
     mode = "gather"
     phase = "gather"
@@ -61,6 +73,7 @@ class GatherSim:
         self._ramp_left = 0
         self.heading = float(p.get("heading_deg", t["start_heading_deg"]))
         self.oxygen_max, self.hp_max = gather_limits(tuning, active_upgrades)
+        self.net = _net_level(tuning, active_upgrades)
         self.oxygen_ticks = p.get("oxygen_ticks", self.oxygen_max)
         self.hp = p.get("hp", self.hp_max)
         self.zero_oxy_ticks = p.get("zero_oxy_ticks", 0)
@@ -189,6 +202,9 @@ class GatherSim:
                                          "required": count, "free": self._hold_free()}))
 
     def _try_catch(self, events):
+        if self.net is not None:
+            self._try_net(events)
+            return
         f = self._nearest(self.fish, self.t["catch_radius"])
         if f is None:
             return
@@ -202,6 +218,26 @@ class GatherSim:
                                          "required": count, "free": self._hold_free()}))
 
     # --- tiện ích ---------------------------------------------------------------
+
+    def _try_net(self, events):
+        """Mở rộng `net` (cấp ≥ 1): duyệt đàn trong bán kính vợt theo id, bắt tối đa max_schools đàn;
+        đàn thiếu chỗ phát hold_full, giữ lại và xét đàn kế; có đàn bắt thành công mới đặt hồi."""
+        caught = 0
+        for f in sort_by_id(self.fish):
+            if caught >= self.net["max_schools"]:
+                break
+            if math.dist(self.pos, f["pos"]) > self.net["catch_radius"]:
+                continue
+            count = self.t["fish_yield"][f["kind"]]
+            if self._add_to_hold([f["kind"]] * count):
+                self.fish.remove(f)
+                caught += 1
+                events.append(("fish_caught", {"fish_id": f["id"], "kind": f["kind"], "yield": count}))
+            else:
+                events.append(("hold_full", {"action": "catch", "fish_id": f["id"],
+                                             "required": count, "free": self._hold_free()}))
+        if caught:
+            self.catch_cd_ticks = int(round(self.t["catch_cooldown_s"] * TICK))
     def _at_surface(self) -> bool:
         return self.pos[1] <= self.t["surface_depth"]
 
