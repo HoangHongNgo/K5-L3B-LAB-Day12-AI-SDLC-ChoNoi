@@ -1,13 +1,18 @@
 """Kiểm Lát B bằng tuning v1.1, giữ fixture độc lập với manifest đang tích hợp."""
 
+import io
 import json
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
+from unittest.mock import patch
 
+from chonoi.headless import main as headless_main
 from chonoi.inputs import InputPlayer
 from chonoi.rng import Streams
 from chonoi.runner import Session
 from chonoi.sim.gather import GatherSim
+from helpers import Workdir, events, read_jsonl, snapshots, write_json
 
 FIXTURES = Path(__file__).with_name("fixtures")
 ROOT = FIXTURES.parent.parent
@@ -35,6 +40,10 @@ def gather_session(scenario):
 
 def monster(pos, **fields):
     return {"id": "M1", "kind": "ca_sau", "pos": pos, "waypoints": [[20, 10], [24, 10]], **fields}
+
+
+def one_step(session, *frames):
+    return [(row["name"], row["data"]) for row in session.step(InputPlayer(frames).advance(0))]
 
 
 class MonsterMovement(unittest.TestCase):
@@ -86,3 +95,185 @@ class MonsterMovement(unittest.TestCase):
                                           "monsters": [monster([20, 10], state="chase")]})
                 session.step(InputPlayer([]).advance(0))
                 self.assertEqual(session.snapshot()["monsters"][0]["state"], want_state)
+
+
+class MonsterDamage(unittest.TestCase):
+    def test_hit_selects_closest_then_numeric_id_and_drops_half_lifo(self):
+        scenario = read_fixture(FIXTURES / "p2_monster_hit.json")["gather"]
+        session = gather_session(scenario)
+        self.assertEqual(one_step(session), [("monster_hit", {
+            "monster_id": "M2", "hp": 2, "lost": ["bong_dien_dien", "ca_loc"], "pos": [20, 10],
+        })])
+        snapshot = session.snapshot()
+        self.assertEqual(snapshot["hold"], ["ca_loc", "bong_sung", "ca_linh"])
+        self.assertEqual(snapshot["player"]["invuln_ticks"], 90)
+        self.assertEqual([(m["id"], m["state"]) for m in snapshot["monsters"]],
+                         [("M1", "chase"), ("M2", "recoil"), ("M10", "chase")])
+        hit_monster = snapshot["monsters"][1]
+        self.assertEqual((hit_monster["state_ticks_left"], hit_monster["recoil_dir"]), (60, [1, 0]))
+
+    def test_hit_uses_post_move_player_and_monster_positions(self):
+        for player, move, start_x in [
+            ({"pos": [20, 10]}, [0, 0], 21.55),
+            ({"pos": [20, 9.95], "vel": [0, 4]}, [0, 1], 21),
+        ]:
+            with self.subTest(player=player):
+                session = gather_session({"player": player, "monsters": [monster([start_x, 10])]})
+                rows = one_step(session, {"tick": 0, "move": move})
+                self.assertEqual([name for name, _ in rows], ["monster_hit"])
+                self.assertEqual(rows[0][1]["pos"], session.snapshot()["player"]["pos"])
+
+    def test_player_just_above_species_depth_cannot_be_hit(self):
+        session = gather_session({
+            "player": {"pos": [20, 9.999]},
+            "monsters": [monster([20, 10], state="chase")],
+        })
+        self.assertEqual(one_step(session), [])
+        self.assertEqual(session.snapshot()["player"]["hp"], 3)
+        self.assertEqual(session.snapshot()["monsters"][0]["state"], "patrol")
+
+    def test_invulnerability_expires_on_the_ninetieth_tick(self):
+        session = gather_session({
+            "player": {"pos": [20, 10], "invuln_ticks": 90},
+            "monsters": [monster([20, 10])],
+        })
+        inputs = InputPlayer([])
+        for tick in range(89):
+            self.assertEqual(session.step(inputs.advance(tick)), [])
+        self.assertEqual(session.snapshot()["monsters"][0]["state"], "chase")
+        self.assertEqual(session.snapshot()["player"]["invuln_ticks"], 1)
+        self.assertEqual([row["name"] for row in session.step(inputs.advance(89))], ["monster_hit"])
+        self.assertEqual(session.snapshot()["player"]["hp"], 2)
+
+    def test_recoil_runs_sixty_steps_in_the_locked_direction(self):
+        session = gather_session({"player": {"pos": [20, 10]}, "monsters": [monster([20, 10])]})
+        inputs = InputPlayer([{"tick": 1, "move": [0, 1]}])
+        session.step(inputs.advance(0))
+        self.assertEqual(session.snapshot()["monsters"][0]["pos"], [20, 10])
+        session.step(inputs.advance(1))
+        after_one = session.snapshot()["monsters"][0]
+        self.assertAlmostEqual(after_one["pos"][0], 20 + 2 / 60)
+        self.assertEqual(after_one["state_ticks_left"], 59)
+        for tick in range(2, 60):
+            session.step(inputs.advance(tick))
+        self.assertEqual(session.snapshot()["monsters"][0]["state_ticks_left"], 1)
+        session.step(inputs.advance(60))
+        last = session.snapshot()["monsters"][0]
+        self.assertAlmostEqual(last["pos"][0], 22)
+        self.assertEqual((last["pos"][1], last["state"], last["recoil_dir"]), (10, "patrol", None))
+
+    def test_final_recoil_tick_is_safe_and_the_next_tick_can_hit(self):
+        session = gather_session({
+            "player": {"pos": [20, 10]},
+            "monsters": [monster([20, 10], state="recoil", state_ticks_left=1, recoil_dir=[1, 0])],
+        })
+        inputs = InputPlayer([])
+        self.assertEqual(session.step(inputs.advance(0)), [])
+        self.assertEqual(session.snapshot()["monsters"][0]["state"], "patrol")
+        self.assertEqual([row["name"] for row in session.step(inputs.advance(1))], ["monster_hit"])
+
+    def test_recoil_clamps_to_map_and_species_bounds(self):
+        session = gather_session({
+            "monsters": [monster([99.99, 10.01], state="recoil", state_ticks_left=2, recoil_dir=[0.6, -0.8])],
+        })
+        one_step(session)
+        self.assertEqual(session.snapshot()["monsters"][0]["pos"], [100, 10])
+
+    def test_choke_ignores_invulnerability_without_spilling_items(self):
+        hold = ["ca_loc", "ca_linh", "bong_sung"]
+        session = gather_session({
+            "player": {"pos": [20, 10], "oxygen_ticks": 0, "zero_oxy_ticks": 59, "invuln_ticks": 2},
+            "hold": hold,
+            "monsters": [monster([20, 10])],
+        })
+        self.assertEqual(one_step(session), [("choke", {"hp": 2})])
+        self.assertEqual(session.snapshot()["hold"], hold)
+        self.assertEqual(session.snapshot()["player"]["invuln_ticks"], 1)
+
+    def test_lethal_choke_finishes_before_monster_moves(self):
+        session = gather_session({
+            "player": {"pos": [20, 10], "oxygen_ticks": 0, "zero_oxy_ticks": 59, "hp": 1},
+            "hold": ["ca_loc"],
+            "monsters": [monster([21, 10])],
+        })
+        self.assertEqual(one_step(session), [
+            ("choke", {"hp": 0}),
+            ("faint", {"cause": "choke", "lost": ["ca_loc"], "hp": 0}),
+            ("gather_end", {"reason": "fainted", "inventory": {"items": {}}}),
+        ])
+        self.assertEqual(session.snapshot()["monsters"][0]["pos"], [21, 10])
+        self.assertEqual(session.sim.result["inventory"], {"items": {}})
+
+    def test_nonlethal_hit_precedes_timeout_and_keeps_remaining_stock(self):
+        session = gather_session({
+            "player": {"pos": [20, 10]}, "hold": ["ca_loc", "bong_sung"], "time_left_ticks": 1,
+            "monsters": [monster([20, 10])],
+        })
+        rows = one_step(session)
+        self.assertEqual([name for name, _ in rows], ["monster_hit", "gather_end"])
+        self.assertEqual(rows[-1][1], {"reason": "time", "inventory": {"items": {"ca_loc": 1}}})
+
+
+class MonsterHeadless(unittest.TestCase):
+    def run_cli(self, workdir, fixture, *args):
+        scenario = write_json(workdir.path("scenario.json"), {"gather": fixture})
+        contract = read_fixture(ROOT / "game.contract.json")
+        contract.update(contract_version="1.1", tuning=monster_tuning())
+        with patch("chonoi.headless.load_contract", return_value=contract):
+            return headless_main([
+                "--mode", "gather", "--seed", "42", "--ticks", "10", "--scenario", scenario,
+                "--out", workdir.path("out.jsonl"), *args,
+            ])
+
+    def test_lethal_hit_after_choke_stops_catch_and_writes_empty_inventory(self):
+        scenario = read_fixture(FIXTURES / "p2_monster_hit.json")["gather"]
+        scenario["player"].update(hp=2, oxygen_ticks=0, zero_oxy_ticks=59)
+        scenario["time_left_ticks"] = 1
+        scenario["fish"] = [{"id": "F1", "kind": "ca_loc", "pos": [20, 10]}]
+        with Workdir() as w:
+            inventory = Path(w.path("catch.json"))
+            write_json(inventory, {"items": {"ca_loc": 2}})
+            inputs = write_json(w.path("inputs.json"), {"frames": [{"tick": 0, "catch": True}]})
+            self.assertEqual(self.run_cli(w, scenario, "--inventory-out", str(inventory), "--inputs", inputs), 0)
+            rows = read_jsonl(w.path("out.jsonl"))
+            self.assertEqual(read_fixture(inventory), {"items": {}})
+
+        self.assertEqual([(e["name"], e["data"], e["tick"]) for e in events(rows)], [
+            ("choke", {"hp": 1}, 1),
+            ("monster_hit", {"monster_id": "M2", "hp": 0,
+                             "lost": ["bong_dien_dien", "ca_loc"], "pos": [20, 10]}, 1),
+            ("faint", {"cause": "monster", "lost": ["ca_linh", "bong_sung", "ca_loc"], "hp": 0}, 1),
+            ("gather_end", {"reason": "fainted", "inventory": {"items": {}}}, 1),
+        ])
+        final = snapshots(rows)[-1]
+        self.assertEqual((final["player"]["hp"], final["hold"], [f["id"] for f in final["fish"]]), (0, [], ["F1"]))
+        self.assertEqual((rows[-1]["reason"], rows[-1]["ticks"]), ("fainted", 1))
+
+    def test_fixture_for_recoil_reaches_headless_snapshot(self):
+        scenario = {"random_fish": False, "monsters": [
+            monster([20, 10], target_idx=0, state="recoil", state_ticks_left=15, recoil_dir=[-1, 0]),
+        ]}
+        with Workdir() as w:
+            self.assertEqual(self.run_cli(w, scenario), 0)
+            rows = read_jsonl(w.path("out.jsonl"))
+        first = snapshots(rows)[0]["monsters"][0]
+        self.assertEqual((first["target_idx"], first["state"], first["state_ticks_left"], first["recoil_dir"]),
+                         (0, "recoil", 15, [-1, 0]))
+
+    def test_malformed_monster_fixtures_exit_before_output(self):
+        cases = [
+            [monster([20, 9])],
+            [monster([20, 10], kind="unknown")],
+            [monster([20, 10], waypoints=[[20, 10]])],
+            [monster([20, 10], target_idx=True)],
+            [monster([20, 10], state="recoil", state_ticks_left=0, recoil_dir=[1, 0])],
+            [monster([20, 10], state="recoil", state_ticks_left=2, recoil_dir=[1, 1])],
+            [monster([20, 10], recoil_dir=[1, 0])],
+            [monster([20, 10]), monster([20, 10])],
+        ]
+        for monsters in cases:
+            with self.subTest(monsters=monsters), Workdir() as w:
+                with redirect_stderr(io.StringIO()) as stderr:
+                    self.assertEqual(self.run_cli(w, {"monsters": monsters}), 2)
+                self.assertIn("monsters", stderr.getvalue())
+                self.assertFalse(Path(w.path("out.jsonl")).exists())

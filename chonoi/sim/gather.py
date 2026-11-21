@@ -3,7 +3,7 @@
 Mặt cắt dòng sông nhìn NGANG: vị trí `[x, d]` (x sang phải, `d` độ sâu hướng xuống, d = 0 là mặt nước).
 `move = [x, d]`: thành phần thứ hai DƯƠNG = bơi xuống. Hướng mặt là góc từ +x, dương = xuống.
 
-Đã có: bơi + tăng/giảm tốc, chặn mép (d không âm), oxy, ngạt, ngất và bỏ giỏ theo LIFO,
+Đã có: bơi + tăng/giảm tốc, chặn mép (d không âm), oxy, ngạt, Cá Sấu, ngất và bỏ giỏ theo LIFO,
 đồng hồ và hết giờ, cập bến (`interact` trong vùng bến -> `gather_end` reason `docked`, xét TRƯỚC hái),
 hái nút ở mặt nước (gather, hold_full, mọc lại sau regrow_s), bắt đàn cá dưới nước (fish_caught,
 hold_full, hồi chiêu catch_cd_ticks), giỏ dùng chung `_add_to_hold`, xuất kho (ghi đúng một lần do runner lo),
@@ -130,10 +130,10 @@ class GatherSim:
         was_surface = self._at_surface()
         self._move(inp)
         self._update_oxygen(events, was_surface)
+        if not self.done:
+            self._update_monsters(events)
         if self.done:
             return events
-        if self.monsters is not None:
-            self.monsters.step(self.pos)
         # 3. interact: bến trước, rồi hái
         if inp.pressed("interact"):
             if self._in_dock():
@@ -226,10 +226,32 @@ class GatherSim:
         self.hp -= 1
         events.append(("choke", {"hp": self.hp}))
         if self.hp == 0:
-            lost = list(reversed(self.hold))
-            self.hold.clear()
-            events.append(("faint", {"cause": "choke", "lost": lost, "hp": 0}))
-            self._finish("fainted", events)
+            self._faint(events, "choke")
+
+    def _update_monsters(self, events):
+        if self.monsters is None:
+            return
+        monster_id = self.monsters.step(self.pos, can_hit=self.invuln_ticks == 0)
+        if monster_id is None:
+            return
+        self.hp -= 1
+        self.invuln_ticks = self.monsters.invuln_ticks
+        lost = self._drop_hold(math.floor(len(self.hold) * self.monsters.loss_ratio))
+        events.append(("monster_hit", {"monster_id": monster_id, "hp": self.hp,
+                                       "lost": lost, "pos": self.pos.copy()}))
+        if self.hp == 0:
+            self._faint(events, "monster")
+
+    def _drop_hold(self, count):
+        cutoff = len(self.hold) - count
+        lost = self.hold[cutoff:][::-1]
+        del self.hold[cutoff:]
+        return lost
+
+    def _faint(self, events, cause):
+        lost = self._drop_hold(len(self.hold))
+        events.append(("faint", {"cause": cause, "lost": lost, "hp": 0}))
+        self._finish("fainted", events)
 
     def _in_dock(self) -> bool:
         return math.dist(self.pos, self.t["dock_pos"]) <= self.t["dock_radius"]

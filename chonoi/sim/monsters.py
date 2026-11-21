@@ -1,8 +1,11 @@
-"""Tuần tra và truy đuổi trong Gather theo tuning v1.1."""
+"""Tuần tra, truy đuổi, va chạm và recoil trong Gather theo tuning v1.1."""
 
 import math
 
 from ..ids import sort_by_id
+
+INACTIVE_STATES = {"recoil", "stunned"}
+MONSTER_STATES = {"patrol", "chase"} | INACTIVE_STATES
 
 
 def monster_bounds(bounds, species):
@@ -16,6 +19,8 @@ class MonsterSim:
     def __init__(self, config, bounds, scenario, day, tick_hz):
         self.species = config["species"]
         self.tick_hz = tick_hz
+        self.invuln_ticks = config["invuln_ticks"]
+        self.loss_ratio = config["loss_ratio"]
         self.bounds = {kind: monster_bounds(bounds, spec) for kind, spec in self.species.items()}
         source = scenario if scenario is not None else [
             monster for monster in config["spawns"] if monster["from_day"] <= day
@@ -34,12 +39,28 @@ class MonsterSim:
     def snapshot(self):
         return [monster.copy() for monster in self.monsters]
 
-    def step(self, player_pos):
+    def step(self, player_pos, *, can_hit):
+        """Di chuyển theo id, rồi trả id con gây hit nếu có."""
+        closest = None
+        closest_dist = math.inf
         for monster in self.monsters:
-            self._advance(monster, player_pos)
+            spec = self.species[monster["kind"]]
+            if monster["state"] in INACTIVE_STATES:
+                self._step_inactive(monster, spec)
+                continue  # Tick cuối recoil/choáng cũng không được gây hit.
 
-    def _advance(self, monster, player_pos):
-        spec = self.species[monster["kind"]]
+            self._advance(monster, player_pos, spec)
+            if can_hit and player_pos[1] >= spec["depths"][0]:
+                distance = math.dist(monster["pos"], player_pos)
+                if distance <= spec["hit_radius"] and distance < closest_dist:
+                    closest, closest_dist = monster, distance
+
+        if closest is None:
+            return None
+        self._start_recoil(closest, player_pos, closest_dist)
+        return closest["id"]
+
+    def _advance(self, monster, player_pos, spec):
         distance = math.dist(monster["pos"], player_pos)
         depth_allowed = player_pos[1] >= spec["depths"][0]
         if monster["state"] == "chase":
@@ -70,3 +91,22 @@ class MonsterSim:
     def _clamp(self, kind, pos):
         bounds = self.bounds[kind]
         return [min(hi, max(lo, value)) for value, (lo, hi) in zip(pos, (bounds["x"], bounds["d"]))]
+
+    def _start_recoil(self, monster, player_pos, distance):
+        if distance == 0:
+            direction = [1.0, 0.0]
+        else:
+            direction = [(m - p) / distance for m, p in zip(monster["pos"], player_pos)]
+        monster["state"] = "recoil"
+        monster["state_ticks_left"] = self.species[monster["kind"]]["recoil_ticks"]
+        monster["recoil_dir"] = direction
+
+    def _step_inactive(self, monster, spec):
+        if monster["state"] == "recoil":
+            travel = spec["recoil_dist"] / spec["recoil_ticks"]
+            pos = [p + travel * d for p, d in zip(monster["pos"], monster["recoil_dir"])]
+            monster["pos"] = self._clamp(monster["kind"], pos)
+        monster["state_ticks_left"] -= 1
+        if monster["state_ticks_left"] == 0:
+            monster["state"] = "patrol"
+            monster["recoil_dir"] = None
