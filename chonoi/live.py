@@ -152,6 +152,8 @@ class LiveGame:
             snap = self.session.snapshot()
             snap["meta"] = self.tuning[snap["phase"]]
             snap["menu"] = self.tuning["menu"]
+            if "freshness" in self.tuning:
+                snap["freshness"] = self.tuning["freshness"]
             if self.mode == "day":
                 best_count = max(self._sold.values(), default=0)
                 snap.update(
@@ -305,11 +307,11 @@ def main(argv=None) -> int:
         if a.inventory_out and a.mode != "gather":
             raise BadInput("--inventory-out chỉ dùng với gather")
         contract = load_contract()
-        if a.mode == "day" and contract["contract_version"] != "1.1":
-            raise BadInput("--mode day cần Test Contract v1.1")
         tuning = contract["tuning"]
+        if a.mode == "day" and "day_plan" not in tuning:
+            raise BadInput("--mode day cần cấu hình day_plan")
         scenario = load_scenario(a.scenario, a.mode, tuning)
-        inventory = read_inventory(a.inventory) if a.inventory else None
+        inventory = read_inventory(a.inventory, contract_version=contract["contract_version"]) if a.inventory else None
         if inventory is not None and "stock" in scenario:
             raise BadInput("vừa có quan.stock vừa có --inventory")
         game = LiveGame(a.mode, tuning, scenario, a.seed, inventory, a.inventory_out)

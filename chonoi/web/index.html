@@ -8,7 +8,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
 <style>
   html, body { margin: 0; height: 100%; background: #06161d; color: #f3e9d2; font: 14px/1.4 "IBM Plex Sans", sans-serif; overflow: hidden; }
-  canvas { display: block; width: 100vw; height: 100vh; }
+  #game-view { display: grid; grid-template-columns: minmax(0, 1fr) auto; height: 100%; }
+  canvas { display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; }
+  #phase-hud {
+    box-sizing: border-box; width: min(28vw, 360px); min-width: 290px; overflow: auto;
+    padding: 14px 16px; border-left: 2px solid #5e3b1c;
+    background: #f3e9d2; color: #1d2a2a; font-size: 18px;
+  }
+  #phase-hud h2 { margin: 12px 0 3px; font-size: 1em; }
+  #phase-hud section:first-child h2 { margin-top: 0; }
+  #phase-hud ul { margin: 0 0 6px; padding-left: 22px; }
+  #phase-hud li { overflow-wrap: anywhere; }
+  #current-message { padding: 6px 9px; margin: 0 0 8px; border: 2px solid #b8372b; border-radius: 6px; font-weight: 700; }
+  @media (max-width: 760px) {
+    #game-view { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+    #phase-hud { width: auto; min-width: 0; max-height: 36vh; border-left: 0; border-top: 2px solid #5e3b1c; font-size: 16px; }
+  }
   [hidden] { display: none !important; }
   .screen {
     position: fixed; inset: 0; display: grid; place-items: safe center; padding: 20px;
@@ -40,7 +55,13 @@
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
+<main id="game-view">
+  <canvas id="c"></canvas>
+  <aside id="phase-hud" aria-label="Nguyên liệu và tình trạng ca" hidden>
+    <p id="current-message" role="status" hidden></p>
+    <div id="phase-hud-details"></div>
+  </aside>
+</main>
 <section id="shop" class="screen" aria-labelledby="shop-title" hidden>
   <div class="card">
     <h1 id="shop-title">Shop</h1>
@@ -80,6 +101,9 @@ const shop = document.getElementById("shop");
 const shopBalance = document.getElementById("shop-balance");
 const shopUpgrades = document.getElementById("shop-upgrades");
 const shopFeedback = document.getElementById("shop-feedback");
+const phaseHud = document.getElementById("phase-hud");
+const phaseHudDetails = document.getElementById("phase-hud-details");
+const currentMessage = document.getElementById("current-message");
 let screenName = "", introTimer, introBusy = false, dayStarted = false;
 
 // ---------- vào: phím ----------
@@ -204,8 +228,18 @@ function ingredientLines(counts) {
   return Object.entries(counts || {}).filter(([, count]) => count > 0)
     .map(([kind, count]) => `${KIND_NAME[kind] || kind} × ${count}`);
 }
+function ingredientCounts(items) {
+  if (!Array.isArray(items)) return items || {};
+  const counts = {};
+  for (const item of items) {
+    const kind = typeof item === "string" ? item : item.kind;
+    counts[kind] = (counts[kind] || 0) + 1;
+  }
+  return counts;
+}
 function showMenu() {
   dayStarted = false;
+  heardWarning = undefined;
   shop.hidden = true;
   showScreen("menu", "Quán Ăn Chợ Nổi", [], [
     action("Chơi", () => {
@@ -226,8 +260,9 @@ function showDayIntro(state) {
 }
 function showEveningIntro(state) {
   const handoff = (state.events || []).findLast((e) => e.name === "gather_end" && e.day === state.day);
-  const stock = handoff?.data?.inventory?.items || state.stock || {};
-  const available = state.stock ? availableStock(state) : stock;
+  const incoming = handoff?.data?.inventory?.items || state.stock;
+  const stock = ingredientCounts(incoming);
+  const available = availableStock(state.stock ? state : { ...state, stock: incoming });
   const total = Object.values(stock).reduce((sum, count) => sum + count, 0);
   const menu = state.menu || {};
   const dishes = Object.keys(state.day_plan?.dishes || {}).filter((id) => {
@@ -376,6 +411,7 @@ async function poll() {
     snap = await r.json();
     offline = false;
     updateDayScreen(previous);
+    updatePhaseHud(snap, previous);
   } catch (e) { offline = true; }
   setTimeout(poll, 16);
 }
@@ -412,7 +448,7 @@ function dishName(dish) {
 
 function fit() {
   const dpr = window.devicePixelRatio || 1;
-  const w = innerWidth, h = innerHeight;
+  const w = cv.clientWidth, h = cv.clientHeight;
   if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   return [w, h];
@@ -506,6 +542,10 @@ const MONSTER_COLOR = "#c9a0ff";
 const distance = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
 function availableStock(state) {
+  if (Array.isArray(state.stock)) {
+    const reserved = new Set((state.customers || []).flatMap(c => c.reserved || []));
+    return ingredientCounts(state.stock.filter(item => !reserved.has(item.id) && !isSpoiled(item, state)));
+  }
   const available = { ...state.stock };
   for (const customer of state.customers || []) {
     for (const [kind, count] of Object.entries(customer.reserved || {})) {
@@ -513,6 +553,101 @@ function availableStock(state) {
     }
   }
   return available;
+}
+
+function isSpoiled(item, state) {
+  return item.fresh < state.freshness?.spoiled_below || (state.events || []).some(e =>
+    e.name === "spoiled" && e.data?.item_id === item.id &&
+    (state.day === undefined || e.day === state.day));
+}
+
+function freshnessLines(items, state) {
+  const groups = new Map();
+  for (const item of items) {
+    const [fresh, spoiled] = groups.get(item.kind) || [0, 0];
+    groups.set(item.kind, isSpoiled(item, state) ? [fresh, spoiled + 1] : [fresh + 1, spoiled]);
+  }
+  return [...groups].map(([kind, [fresh, spoiled]]) => {
+    const status = [fresh ? `${fresh} còn tươi` : "", spoiled ? `${spoiled} ươn` : ""].filter(Boolean);
+    return `${KIND_NAME[kind] || kind} · ${status.join(", ")}`;
+  });
+}
+
+const RESERVATION_STATES = { scheduled: "Đã đặt", holding: "Đang giữ bàn", waiting: "Đang chờ món", served: "Đã phục vụ", failed: "Lỡ đơn" };
+let floodAudio, heardWarning, hudKey;
+
+function unlockWarningAudio() {
+  if (!snap?.meta?.current || !window.AudioContext) return;
+  floodAudio ??= new AudioContext();
+  if (floodAudio.state === "suspended") floodAudio.resume().catch(() => {});
+}
+addEventListener("pointerdown", unlockWarningAudio);
+addEventListener("keydown", unlockWarningAudio);
+
+function updateCurrentMessage(state, previous) {
+  if (state.tick < previous?.tick) heardWarning = undefined;
+  const warning = state.phase === "gather" ? (state.events || []).findLast(e =>
+    e.name === "current_warning" && e.phase === "gather" && e.day === state.day) : undefined;
+  const startsAt = warning?.data?.starts_at_phase_tick;
+  const ticks = startsAt - state.phase_tick;
+  let message = "";
+  if (state.phase === "gather" && state.current) {
+    const direction = state.current.direction === 1 ? "Đông →" : "← Tây";
+    message = `Dòng lũ · ${direction} · ${fmtTime(state.current.ticks_left)}`;
+  } else if (ticks > 0) {
+    message = `⚠ Sắp có dòng lũ · ${fmtTime(ticks)}`;
+    const id = `${state.day ?? 0}:${warning.tick}`;
+    if (heardWarning !== id && state.state === "playing" && floodAudio?.state === "running") {
+      heardWarning = id;
+      const tone = floodAudio.createOscillator();
+      const volume = floodAudio.createGain();
+      const start = floodAudio.currentTime;
+      tone.frequency.value = 560;
+      volume.gain.setValueAtTime(.16, start);
+      volume.gain.exponentialRampToValueAtTime(.001, start + .28);
+      tone.connect(volume).connect(floodAudio.destination);
+      tone.start(start);
+      tone.stop(start + .28);
+    }
+  }
+  currentMessage.hidden = !message;
+  setText(currentMessage, message);
+}
+
+function updatePhaseHud(state, previous) {
+  const sections = [];
+  if (state.phase === "gather" && state.freshness && Array.isArray(state.hold) &&
+      state.hold.every(item => typeof item !== "string")) {
+    sections.push(["Độ tươi trong giỏ", freshnessLines(state.hold, state), "Giỏ trống."]);
+  }
+  if (state.phase === "quan" && Array.isArray(state.stock)) {
+    sections.push(["Độ tươi trong kho", freshnessLines(state.stock, state), "Kho trống."]);
+    const byId = new Map(state.stock.map(item => [item.id, item]));
+    const held = (state.customers || []).flatMap(customer => {
+      if (!Array.isArray(customer.reserved)) return [];
+      const items = customer.reserved.map(id => byId.get(id)).filter(Boolean);
+      return freshnessLines(items, state).map(line => `${customer.table_id} · ${line}`);
+    });
+    sections.push(["Nguyên liệu đang giữ", held, "Chưa giữ nguyên liệu cho đơn."]);
+  }
+  if ((state.phase === "gather" || state.phase === "quan") && state.reservations?.length) {
+    const orders = state.reservations.map(r => {
+      const table = state.tables?.find(t => t.id === r.table_id);
+      const held = r.state === "holding" || (table?.reservation_id === r.id && r.state === "scheduled");
+      const status = held ? RESERVATION_STATES.holding : RESERVATION_STATES[r.state];
+      const time = state.phase === "gather" ? `đến lúc ${fmtTime(r.arrival_tick)} của ca tối` :
+        r.state === "scheduled" || r.state === "holding" ? `còn ${fmtTime(Math.max(0, r.arrival_tick - state.phase_tick))}` : "";
+      return [r.id, `bàn ${r.table_id}`, dishName(r.dish_id), status, time].filter(Boolean).join(" · ");
+    });
+    sections.push(["Đơn đặt trước", orders, ""]);
+  }
+  updateCurrentMessage(state, previous);
+  phaseHud.hidden = sections.length === 0 && currentMessage.hidden;
+  const key = JSON.stringify(sections);
+  if (key !== hudKey) {
+    hudKey = key;
+    phaseHudDetails.replaceChildren(...sections.map(args => listSection(...args)));
+  }
 }
 
 // ----- cảnh GATHER: nhìn ngang, x sang phải, d xuống -----
@@ -631,10 +766,11 @@ function drawGather(w, h) {
     for (let i = 0; i < cap; i++) {
       const x0 = 22 + i * (sz + gap);
       ctx.fillStyle = "rgba(29,42,42,.12)"; rr(x0, y0, sz, sz, 5); ctx.fill();
-      if (snap.hold[i]) { ctx.fillStyle = kc(snap.hold[i]); rr(x0 + 2, y0 + 2, sz - 4, sz - 4, 4); ctx.fill(); }
+      const item = snap.hold[i];
+      if (item) { ctx.fillStyle = kc(item.kind || item); rr(x0 + 2, y0 + 2, sz - 4, sz - 4, 4); ctx.fill(); }
       ctx.strokeStyle = C.ink; ctx.lineWidth = 1; rr(x0 + .5, y0 + .5, sz - 1, sz - 1, 5); ctx.stroke();
     }
-    const names = {}; snap.hold.forEach((k) => (names[k] = (names[k] || 0) + 1));
+    const names = ingredientCounts(snap.hold);
     const materials = Object.entries(names).map(([kind, count]) => `${KIND_NAME[kind] || kind}×${count}`).join(", ");
     text(`Giỏ ${snap.hold_count ?? snap.hold.length}/${cap} · ${materials || "trống"}`, 22, y0 + sz + 14, { size: 12, color: C.inkSoft, maxWidth: w - 44 });
   }
@@ -715,12 +851,7 @@ function drawQuan(w, h) {
     if (snap.hand) text("●", px, py + 0.1 * s, { size: 12, align: "center", base: "middle", color: C.lacquer });
   }
   // HUD
-  const available = { ...snap.stock };
-  for (const customer of customers) {
-    for (const [kind, count] of Object.entries(customer.reserved || {})) {
-      available[kind] = (available[kind] ?? 0) - count;
-    }
-  }
+  const available = availableStock(snap);
   const materials = Object.entries(available).filter(([, count]) => count > 0)
     .map(([kind, count]) => `${KIND_NAME[kind] || kind}×${count}`).join(", ");
   panel(10, 10, w - 20, 66);
@@ -731,8 +862,9 @@ function drawQuan(w, h) {
     stat("UY TÍN", String(Number(snap.reputation.toFixed(2))), 1, C.lacquer);
     stat("ĐIỂM", String(snap.score), 2);
   }
-  text(`Kho · ${materials || "trống"}`, 130, 38, { size: 12, color: C.inkSoft, maxWidth: Math.max(60, w - 130 - 330) });
-  text(`Đang bưng · ${dishName(snap.hand) || "tay trống"}`, 130, 58, { size: 13, weight: 600, maxWidth: Math.max(60, w - 130 - 330) });
+  const infoWidth = w - 144 - (w > 560 ? 330 : 0);
+  text(`Kho khả dụng · ${materials || "trống"}`, 130, 38, { size: 14, color: C.inkSoft, maxWidth: infoWidth });
+  text(`Đang bưng · ${dishName(snap.hand) || "tay trống"}`, 130, 58, { size: 14, weight: 600, maxWidth: infoWidth });
 
   panel(10, h - bottom + 2, w - 20, bottom - 12, "rgba(243,233,210,.94)");
   let row = h - bottom + 26;
