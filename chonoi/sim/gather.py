@@ -150,7 +150,7 @@ class GatherSim:
         count = self.t["node_yield"]
         if self._add_to_hold([n["kind"]] * count):
             n["regrow_ticks"] = int(round(self.t["regrow_s"] * TICK))
-            events.append(("gather", {"node_id": n["id"], "kind": n["kind"], "count": count}))
+            events.append(("gather", {"node_id": n["id"], "kind": n["kind"], "amount": count}))
         else:
             events.append(("hold_full", {"action": "gather", "node_id": n["id"],
                                          "required": count, "free": self._hold_free()}))
@@ -163,7 +163,7 @@ class GatherSim:
         if self._add_to_hold([f["kind"]] * count):
             self.fish.remove(f)
             self.catch_cd_ticks = int(round(self.t["catch_cooldown_s"] * TICK))
-            events.append(("fish_caught", {"fish_id": f["id"], "kind": f["kind"], "count": count}))
+            events.append(("fish_caught", {"fish_id": f["id"], "kind": f["kind"], "yield": count}))
         else:
             events.append(("hold_full", {"action": "catch", "fish_id": f["id"],
                                          "required": count, "free": self._hold_free()}))
