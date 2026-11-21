@@ -14,5 +14,6 @@ Các mã AC dưới đây được đánh số theo TICKET-04 để tra bằng c
 | AC-P4-08 | Mốc phát hành và tag được đối chiếu với fork chung. Integrator phụ trách theo TEAM.md | [Phân công](../../TEAM.md) · [lịch sử release của fork](https://github.com/HoangHongNgo/K5-L3B-LAB-Day12-AI-SDLC-ChoNoi/releases) |
 | AC-P4-09 | Mở rộng `leaderboard`: top 10 bền vững, hòa giữ thứ tự ghi, cặp cờ headless, xuất qua `run_cmd` | [Bằng chứng](../proof/phase-4/extensions.md) · `tests/test_p4_leaderboard.py` |
 | AC-P4-10 | Mở rộng phụ đề SFX trong Sổ tay → Điều khiển; đã chơi thử với âm thanh tắt: phụ đề hiện đúng khi hái đồ | [Bằng chứng](../proof/phase-4/extensions.md) |
+| AC-P4-11 | Demo sau giờ build: chơi lại một Ngày từ Lặn & Hái qua Mở Quán đến đóng Shop, chạy test, mở ma trận truy vết | Do HoangHongNgo xác nhận đã chơi lại. Chưa lưu video hoặc ảnh; bằng chứng chạy được dùng [gói và demo chuyển Ngày](../proof/phase-4/package.md) |
 
 Để lặp lại hai tình huống cảnh báo, chạy `python3 -m chonoi.live --mode gather --scenario docs/proof/phase-4/alerts-gather.json` hoặc `python3 -m chonoi.live --mode quan --scenario docs/proof/phase-4/alerts-quan.json`. Từ bến, mở bản đồ → Điều khiển → Tương phản cao, quay lại và vào chơi.
