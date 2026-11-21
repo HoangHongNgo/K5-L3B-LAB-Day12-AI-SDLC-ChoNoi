@@ -1,19 +1,26 @@
-Revision main: a1c94cb2a78532dccbacd1c8b5d7f1db5adfe361
-AC-P1-01: v1.0, team_size=6, tick_hz=60, kho mẫu exit=0 stock={'bong_sung': 2, 'ca_loc': 1}
-AC-P1-02 oxygen_empty/choke: [(1, {'oxygen_ticks': 0})] [(60, {'hp': 2})]
-AC-P1-02 nổi đúng bước ngạt: [(1, {'pos': [20.0, 0.443]})] [] 6
-AC-P1-03 ngất: [(1, {'cause': 'choke', 'lost': ['bong_sung', 'ca_loc'], 'hp': 0})] [(1, {'reason': 'fainted', 'inventory': {'items': {}}})] {"items":{}}
-AC-P1-04 hái/mọc lại, kỳ vọng amount: [(1, {'node_id': 'N1', 'kind': 'bong_sung', 'count': 1})] [(1201, {'node_id': 'N1'})]
-AC-P1-05 bắt cá, kỳ vọng yield: [(1, {'fish_id': 'F1', 'kind': 'ca_linh', 'count': 3})] giỏ = 3
-AC-P1-06 hai tiến trình và lặp seed 42 giống từng byte: {'bong_sung': 2, 'ca_loc': 1}
-gather.jsonl 6bc3a907bb1c941be656463f91009d0644398b32057bef98ba04103b2eaed8f9
-catch.json b6bb9d2da81ecee69d01fd0860cef1b54edfcb140409c250b4ec3ba1e4410b65
-quan.jsonl e4d852552c5414a2aa58686488a8790b96728f50c251863ade23520a01fc71d3
-AC-P1-06 tick_limit: giữ nguyên file kho có sẵn.
-AC-P1-07 no_dish, kỳ vọng data {}: [(120, {'table_id': 'T1'}), (1020, {'table_id': 'T1'})]
-AC-P1-07 customer_arrived, kỳ vọng order_id / table_id / dish_id: [(120, {'customer_id': 'C1', 'table_id': 'T1', 'dish_id': 'ca_loc_nuong_trui', 'reserved': {'ca_loc': 1}})] [{'id': 'C1', 'table_id': 'T1', 'dish_id': 'ca_loc_nuong_trui', 'order_tick': 120, 'state': 'waiting', 'patience_ticks_left': 3600, 'eat_ticks_left': 0, 'order_status': 'reserved', 'reserved': {'ca_loc': 1}, 'base_price': None, 'tip': 0}]
-AC-P1-08 hết kiên nhẫn, kỳ vọng order_id và reputation trong event: [(1, {'customer_id': 'C1', 'table_id': 'T1', 'reason': 'patience'})] uy tín cuối = 2.5
-AC-P1-09 bấm E tại bếp có khách giữ chỗ, kỳ vọng cook_started: []
-AC-P1-10 hết kiên nhẫn đúng tick đóng ca, kỳ vọng closing và giữ uy tín: [(1, {'customer_id': 'C1', 'table_id': 'T1', 'reason': 'patience'})] [(1, {'reason': 'time', 'money': 0, 'earned': 0, 'shift_earned': 0, 'reputation': 2.5})]
-AC-P1-10 fixture assigned mục D, giao đúng bước cuối, kỳ vọng served → paid → quan_end: 2 đầu vào sai: hand có trường lạ: ['base_price']
-AC-P1-12 README có công thức điểm: True
+Revision: fd2f2953b1778c2c0f9dc5f51e3bac00618c55bf
+AC-P1-01 PASS khóa v1.0, team_size khớp TEAM.md, quán nạp kho mẫu: {'version': '1.0', 'team_size': 6, 'TEAM.md': 6, 'stock': {'bong_sung': 2, 'ca_loc': 1}}
+AC-P1-02 PASS chạm oxy 0 ở t=1, ngạt ở t+59: {'oxygen_empty': [(1, {'oxygen_ticks': 0})], 'choke': [(60, {'hp': 2})]}
+AC-P1-02 PASS nổi lên đúng bước đáng lẽ ngạt thì hồi oxy, không ngạt: {'surface': [(1, {'pos': [20.0, 0.443]})], 'oxygen': 6, 'hp': 3}
+AC-P1-03 PASS Máu 0 -> faint (lost LIFO) -> gather_end fainted, kho rỗng: {'faint': [(1, {'cause': 'choke', 'lost': ['ca_linh', 'bong_sung', 'ca_loc'], 'hp': 0})], 'gather_end': [(1, {'reason': 'fainted', 'inventory': {'items': {}}})], 'file': {'items': {}}}
+AC-P1-04 PASS hái đúng mép bán kính, payload amount, mọc lại sau regrow_s: {'gather': [(1, {'node_id': 'N1', 'kind': 'bong_sung', 'amount': 1})], 'node_regrown': [(1201, {'node_id': 'N1'})]}
+AC-P1-04 PASS dưới nước không hái: []
+AC-P1-04 PASS giỏ đầy -> hold_full, nút vẫn ready: {'hold_full': [(1, {'action': 'gather', 'node_id': 'N1', 'required': 1, 'free': 0})], 'ready': True}
+AC-P1-05 PASS bắt cá linh yield 3, xóa đàn; bấm lại ở t+29 bị chặn: [(1, {'fish_id': 'F1', 'kind': 'ca_linh', 'yield': 3})]
+AC-P1-05 PASS bắt tiếp ở t+30 (hết hồi), cá lóc yield 1: [(1, {'fish_id': 'F1', 'kind': 'ca_linh', 'yield': 3}), (31, {'fish_id': 'F2', 'kind': 'ca_loc', 'yield': 1})]
+AC-P1-05 PASS ở mặt nước không bắt: []
+AC-P1-05 PASS thiếu chỗ -> hold_full, giữ đàn, không hồi chiêu: {'hold_full': [(1, {'action': 'catch', 'fish_id': 'F1', 'required': 3, 'free': 2})], 'fish': 1, 'cd': 0}
+AC-P1-06 PASS smoke hai tiến trình seed 42, lặp lại giống từng byte: {'file': {'items': {'bong_sung': 2, 'ca_loc': 1}}, 'stock': {'bong_sung': 2, 'ca_loc': 1}, 'byte_identical': True}
+AC-P1-06 PASS chạm --ticks: không tạo file mới, file có sẵn giữ nguyên: {'kept': '{"items":{"ca_loc":9}}'}
+AC-P1-07 PASS kho rỗng -> no_dish {} theo lịch: [(120, {}), (1020, {})]
+AC-P1-07 PASS khách đầu ở phase_tick 120, giữ đúng công thức: {'event': [(120, {'order_id': 'C1', 'customer_id': 'C1', 'table_id': 'T1', 'dish_id': 'ca_loc_nuong_trui', 'reserved': {'ca_loc': 1}})], 'order_tick': 120, 'reserved': {'ca_loc': 1}}
+AC-P1-07 PASS cùng seed -> JSONL giống từng byte: {'customers': 1}
+AC-P1-08 PASS hết kiên nhẫn -> customer_left patience, uy tín −0.5, nhả giữ chỗ: {'event': [(1, {'order_id': 'C1', 'customer_id': 'C1', 'table_id': 'T1', 'reason': 'patience', 'reputation': 2.5})], 'reputation': 2.5, 'stock': {'ca_loc': 1}}
+AC-P1-09 PASS nấu -> bưng -> phục vụ -> ăn 600 tick -> paid; tiền, uy tín, điểm: {'events': [(1, 'cook_started'), (361, 'dish_ready'), (362, 'dish_picked'), (554, 'served'), (1154, 'paid')], 'money': 72, 'reputation': 3.2, 'score': 372}
+AC-P1-09 PASS boa ở đúng ngưỡng 50% và 0 ngay dưới ngưỡng (fixture hand theo mục D): {'tips': [12, 0]}
+AC-P1-10 PASS hết ca: khách đang ăn trả closing, dọn bàn trước quan_end: [('paid', 'closing'), ('quan_end', 'time')]
+AC-P1-10 PASS hết ca: khách chờ rời closing, không trừ uy tín: {'customer_left': [(1, {'order_id': 'C1', 'customer_id': 'C1', 'table_id': 'T1', 'reason': 'closing', 'reputation': 3.0})], 'reputation': 3.0}
+AC-P1-10 PASS giao đúng món ở bước cuối -> served rồi paid closing: [('served', None), ('paid', 'closing'), ('quan_end', 'time')]
+AC-P1-11 PASS HUD đọc đủ trường PRD mục 2 từ snapshot (kiểm tĩnh; ảnh chụp xem hud-*.png): {'index.html thiếu': [], 'snapshot đủ trường': True}
+AC-P1-12 PASS README ≤ 3 lệnh, phím, công thức điểm; test 1 lệnh chạy xanh trên clone sạch: {'lệnh khởi động': 3, 'test clone sạch': (0, '151')}
+Tổng: tất cả PASS
