@@ -15,3 +15,5 @@
   .opening-board label {gap:7px}
   .ledger {max-width:49vw; max-height:52vh}
 }
+.sfx-caption {display:block; margin-bottom:6px; padding:4px 10px; border-radius:4px; background:#000c; color:#fff; font-style:italic; text-align:center; width:max-content; max-width:min(88vw,480px)}
+.sfx-caption[hidden] {display:none}

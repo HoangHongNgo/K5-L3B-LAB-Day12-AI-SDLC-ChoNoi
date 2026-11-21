@@ -69,7 +69,7 @@ function fillAtlas() {
       "Buổi sáng dùng E để hái hoặc cập bến, Space để bắt cá. Nổi lên để hồi oxy.",
       "Buổi tối dùng E tại bếp để nấu hoặc lấy món, rồi đến đúng bàn và nhấn E để giao.",
       "M mở bản đồ. Esc hoặc P mở Sổ tay và tạm dừng đồng hồ."
-    ],""),contrast);
+    ],""),contrast,...(window.ChoNoiSfx ? ChoNoiSfx.buttons() : []));
   } else {
     if(snap.phase==="shop") body.append(element("p","Chọn nâng cấp trong ngân sách rồi đóng tiệm để sang Ngày kế."));
     else if(morning) body.append(listSection("Gom cho bữa chiều",ingredientLines(snap.day_plan?.ingredients),"Hái cây ven sông và bắt đàn cá. Đưa giỏ về bến trước khi hết giờ."));
