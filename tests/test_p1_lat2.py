@@ -191,5 +191,75 @@ class Catch(unittest.TestCase):
             self.assertEqual(events(rows, "fish_caught"), [])
 
 
+class DockAndInventory(unittest.TestCase):
+    """AC-P1-06 (phía gather): bến xét trước, bước cuối vẫn vào kho, chạm --ticks thì không ghi kho."""
+
+    def test_dock_at_exact_radius_writes_hold(self):
+        with Workdir() as w:
+            inv = w.path("inv.json")
+            pos = [G["dock_pos"][0] + G["dock_radius"], G["dock_pos"][1]]
+            rows = run_gather(w, {"player": {"pos": pos}, "hold": ["ca_loc", "bong_sung"],
+                                  "nodes": [node("N1", "bong_sung", pos)], "fish": []}, press(0), 5, inv)
+            self.assertEqual(events(rows, "gather"), [])  # bến xét trước hái
+            self.assertEqual(events(rows, "gather_end")[0]["data"]["reason"], "docked")
+            with open(inv, encoding="utf-8") as f:
+                self.assertEqual(json.load(f), {"items": {"bong_sung": 1, "ca_loc": 1}})
+
+    def test_gather_on_last_tick_counts(self):
+        with Workdir() as w:
+            inv = w.path("inv.json")
+            rows = run_gather(w, {"player": {"pos": FAR}, "time_left_ticks": 1,
+                                  "nodes": [node("N1", "bong_sung", FAR)], "fish": []}, press(0), 5, inv)
+            self.assertEqual(events(rows, "gather_end")[0]["data"]["reason"], "time")
+            with open(inv, encoding="utf-8") as f:
+                self.assertEqual(json.load(f), {"items": {"bong_sung": 1}})
+
+    def test_catch_on_last_tick_counts(self):
+        with Workdir() as w:
+            inv = w.path("inv.json")
+            run_gather(w, {"player": {"pos": [50, 10]}, "time_left_ticks": 1, "nodes": [],
+                           "fish": [fish("F1", "ca_linh", [50, 10])]}, press(0, "catch"), 5, inv)
+            with open(inv, encoding="utf-8") as f:
+                self.assertEqual(json.load(f), {"items": {"ca_linh": 3}})
+
+    def test_tick_limit_after_gather_no_inventory(self):
+        with Workdir() as w:
+            inv = w.path("inv.json")
+            rows = run_gather(w, {"player": {"pos": FAR}, "nodes": [node("N1", "bong_sung", FAR)], "fish": []},
+                              press(0), 3, inv)
+            self.assertEqual(len(events(rows, "gather")), 1)
+            self.assertFalse(os.path.exists(inv))
+            self.assertEqual(rows[-1]["reason"], "tick_limit")
+
+    def test_full_run_gather_catch_dock_then_quan(self):
+        """Hái ở mặt nước, lặn bắt cá, nổi lên rồi về bến; quán đọc đúng kho (smoke hai tiến trình)."""
+        with Workdir() as w:
+            inv = w.path("inv.json")
+            x0 = 10  # ngoài bến
+            nodes = [node("N1", "bong_sung", [x0, 0])]
+            fs = [fish("F1", "ca_loc", [x0, 3])]
+            speed = G["swim_speed"]
+            down = int(3 / speed * TICK)  # ~3 đơn vị độ sâu
+            back = int((x0 + 1) / speed * TICK) + G["ramp_max_ticks"] + 10  # đủ để chạm mép x = 0 (trong bến)
+            fr = press(0)  # hái N1 ở mặt nước
+            fr += [{"tick": 5, "move": [0, 1]}, {"tick": 5 + down, "move": [0, 0]}]
+            t = 5 + down + 10
+            fr += press(t, "catch")  # dưới nước, F1 trong catch_radius
+            up = t + 2
+            fr += [{"tick": up, "move": [0, -1]}, {"tick": up + down + 30, "move": [-1, 0]},
+                   {"tick": up + down + 30 + back, "move": [0, 0]}]
+            fr += press(up + down + 30 + back + 5)
+            rows = run_gather(w, {"player": {"pos": [x0, 0]}, "nodes": nodes, "fish": fs}, fr, 900, inv)
+            self.assertEqual(len(events(rows, "gather")), 1)
+            self.assertEqual(len(events(rows, "fish_caught")), 1)
+            self.assertEqual(events(rows, "gather_end")[0]["data"]["reason"], "docked")
+            with open(inv, encoding="utf-8") as f:
+                self.assertEqual(json.load(f), {"items": {"bong_sung": 1, "ca_loc": 1}})
+            code, err = run_headless("--mode", "quan", "--seed", "42", "--ticks", "0", "--inventory", inv,
+                                     "--out", w.path("q.jsonl"))
+            self.assertEqual(code, 0, err)
+            self.assertEqual(snapshots(read_jsonl(w.path("q.jsonl")))[0]["stock"], {"bong_sung": 1, "ca_loc": 1})
+
+
 if __name__ == "__main__":
     unittest.main()
